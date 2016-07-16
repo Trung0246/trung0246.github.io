@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <style>
+    #demo {
+      image-rendering: optimizeSpeed;             /* Older versions of FF          */
+      image-rendering: -moz-crisp-edges;          /* FF 6.0+                       */
+      image-rendering: -webkit-optimize-contrast; /* Safari                        */
+      image-rendering: -o-crisp-edges;            /* OS X & Windows Opera (12.02+) */
+      image-rendering: pixelated;                 /* Awesome future-browsers       */
+    -ms-interpolation-mode: nearest-neighbor;   /* IE                            */
+    }
+  </style>
+  <script src="https://cdn.rawgit.com/daishihmr/bulletml.js/master/build/bulletml.min.js"></script>
+  <script>
+  
+    window.addEventListener("keydown", function(e) {
+    // space and arrow keys
+    if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
+        e.preventDefault();
+    }
+}, false);
+var danmaku0 = bulletml.buildXML(
+    /*"<bulletml>" +
+        "<action label='top'>" +
+            "<repeat>" +
+                "<times>999</times>" +
+                "<action>" +
+                    "<repeat>" +
+                        "<times>30</times>" +
+                        "<action>" +
+                            "<fire>" +
+                                "<direction type='sequence'>12</direction>" +
+                                "<speed>5</speed>" +
+                                "<bullet>" +
+                                    "<actionRef label='b'/>" +
+                                "</bullet>" +
+                            "</fire>" +
+                            "<repeat>" +
+                                "<times>9-1</times>" +
+                                "<action>" +
+                                    "<fire>" +
+                                        "<direction type='sequence'>360/9</direction>" +
+                                        "<speed>5</speed>" +
+                                        "<bullet>" +
+                                            "<actionRef label='b'/>" +
+                                        "</bullet>" +
+                                    "</fire>" +
+                                "</action>" +
+                            "</repeat>" +
+                            "<wait>2</wait>" +
+                        "</action>" +
+                    "</repeat>" +
+                    "<wait>30</wait>" +
+                    "<repeat>" +
+                        "<times>30</times>" +
+                        "<action>" +
+                            "<fire>" +
+                                "<direction type='sequence'>-12</direction>" +
+                                "<speed>5</speed>" +
+                                "<bullet>" +
+                                    "<actionRef label='b'/>" +
+                                "</bullet>" +
+                            "</fire>" +
+                            "<repeat>" +
+                                "<times>9-1</times>" +
+                                "<action>" +
+                                    "<fire>" +
+                                        "<direction type='sequence'>360/9</direction>" +
+                                        "<speed>5</speed>" +
+                                        "<bullet>" +
+                                            "<actionRef label='b'/>" +
+                                        "</bullet>" +
+                                    "</fire>" +
+                                "</action>" +
+                            "</repeat>" +
+                            "<wait>2</wait>" +
+                        "</action>" +
+                    "</repeat>" +
+                    "<wait>30</wait>" +
+                "</action>" +
+            "</repeat>" +
+        "</action>" +
+        "<action label='b'>" +
+            "<changeSpeed>" +
+                "<speed>1</speed>" +
+                "<term>30</term>" +
+            "</changeSpeed>" +
+            "<wait>30</wait>" +
+            "<changeDirection>" +
+                "<direction type='aim'>1</direction>" +
+                "<term>60</term>" +
+            "</changeDirection>" +
+            "<changeSpeed>" +
+                "<speed>3</speed>" +
+                "<term>30</term>" +
+            "</changeSpeed>" +
+            "<wait>50</wait>" +
+            "<vanish />" +
+            "<fire>" +
+                "<speed>2</speed>" +
+                "<bullet />" +
+            "</fire>" +
+        "</action>" +
+    "</bulletml>"*/
+    '<bulletml type="vertical" xmlns="http://www.asahi-net.or.jp/~cs8k-cyu/bulletml"><action label="top"> <repeat> <times>10</times> <action> <fire> <direction type="absolute">270</direction> <bulletRef label="bm_seed"> <param>-25</param> </bulletRef> </fire> <wait>20</wait> <fire> <direction type="absolute">90</direction> <bulletRef label="bm_seed"> <param>25</param> </bulletRef> </fire> <wait>25</wait> </action> </repeat></action><bullet label="bm_seed"><speed>24</speed><action> <wait>1</wait> <fire> <bullet> <direction type="absolute">180</direction> <speed>3</speed> <actionRef label="bm"/> </bullet> </fire> <fire> <bullet> <direction type="sequence">$1</direction> <speed>2</speed> <actionRef label="bm"/> </bullet> </fire> <vanish/></action></bullet><action label="bm"> <changeSpeed> <speed>0</speed> <term>50</term> </changeSpeed> <wait>45</wait> <fire> <bulletRef label="round"> <param>1.5</param> <param>0</param> </bulletRef> </fire> <fire> <bulletRef label="round"> <param>1.25</param> <param>7</param> </bulletRef> </fire> <fire> <bulletRef label="round"> <param>1</param> <param>14</param> </bulletRef> </fire> <vanish/></action> <bullet label="round"><speed>0</speed><action> <fire> <direction type="absolute">$2</direction> <speed>$1</speed> <bullet/> </fire> <repeat> <times>10+3*10</times> <action> <fire> <direction type="sequence">360/(10+3*10)</direction> <speed>$1</speed> <bullet/> </fire> </action> </repeat> <vanish/></action></bullet></bulletml>'
+);
+bulletml.dsl();
+var danmaku1 = new bulletml.Root({
+    top: action([
+        repeat(999, [
+            repeat(30, [
+                fire(direction(12, "sequence"), speed(5), bullet(actionRef("b"))),
+                repeat(9-1, [
+                    fire(direction(360/9, "sequence"), speed(5), bullet(actionRef("b"))),
+                ]),
+                wait(2),
+            ]),
+            wait(30),
+            repeat(30, [
+                fire(direction(-12, "sequence"), speed(5), bullet(actionRef("b"), {color:"hsl(220, 60%, 80%)"})),
+                repeat(9-1, [
+                    fire(direction(360/9, "sequence"), speed(5), bullet(actionRef("b"), {color:"hsl(220, 60%, 80%)"})),
+                ]),
+                wait(2),
+            ]),
+            wait(30),
+        ]),
+    ]),
+    b: action([
+        changeSpeed(speed(1), 30),
+        wait(30),
+        changeDirection(direction(0, "aim"), 60),
+        changeSpeed(speed(3), 30),
+        wait(50),
+        vanish(),
+        fire(speed(2), bullet({color:"hsl(50, 60%, 80%)"}))
+    ]),
+});
+
+var SC_W = 300;
+var SC_H = 500;
+window.onload = function() {
+    var scene = new Scene();
+    var player = new Player().addTo(scene);
+    var danmakuConfig = {
+        target: player,
+        createNewBullet: function(runner, spec) {
+            var bullet = new Bullet(spec);
+            bullet.x = runner.x;
+            bullet.y = runner.y;
+            runner.onVanish = function() {
+                bullet.remove();
+            };
+            bullet.update = function() {
+                runner.update();
+                this.x = runner.x;
+                this.y = runner.y;
+                this.areaTest();
+            };
+            bullet.addTo(scene);
+        }
+    };
+    var enemyXML = new Hex(40, 30, 15, "hsl(290, 60%, 80%)").addTo(scene);
+    enemyXML.danmakuRunner = danmaku0.createRunner(danmakuConfig);
+    enemyXML.update = function(frame) {
+        this.x = SC_W/2;//SC_W*.5 - Math.cos(frame*0.01) * SC_W*.4
+        this.y = 100;//SC_H*.3 - Math.sin(frame*0.03) * SC_H*.2
+        this.danmakuRunner.x = this.x;
+        this.danmakuRunner.y = this.y;
+        this.danmakuRunner.update();
+    };
+    /*var enemyDSL = new Hex(40, 30, 15, "hsl(250, 60%, 80%)").addTo(scene);
+    enemyDSL.danmakuRunner = danmaku1.createRunner(danmakuConfig);
+    enemyDSL.update = function(frame) {
+        this.x = SC_W*.5 + Math.cos(frame*0.01) * SC_W*.4
+        this.y = SC_H*.3 + Math.sin(frame*0.03) * SC_H*.2
+        this.danmakuRunner.x = this.x;
+        this.danmakuRunner.y = this.y;
+        this.danmakuRunner.update();
+    };*/
+    scene.start();
+};
+
+var Scene = function() {
+    var canvas = document.getElementById('demo');
+    //var canvas = document.createElement("canvas");
+    document.body.appendChild(canvas);
+    canvas.width = SC_W;
+    canvas.height = SC_H;
+    canvas.fitWindow();
+    this.context = canvas.getContext("2d");
+    this.context.textAlign = "right";
+    this.context.textBaseline = "top";
+    this.frame = 0;
+    this.sceneObjects = [];
+};
+Scene.prototype.start = function() {
+    var renderFrame = function() {
+        this.context.fillStyle = "black";
+        this.context.globalCompositeOperation = "source-over";
+        this.context.fillRect(0, 0, SC_W, SC_H);
+        this.context.globalCompositeOperation = "lighter";
+        var copied = [].concat(this.sceneObjects);
+        for (var i = 0, end = copied.length; i < end; i++) {
+            copied[i].update(this.frame);
+            copied[i].draw(this.context);
+        }
+        this.context.fillStyle = "white";
+        this.frame += 1;
+        requestAnimationFrame(renderFrame);
+    }.bind(this);
+    renderFrame();
+};
+Scene.prototype.addChild = function(obj) {
+    obj.parent = this;
+    this.sceneObjects.push(obj);
+};
+Scene.prototype.removeChild = function(obj) {
+    obj.parent = null;
+    this.sceneObjects.erase(obj);
+};
+
+var Hex = function(w, h, radius, color) {
+    this.radius = radius;
+    this.x = 0;
+    this.y = 0;
+    this.color = color || "hsl(0, 60%, 80%)";
+    this.canvas = document.createElement("canvas");
+    this.canvas.width = w*2;
+    this.canvas.height = h*2;
+    var context = this.canvas.getContext("2d");
+    context.globalCompositeOperation = "lighter";
+    /*context.fillStyle = this.color;
+    context.translate(w, h);
+    context.globalAlpha = 1.0;
+    context.fillHex(w, h);*/
+    context.beginPath();
+      context.arc(w, h, radius, 0, 2 * Math.PI, false);
+      context.fillStyle = this.color;;
+      context.fill();
+      context.stroke();
+    this.parent = null;
+};
+Hex.prototype = {
+    constructor: Hex,
+    update: function() {},
+    draw: function(context) {
+        context.fillStyle = this.color;
+        context.save();
+        context.translate(this.x, this.y);
+        context.drawImage(this.canvas, -this.canvas.width*.5, -this.canvas.height*.5);
+        context.restore();
+    },
+    addTo: function(parent) {
+        parent.addChild(this);
+        return this;
+    },
+    remove: function() {
+        if (this.parent) this.parent.removeChild(this);
+        return this;
+    }
+};
+
+var Bullet = function(spec) {
+    Hex.call(this, 8, 8, 2.5, spec.color);
+};
+Bullet.prototype = Object.create(Hex.prototype);
+Bullet.prototype.areaTest = function() {
+    if (this.x < -20 || SC_W < this.x - 20 || this.y < -20 || SC_H < this.y - 20) {
+        this.remove();
+        return;
+    }
+};
+
+var Player = function() {
+    Hex.call(this, 10, 10, 3.25, "hsl(120, 60%, 80%)");
+    this.x = SC_W * 0.5;
+    this.y = SC_H * 0.9;
+    this.speed = 1.5;
+};
+Player.prototype = Object.create(Hex.prototype);
+Player.prototype.update = function(frame) {
+    if (keyboard.left) this.x -= this.speed;
+    else if (keyboard.right) this.x += this.speed;
+    if (keyboard.up) this.y -= this.speed;
+    else if (keyboard.down) this.y += this.speed;
+    this.x = Math.max(0, Math.min(this.x, SC_W));
+    this.y = Math.max(0, Math.min(this.y, SC_H));
+};
+
+var keyboard = {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+};
+document.addEventListener("keydown", function(e) {
+    switch (e.keyCode) {
+        case 37: keyboard.left = true; break;
+        case 38: keyboard.up = true; break;
+        case 39: keyboard.right = true; break;
+        case 40: keyboard.down = true; break;
+    }
+}, false);
+document.addEventListener("keyup", function(e) {
+    switch (e.keyCode) {
+        case 37: keyboard.left = false; break;
+        case 38: keyboard.up = false; break;
+        case 39: keyboard.right = false; break;
+        case 40: keyboard.down = false; break;
+    }
+}, false);
+Array.prototype.erase = function(obj) {
+    var idx = this.indexOf(obj);
+    if (idx !== -1) this.splice(idx, 1);
+};
+CanvasRenderingContext2D.prototype.fillHex = function(w, h) {
+    this.beginPath();
+    this.moveTo(Math.sin(Math.PI/3 * 0)*w*.5, Math.cos(Math.PI/3 * 0)*h*.5);
+    for (var i = 1; i < 6; i++) {
+        this.lineTo(Math.sin(Math.PI/3 * i)*w*.5, Math.cos(Math.PI/3 * i)*h*.5);
+    }
+    this.closePath();
+    this.fill();
+};
+HTMLCanvasElement.prototype.fitWindow = function() {
+    var resize = function() {
+        var rateWidth = this.width/window.innerWidth;
+        var rateHeight= this.height/window.innerHeight;
+        var rate = this.height/this.width;
+        if (rateWidth > rateHeight) {
+            this.style.width  = innerWidth+"px";
+            this.style.height = innerWidth*rate+"px";
+        } else {
+            this.style.width  = innerHeight/rate+"px";
+            this.style.height = innerHeight+"px";
+        }
+    }.bind(this);
+    window.addEventListener("resize", resize, false);
+    resize();
+};
+
+  </script>
+  </head>
+  <body>
+  <canvas id="demo"></canvas>
+  </body>
+</html>
