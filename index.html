@@ -12,8 +12,15 @@
     }
   </style>
   <script src="https://cdn.rawgit.com/daishihmr/bulletml.js/master/build/bulletml.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p2.js/0.7.1/p2.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/3.0.11/pixi.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.6.1/creature.min.js"></script>
+  <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.6.1/custom/phaser-arcade-physics.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.6.1/custom/phaser-no-physics.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.6.1/custom/phaser-split.js"></script>-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.6.1/phaser-creature.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/2.6.1/phaser.min.js"></script>
   <script>
-  
     window.addEventListener("keydown", function(e) {
     // space and arrow keys
     if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
@@ -141,27 +148,41 @@ var danmaku1 = new bulletml.Root({
 var SC_W = 300;
 var SC_H = 500;
 window.onload = function() {
-    var scene = new Scene();
-    var player = new Player().addTo(scene);
+  var game = new Phaser.Game(300, 500, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+  var player, enemy;
+  function preload() {
+    game.load.image("player", "player.png");
+    game.load.image("enemy", "enemy.png");
+    game.load.image("bullet1", "bullet1.png");
+  }
+
+  function create() {
+    player = game.add.sprite(150, 475, "player");
+    enemyXML = game.add.sprite(150, 100, "enemy");
+    game.physics.arcade.enable(player);
+    game.physics.arcade.enable(enemyXML);
     var danmakuConfig = {
         target: player,
         createNewBullet: function(runner, spec) {
-            var bullet = new Bullet(spec);
-            bullet.x = runner.x;
-            bullet.y = runner.y;
+            var bullet = Phaser.Bullet(game, runner.x, runner.y, "bullet1");
+            //bullet.x = runner.x;
+            //bullet.y = runner.y;
+            //new Bullet(spec);
             runner.onVanish = function() {
-                bullet.remove();
+                bullet.kill();
+                //bullet.remove();
             };
-            bullet.update = function() {
+            /*bullet.update = function() {
                 runner.update();
                 this.x = runner.x;
                 this.y = runner.y;
-                this.areaTest();
-            };
-            bullet.addTo(scene);
+                //this.areaTest();
+            };*/
+            bullet.update = Phaser.Bullet.prototype.update;
+            //bullet.addTo(scene);
         }
     };
-    var enemyXML = new Hex(40, 30, 15, "hsl(290, 60%, 80%)").addTo(scene);
+    //var enemyXML = new Hex(40, 30, 15, "hsl(290, 60%, 80%)").addTo(scene);
     enemyXML.danmakuRunner = danmaku0.createRunner(danmakuConfig);
     enemyXML.update = function(frame) {
         this.x = SC_W/2;//SC_W*.5 - Math.cos(frame*0.01) * SC_W*.4
@@ -179,10 +200,52 @@ window.onload = function() {
         this.danmakuRunner.y = this.y;
         this.danmakuRunner.update();
     };*/
-    scene.start();
+    cursors = this.input.keyboard.createCursorKeys();
+    fireButton = this.input.keyboard.addKey(Phaser.KeyCode.Z);
+  }
+
+  function update() {
+    player.body.velocity.x = 0;
+    player.body.velocity.y = 0
+    if (cursors.left.isDown)
+    {
+        player.body.velocity.x = -200;
+    }
+    else if (cursors.right.isDown)
+    {
+        player.body.velocity.x = 200;
+    }
+    if (cursors.up.isDown)
+    {
+        player.body.velocity.y = -200;
+    }
+    else if (cursors.down.isDown)
+    {
+        player.body.velocity.y = 200;
+    }
+  }
+    //var scene = new Scene();
+    //var player = new Player().addTo(scene);
+    //scene.start();
 };
 
-var Scene = function() {
+/*var Bullet = function (game, key) {
+
+    Phaser.Sprite.call(this, game, 0, 0, key);
+
+    this.texture.baseTexture.scaleMode = PIXI.scaleModes.NEAREST;
+
+    this.anchor.set(0.5);
+
+    this.checkWorldBounds = true;
+    this.outOfBoundsKill = true;
+    this.exists = false;
+
+    this.tracking = false;
+    this.scaleSpeed = 0;
+
+};
+/*var Scene = function() {
     var canvas = document.getElementById('demo');
     //var canvas = document.createElement("canvas");
     document.body.appendChild(canvas);
@@ -234,7 +297,7 @@ var Hex = function(w, h, radius, color) {
     /*context.fillStyle = this.color;
     context.translate(w, h);
     context.globalAlpha = 1.0;
-    context.fillHex(w, h);*/
+    context.fillHex(w, h);**
     context.beginPath();
       context.arc(w, h, radius, 0, 2 * Math.PI, false);
       context.fillStyle = this.color;;
@@ -272,7 +335,7 @@ Bullet.prototype.areaTest = function() {
         return;
     }
 };
-
+/*
 var Player = function() {
     Hex.call(this, 10, 10, 3.25, "hsl(120, 60%, 80%)");
     this.x = SC_W * 0.5;
@@ -340,7 +403,7 @@ HTMLCanvasElement.prototype.fitWindow = function() {
     window.addEventListener("resize", resize, false);
     resize();
 };
-
+*/
   </script>
   </head>
   <body>
