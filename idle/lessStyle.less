@@ -1,0 +1,122 @@
+//Body
+body {
+  margin: 0px 0px 0px 0px;
+  padding: 0px 0px 0px 0px;
+}
+
+//Variables
+@mainBorder: 2px solid;
+@mainLength: 60%;
+@heightLimit: 94.5%;
+
+//Functions
+.mainData(@position: absolute, @width: @mainLength / 2%, @overflow: auto) {
+  position: @position;
+  width: @width;
+  overflow: @overflow;
+}
+.pointerHover {
+  cursor: pointer;
+}
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+}
+.spacing {
+  white-space: pre;
+}
+
+//Main part
+div {
+  &#uiData {
+    .mainData();
+    width: @mainLength;
+    border: @mainBorder black;
+    text-align: center;
+  }
+  &#heroData {
+    .mainData();
+    top: 26px;
+    height: @heightLimit;
+    border: @mainBorder blue;
+  }
+  &#enemyData {
+    .mainData();
+    top: 26px;
+    left: @mainLength / 2;
+    height: @heightLimit;
+    border: @mainBorder red;
+  }
+  &#shopData {
+    .mainData(absolute, (100% - @mainLength) * 0.985);
+    top: 0%;
+    height: @heightLimit - 40%;
+    right: 0%;
+    border: @mainBorder green;
+  }
+  &#optionData {
+    .mainData(absolute, (100% - @mainLength) * 0.985);
+    //top: @heightLimit - 40%;
+    bottom: 95% - @heightLimit;
+    height: @heightLimit * 0.471;
+    right: 0%;
+    border: @mainBorder aqua;
+    @betweenWidth: 49.5%;
+    @betweenHeight: 75px;
+    #zoneData {
+      width: @betweenWidth;
+      height: @betweenHeight;
+      border: @mainBorder brown;
+      #currentZoneTitle {
+        position: absolute;
+      }
+      input#currentZone {
+        position: absolute;
+        left: 110px;
+        width: 60px;
+        text-align: center;
+      }
+      #requiredKill {
+        position: absolute;
+        top: 25px;
+      }
+      #beatedZone {
+        position: absolute;
+        top: 50px;
+      }
+    }
+    #clickData {
+      border: @mainBorder gray;
+      position: absolute;
+      right: 0px;
+      top: 0px;
+      height: @betweenHeight * 1.8;
+      display: inline-block;
+      width: @betweenWidth;
+    }
+    #buyData {
+      border: @mainBorder orange;
+      width: @betweenWidth;
+      height: @betweenHeight * 0.75;
+      #buyAmountTitle {
+        position: absolute;
+      }
+      input#buyAmount {
+        position: absolute;
+        left: 110px;
+        width: 60px;
+        text-align: center;
+      }
+      #heroVsEnemy {
+        position: absolute;
+        top: 105px;
+      }
+    }
+  }
+}
+
