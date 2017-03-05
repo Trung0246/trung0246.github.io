@@ -9,11 +9,12 @@
       enemy = {
         active: [],
         dead: [],
-        wait: [],
+        inactive: [],
       }, hero = {
         active: [],
         dead: [],
         wait: [],
+        inactive: [],
       }, upgrade = {}, bonus = {},
       equipment = [], player = {}, temp = {};
   
@@ -26,6 +27,7 @@
     stats.multiply = {};
     stats.multiply.base = math.bignumber(1.2);
     stats.multiply.lost = lostCalculate(stats.multiply.base, stats.level.base, stats.level.lost);
+    stats.multiply.high = math.bignumber(1.5);
     stats.zone = {
       highest: 0,
       current: 0,
@@ -224,6 +226,7 @@
       }),
       nextHero: 10,
       nextEnemy: 15,
+      maxZone: 1000,
     };
   })();
   
@@ -979,244 +982,185 @@
   })();
   
   function Hero(data) {
-    data = data || {};
-    this.hash = randomString();
-    this.damage = {
-      perSecond: undefined,
-      value: {
-        current: undefined,
-        total: undefined,
-        base: data.damage.value.base || math.bignumber(0),
-        count: 0,
-        increment: lostCalculate(data.damage.value.increment, 10, 7) || math.bignumber(0),
-        cost: {
-          base: data.damage.value.cost.base || math.bignumber(0),
-          increment: data.damage.value.cost.increment || math.bignumber(0),
-          current: undefined,
-          total: undefined,
-        },
-      },
-      chance: {
-        percent: {
-          current: undefined,
-          total: undefined,
-          base: data.damage.chance.percent.base || 0,
-          count: 0,
-          increment: data.damage.chance.percent.increment || 0,
-          cost: {
-            base: data.damage.chance.percent.cost.base || math.bignumber(0),
-            increment: data.damage.chance.percent.cost.increment || math.bignumber(0),
-            current: undefined,
-            total: undefined,
-          },
-          max: data.damage.chance.percent.max || 0,
-        },
-        amount: {
-          current: undefined,
-          total: undefined,
-          base: data.damage.chance.amount.base || math.bignumber(0),
-          count: 0,
-          increment: data.damage.chance.amount.increment || math.bignumber(0),
-          cost: {
-            base: data.damage.chance.amount.cost.base || math.bignumber(0),
-            increment: data.damage.chance.amount.cost.increment || math.bignumber(0),
-            current: undefined,
-            total: undefined,
-          },
-          max: data.damage.chance.amount.max || 0,
-        },
-      },
-      speed: {
-        current: undefined,
-        total: undefined,
-        base: data.damage.speed.base || 0,
-        count: 0,
-        increment: data.damage.speed.increment || 0,
-        cost: {
-          base: data.damage.speed.cost.base || math.bignumber(0),
-          increment: data.damage.speed.cost.increment || math.bignumber(0),
-          current: undefined,
-          total: undefined,
-        },
-        max: data.damage.speed.max || 0,
-      },
-      multiple: {
+    this.stats(data);
+  }
+  Hero.prototype = {
+    stats: function(data) {
+      data = data || {};
+      this.hash = randomString();
+      this.damage = {
+        perSecond: undefined,
         value: {
           current: undefined,
           total: undefined,
-          base: data.damage.multiple.value.base || 0,
+          base: data.damage.value.base || math.bignumber(0),
           count: 0,
-          increment: data.damage.multiple.value.increment || 0,
+          increment: lostCalculate(data.damage.value.increment, 10, 7) || math.bignumber(0),
           cost: {
-            base: data.damage.multiple.value.cost.base || math.bignumber(0),
-            increment: data.damage.multiple.value.cost.increment || math.bignumber(0),
+            base: data.damage.value.cost.base || math.bignumber(0),
+            increment: data.damage.value.cost.increment || math.bignumber(0),
             current: undefined,
             total: undefined,
           },
-          max: data.damage.multiple.value.max || 0,
         },
         chance: {
           percent: {
             current: undefined,
             total: undefined,
-            base: data.damage.multiple.chance.percent.base || 0,
+            base: data.damage.chance.percent.base || 0,
             count: 0,
-            increment: data.damage.multiple.chance.percent.increment || 0,
+            increment: data.damage.chance.percent.increment || 0,
             cost: {
-              base: data.damage.multiple.chance.percent.cost.base || math.bignumber(0),
-              increment: data.damage.multiple.chance.percent.cost.increment || math.bignumber(0),
+              base: data.damage.chance.percent.cost.base || math.bignumber(0),
+              increment: data.damage.chance.percent.cost.increment || math.bignumber(0),
               current: undefined,
               total: undefined,
             },
-            max: data.damage.multiple.chance.percent.max || 0,
+            max: data.damage.chance.percent.max || 0,
           },
           amount: {
             current: undefined,
             total: undefined,
-            base: data.damage.multiple.chance.amount.base || 0,
+            base: data.damage.chance.amount.base || math.bignumber(0),
             count: 0,
-            increment: data.damage.multiple.chance.amount.increment || 0,
+            increment: data.damage.chance.amount.increment || math.bignumber(0),
             cost: {
-              base: data.damage.multiple.chance.amount.cost.base || math.bignumber(0),
-              increment: data.damage.multiple.chance.amount.cost.increment || math.bignumber(0),
+              base: data.damage.chance.amount.cost.base || math.bignumber(0),
+              increment: data.damage.chance.amount.cost.increment || math.bignumber(0),
               current: undefined,
               total: undefined,
             },
-            max: data.damage.multiple.chance.amount.max || 0,
-          },
-        },
-      },
-    };
-    this.defense = {
-      perSecond: undefined,
-      value: {
-        current: undefined,
-        total: undefined,
-        base: data.defense.value.base || math.bignumber(0),
-        count: 0,
-        increment: lostCalculate(data.defense.value.increment, 10, 7) || math.bignumber(0),
-        cost: {
-          base: data.defense.value.cost.base || math.bignumber(0),
-          increment: data.defense.value.cost.increment || math.bignumber(0),
-          current: undefined,
-          total: undefined,
-        },
-      },
-      chance: {
-        percent: {
-          current: undefined,
-          total: undefined,
-          base: data.defense.chance.percent.base || 0,
-          count: 0,
-          increment: data.defense.chance.percent.increment || 0,
-          cost: {
-            base: data.defense.chance.percent.cost.base || math.bignumber(0),
-            increment: data.defense.chance.percent.cost.increment || math.bignumber(0),
-            current: undefined,
-            total: undefined,
-          },
-          max: data.defense.chance.percent.max || 0,
-        },
-        amount: {
-          current: undefined,
-          total: undefined,
-          base: data.defense.chance.amount.base || math.bignumber(0),
-          count: 0,
-          increment: data.defense.chance.amount.increment || math.bignumber(0),
-          cost: {
-            base: data.defense.chance.amount.cost.base || math.bignumber(0),
-            increment: data.defense.chance.amount.cost.increment || math.bignumber(0),
-            current: undefined,
-            total: undefined,
-          },
-          max: data.defense.chance.amount.max || 0,
-        },
-      },
-    };
-    this.xp = {
-      value: undefined,
-      max: {
-        current: undefined,
-        total: undefined,
-        base: data.xp.max.base || math.bignumber(0),
-        count: 0,
-        increment: data.xp.max.increment || math.bignumber(0),
-      },
-    };
-    this.hp = {
-      value: undefined,
-      max: {
-        current: undefined,
-        total: undefined,
-        base: data.hp.max.base || math.bignumber(0),
-        count: 0,
-        increment: lostCalculate(data.hp.max.increment, 10, 7) || math.bignumber(0),
-        cost: {
-          base: data.hp.max.cost.base || math.bignumber(0),
-          increment: data.hp.max.cost.increment || math.bignumber(0),
-          current: undefined,
-          total: undefined,
-        },
-      },
-      regen: {
-        rate: {
-          current: undefined,
-          total: undefined,
-          base: data.hp.regen.rate.base || math.bignumber(0),
-          count: 0,
-          increment: lostCalculate(data.hp.regen.rate.increment, 10, 7) || math.bignumber(0),
-          cost: {
-            base: data.hp.regen.rate.cost.base || math.bignumber(0),
-            increment: data.hp.regen.rate.cost.increment || math.bignumber(0),
-            current: undefined,
-            total: undefined,
+            max: data.damage.chance.amount.max || 0,
           },
         },
         speed: {
           current: undefined,
           total: undefined,
-          base: data.hp.regen.speed.base || 0,
+          base: data.damage.speed.base || 0,
           count: 0,
-          increment: data.hp.regen.speed.increment || 0,
+          increment: data.damage.speed.increment || 0,
           cost: {
-            base: data.hp.regen.speed.cost.base || math.bignumber(0),
-            increment: data.hp.regen.speed.cost.increment || math.bignumber(0),
+            base: data.damage.speed.cost.base || math.bignumber(0),
+            increment: data.damage.speed.cost.increment || math.bignumber(0),
             current: undefined,
             total: undefined,
           },
-          max: data.hp.regen.speed.max || 0,
+          max: data.damage.speed.max || 0,
         },
-      },
-    };
-    this.magic = {
-      spell: {
-        data: [],
-        max: {
+        multiple: {
+          value: {
+            current: undefined,
+            total: undefined,
+            base: data.damage.multiple.value.base || 0,
+            count: 0,
+            increment: data.damage.multiple.value.increment || 0,
+            cost: {
+              base: data.damage.multiple.value.cost.base || math.bignumber(0),
+              increment: data.damage.multiple.value.cost.increment || math.bignumber(0),
+              current: undefined,
+              total: undefined,
+            },
+            max: data.damage.multiple.value.max || 0,
+          },
+          chance: {
+            percent: {
+              current: undefined,
+              total: undefined,
+              base: data.damage.multiple.chance.percent.base || 0,
+              count: 0,
+              increment: data.damage.multiple.chance.percent.increment || 0,
+              cost: {
+                base: data.damage.multiple.chance.percent.cost.base || math.bignumber(0),
+                increment: data.damage.multiple.chance.percent.cost.increment || math.bignumber(0),
+                current: undefined,
+                total: undefined,
+              },
+              max: data.damage.multiple.chance.percent.max || 0,
+            },
+            amount: {
+              current: undefined,
+              total: undefined,
+              base: data.damage.multiple.chance.amount.base || 0,
+              count: 0,
+              increment: data.damage.multiple.chance.amount.increment || 0,
+              cost: {
+                base: data.damage.multiple.chance.amount.cost.base || math.bignumber(0),
+                increment: data.damage.multiple.chance.amount.cost.increment || math.bignumber(0),
+                current: undefined,
+                total: undefined,
+              },
+              max: data.damage.multiple.chance.amount.max || 0,
+            },
+          },
+        },
+      };
+      this.defense = {
+        perSecond: undefined,
+        value: {
           current: undefined,
           total: undefined,
-          base: data.magic.spell.max.base || 0,
+          base: data.defense.value.base || math.bignumber(0),
           count: 0,
-          increment: data.magic.spell.max.increment || 0,
+          increment: lostCalculate(data.defense.value.increment, 10, 7) || math.bignumber(0),
           cost: {
-            base: data.magic.spell.max.cost.base || math.bignumber(0),
-            increment: data.magic.spell.max.cost.increment || math.bignumber(0),
+            base: data.defense.value.cost.base || math.bignumber(0),
+            increment: data.defense.value.cost.increment || math.bignumber(0),
             current: undefined,
             total: undefined,
           },
-          max: data.magic.spell.max.max || 0
         },
-      },
-      mana: {
+        chance: {
+          percent: {
+            current: undefined,
+            total: undefined,
+            base: data.defense.chance.percent.base || 0,
+            count: 0,
+            increment: data.defense.chance.percent.increment || 0,
+            cost: {
+              base: data.defense.chance.percent.cost.base || math.bignumber(0),
+              increment: data.defense.chance.percent.cost.increment || math.bignumber(0),
+              current: undefined,
+              total: undefined,
+            },
+            max: data.defense.chance.percent.max || 0,
+          },
+          amount: {
+            current: undefined,
+            total: undefined,
+            base: data.defense.chance.amount.base || math.bignumber(0),
+            count: 0,
+            increment: data.defense.chance.amount.increment || math.bignumber(0),
+            cost: {
+              base: data.defense.chance.amount.cost.base || math.bignumber(0),
+              increment: data.defense.chance.amount.cost.increment || math.bignumber(0),
+              current: undefined,
+              total: undefined,
+            },
+            max: data.defense.chance.amount.max || 0,
+          },
+        },
+      };
+      this.xp = {
         value: undefined,
         max: {
           current: undefined,
           total: undefined,
-          base: data.magic.mana.max.base || math.bignumber(0),
+          base: data.xp.max.base || math.bignumber(0),
           count: 0,
-          increment: lostCalculate(data.magic.mana.max.increment, 10, 7) || math.bignumber(0),
+          increment: data.xp.max.increment || math.bignumber(0),
+        },
+      };
+      this.hp = {
+        value: undefined,
+        max: {
+          current: undefined,
+          total: undefined,
+          base: data.hp.max.base || math.bignumber(0),
+          count: 0,
+          increment: lostCalculate(data.hp.max.increment, 10, 7) || math.bignumber(0),
           cost: {
-            base: data.magic.mana.max.cost.base || math.bignumber(0),
-            increment: data.magic.mana.max.cost.increment || math.bignumber(0),
+            base: data.hp.max.cost.base || math.bignumber(0),
+            increment: data.hp.max.cost.increment || math.bignumber(0),
             current: undefined,
             total: undefined,
           },
@@ -1225,12 +1169,12 @@
           rate: {
             current: undefined,
             total: undefined,
-            base: data.magic.mana.regen.rate.base || math.bignumber(0),
+            base: data.hp.regen.rate.base || math.bignumber(0),
             count: 0,
-            increment: lostCalculate(data.magic.mana.regen.rate.increment, 10, 7) || math.bignumber(0),
+            increment: lostCalculate(data.hp.regen.rate.increment, 10, 7) || math.bignumber(0),
             cost: {
-              base: data.magic.mana.regen.rate.cost.base || math.bignumber(0),
-              increment: data.magic.mana.regen.rate.cost.increment || math.bignumber(0),
+              base: data.hp.regen.rate.cost.base || math.bignumber(0),
+              increment: data.hp.regen.rate.cost.increment || math.bignumber(0),
               current: undefined,
               total: undefined,
             },
@@ -1238,93 +1182,121 @@
           speed: {
             current: undefined,
             total: undefined,
-            base: data.magic.mana.regen.speed.base || 0,
+            base: data.hp.regen.speed.base || 0,
             count: 0,
-            increment: data.magic.mana.regen.speed.increment || 0,
+            increment: data.hp.regen.speed.increment || 0,
             cost: {
-              base: data.magic.mana.regen.speed.cost.base || math.bignumber(0),
-              increment: data.magic.mana.regen.speed.cost.increment || math.bignumber(0),
+              base: data.hp.regen.speed.cost.base || math.bignumber(0),
+              increment: data.hp.regen.speed.cost.increment || math.bignumber(0),
               current: undefined,
               total: undefined,
             },
-            max: data.magic.mana.regen.speed.max || 0,
+            max: data.hp.regen.speed.max || 0,
           },
         },
-      },
-    };
-    this.death = {
-      speed: { //Actually this is revive wait time but use "speed" for convenience
-        current: undefined,
-        total: undefined,
-        base: data.death.speed.base || 0,
-        count: 0,
-        increment: data.death.speed.increment || 0,
-        max: data.death.speed.max || 0,
-        cost: {
-          base: data.death.speed.cost.base || math.bignumber(0),
-          increment: data.death.speed.cost.increment || math.bignumber(0),
-          current: undefined,
-          total: undefined,
-        },
-      },
-      max: {
-        current: undefined,
-        total: undefined,
-        base: data.death.max.base || 0,
-        count: 0,
-        increment: data.death.max.increment || 0,
-        cost: {
-          base: data.death.max.cost.base || math.bignumber(0),
-          increment: data.death.max.cost.increment || math.bignumber(0),
-          current: undefined,
-          total: undefined,
-        },
-        max: data.death.max.max || 0,
-      },
-      total: 0,
-    };
-    this.equipment = [];
-    this.bonus = {
-      data: [],
-      damage: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-        chance: {
-          percent: {
-            multiply: 0,
-            plus: 0,
+      };
+      this.magic = {
+        spell: {
+          data: [],
+          max: {
+            current: undefined,
+            total: undefined,
+            base: data.magic.spell.max.base || 0,
+            count: 0,
+            increment: data.magic.spell.max.increment || 0,
             cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
+              base: data.magic.spell.max.cost.base || math.bignumber(0),
+              increment: data.magic.spell.max.cost.increment || math.bignumber(0),
+              current: undefined,
+              total: undefined,
+            },
+            max: data.magic.spell.max.max || 0
+          },
+        },
+        mana: {
+          value: undefined,
+          max: {
+            current: undefined,
+            total: undefined,
+            base: data.magic.mana.max.base || math.bignumber(0),
+            count: 0,
+            increment: lostCalculate(data.magic.mana.max.increment, 10, 7) || math.bignumber(0),
+            cost: {
+              base: data.magic.mana.max.cost.base || math.bignumber(0),
+              increment: data.magic.mana.max.cost.increment || math.bignumber(0),
+              current: undefined,
+              total: undefined,
             },
           },
-          amount: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
+          regen: {
+            rate: {
+              current: undefined,
+              total: undefined,
+              base: data.magic.mana.regen.rate.base || math.bignumber(0),
+              count: 0,
+              increment: lostCalculate(data.magic.mana.regen.rate.increment, 10, 7) || math.bignumber(0),
+              cost: {
+                base: data.magic.mana.regen.rate.cost.base || math.bignumber(0),
+                increment: data.magic.mana.regen.rate.cost.increment || math.bignumber(0),
+                current: undefined,
+                total: undefined,
+              },
+            },
+            speed: {
+              current: undefined,
+              total: undefined,
+              base: data.magic.mana.regen.speed.base || 0,
+              count: 0,
+              increment: data.magic.mana.regen.speed.increment || 0,
+              cost: {
+                base: data.magic.mana.regen.speed.cost.base || math.bignumber(0),
+                increment: data.magic.mana.regen.speed.cost.increment || math.bignumber(0),
+                current: undefined,
+                total: undefined,
+              },
+              max: data.magic.mana.regen.speed.max || 0,
             },
           },
         },
-        speed: {
-          multiply: 0,
-          plus: 0,
+      };
+      this.death = {
+        speed: { //Actually this is revive wait time but use "speed" for convenience
+          current: undefined,
+          total: undefined,
+          base: data.death.speed.base || 0,
+          count: 0,
+          increment: data.death.speed.increment || 0,
+          max: data.death.speed.max || 0,
           cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
+            base: data.death.speed.cost.base || math.bignumber(0),
+            increment: data.death.speed.cost.increment || math.bignumber(0),
+            current: undefined,
+            total: undefined,
           },
         },
-        multiple: {
+        max: {
+          current: undefined,
+          total: undefined,
+          base: data.death.max.base || 0,
+          count: 0,
+          increment: data.death.max.increment || 0,
+          cost: {
+            base: data.death.max.cost.base || math.bignumber(0),
+            increment: data.death.max.cost.increment || math.bignumber(0),
+            current: undefined,
+            total: undefined,
+          },
+          max: data.death.max.max || 0,
+        },
+        total: 0,
+      };
+      this.equipment = [];
+      this.bonus = {
+        data: [],
+        damage: {
           value: {
-            multiply: 0,
-            plus: 0,
+            multiply: math.bignumber(0),
+            plus: math.bignumber(0),
             cost: {
               multiply: math.bignumber(0),
               plus: math.bignumber(0),
@@ -1340,70 +1312,12 @@
               },
             },
             amount: {
-              multiply: 0,
-              plus: 0,
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
               cost: {
                 multiply: math.bignumber(0),
                 plus: math.bignumber(0),
               },
-            },
-          },
-        },
-      },
-      defense: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-        chance: {
-          percent: {
-            multiply: 0,
-            plus: 0,
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-          amount: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-        },
-      },
-      xp: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-        max: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-      },
-      hp: {
-        max: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-        regen: {
-          rate: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
             },
           },
           speed: {
@@ -1414,28 +1328,74 @@
               plus: math.bignumber(0),
             },
           },
+          multiple: {
+            value: {
+              multiply: 0,
+              plus: 0,
+              cost: {
+                multiply: math.bignumber(0),
+                plus: math.bignumber(0),
+              },
+            },
+            chance: {
+              percent: {
+                multiply: 0,
+                plus: 0,
+                cost: {
+                  multiply: math.bignumber(0),
+                  plus: math.bignumber(0),
+                },
+              },
+              amount: {
+                multiply: 0,
+                plus: 0,
+                cost: {
+                  multiply: math.bignumber(0),
+                  plus: math.bignumber(0),
+                },
+              },
+            },
+          },
         },
-      },
-      magic: {
-        spell: {
-          max: {
-            multiply: 0,
-            plus: 0,
+        defense: {
+          value: {
+            multiply: math.bignumber(0),
+            plus: math.bignumber(0),
             cost: {
               multiply: math.bignumber(0),
               plus: math.bignumber(0),
             },
           },
-          duration: {
-            multiply: 0,
-            plus: 0,
-          },
-          coolDown: {
-            multiply: 0,
-            plus: 0,
+          chance: {
+            percent: {
+              multiply: 0,
+              plus: 0,
+              cost: {
+                multiply: math.bignumber(0),
+                plus: math.bignumber(0),
+              },
+            },
+            amount: {
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
+              cost: {
+                multiply: math.bignumber(0),
+                plus: math.bignumber(0),
+              },
+            },
           },
         },
-        mana: {
+        xp: {
+          value: {
+            multiply: math.bignumber(0),
+            plus: math.bignumber(0),
+          },
+          max: {
+            multiply: math.bignumber(0),
+            plus: math.bignumber(0),
+          },
+        },
+        hp: {
           max: {
             multiply: math.bignumber(0),
             plus: math.bignumber(0),
@@ -1463,38 +1423,84 @@
             },
           },
         },
-      },
-      death: {
-        speed: {
-          multiply: 0,
-          plus: 0,
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
+        magic: {
+          spell: {
+            max: {
+              multiply: 0,
+              plus: 0,
+              cost: {
+                multiply: math.bignumber(0),
+                plus: math.bignumber(0),
+              },
+            },
+            duration: {
+              multiply: 0,
+              plus: 0,
+            },
+            coolDown: {
+              multiply: 0,
+              plus: 0,
+            },
+          },
+          mana: {
+            max: {
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
+              cost: {
+                multiply: math.bignumber(0),
+                plus: math.bignumber(0),
+              },
+            },
+            regen: {
+              rate: {
+                multiply: math.bignumber(0),
+                plus: math.bignumber(0),
+                cost: {
+                  multiply: math.bignumber(0),
+                  plus: math.bignumber(0),
+                },
+              },
+              speed: {
+                multiply: 0,
+                plus: 0,
+                cost: {
+                  multiply: math.bignumber(0),
+                  plus: math.bignumber(0),
+                },
+              },
+            },
           },
         },
-        max: {
-          multiply: 0,
-          plus: 0,
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
+        death: {
+          speed: {
+            multiply: 0,
+            plus: 0,
+            cost: {
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
+            },
           },
+          max: {
+            multiply: 0,
+            plus: 0,
+            cost: {
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
+            },
+          },
+          bool: false,
         },
-        bool: false,
-      },
-    };
-    this._ = {
-      coolDown: {
-        damage: 0,
-        death: 0,
-        hp: 0,
-        mana: 0,
-      },
-      xpBonus: undefined,
-    };
-  }
-  Hero.prototype = {
+      };
+      this._ = {
+        coolDown: {
+          damage: 0,
+          death: 0,
+          hp: 0,
+          mana: 0,
+        },
+        xpBonus: undefined,
+      };
+    },
     attack: function(enemyData, amount, instant) {
       var returnData = [];
       if (!instant) {
@@ -1653,7 +1659,7 @@
           returnData.max = true;
         }
       }
-      tempCost = math.add(math.multiply(costCalculate(tempObj.cost.base, tempObj.cost.increment, tempObj.count, amount), math.add(tempBonus.cost.multiply, 1)), tempBonus.cost.plus);
+      tempCost = totalCalculate("bignumber", costCalculate(tempObj.cost.base, tempObj.cost.increment, tempObj.count, amount), [tempBonus.cost.multiply], [tempBonus.cost.plus]);
       if (math.compare(stats.money.current, tempCost).toNumber() > -1 && amount > 0 && !isCost) {
         stats.money.current = math.subtract(stats.money.current, tempCost);
         tempObj.count += amount;
@@ -1694,7 +1700,7 @@
       //Damage
       objCurrentCal(this.damage.value, "bignumber");
       objCurrentCal(this.damage.chance.percent, "add");
-      objCurrentCal(this.damage.chance.amount, "bignumber");
+      objCurrentCal(this.damage.chance.amount, "addBignumber");
       objCurrentCal(this.damage.speed, "subtract");
       objCurrentCal(this.damage.multiple.value, "add");
       objCurrentCal(this.damage.multiple.chance.percent, "add");
@@ -1725,7 +1731,7 @@
       //Defense
       objCurrentCal(this.defense.value, "bignumber");
       objCurrentCal(this.defense.chance.percent, "add");
-      objCurrentCal(this.defense.chance.amount, "bignumber");
+      objCurrentCal(this.defense.chance.amount, "addBignumber");
       objCurrentCal(this.defense.value, "cost");
       objCurrentCal(this.defense.chance.percent, "cost");
       objCurrentCal(this.defense.chance.amount, "cost");
@@ -1782,149 +1788,134 @@
   };
   
   function Enemy(data) {
-    data = data || {};
-    data.boss = data.boss || false;
-    data = data || {};
-    this.hash = randomString();
-    this.damage = {
-      perSecond: undefined,
-      value: {
-        current: data.damage.value || math.bignumber(0),
-        total: undefined,
-      },
-      chance: {
-        percent: {
-          current: data.damage.chance.percent || 0,
-          total: undefined,
-        },
-        amount: {
-          current: data.damage.chance.amount || math.bignumber(0),
-          total: undefined,
-        },
-      },
-      speed: {
-        current: data.damage.speed || 0,
-        total: undefined,
-      },
-      multiple: {
+    this.stats(data);
+  }
+  Enemy.prototype = {
+    stats: function(data) {
+      data = data || {};
+      data.boss = data.boss || false;
+      data = data || {};
+      this.hash = randomString();
+      this.damage = {
+        perSecond: undefined,
         value: {
-          current: data.damage.multiple.value || 0,
+          current: data.damage.value || math.bignumber(0),
           total: undefined,
         },
         chance: {
           percent: {
-            current: data.damage.multiple.chance.percent || 0,
+            current: data.damage.chance.percent || 0,
             total: undefined,
           },
           amount: {
-            current: data.damage.multiple.chance.amount || 0,
+            current: data.damage.chance.amount || math.bignumber(0),
             total: undefined,
           },
         },
-      },
-    };
-    this.defense = {
-      perSecond: undefined,
-      value: {
-        current: data.defense.value || math.bignumber(0),
-        total: undefined,
-      },
-      chance: {
-        percent: {
-          current: data.defense.chance.percent || 0,
-          total: undefined,
-        },
-        amount: {
-          current: data.defense.chance.amount || math.bignumber(0),
-          total: undefined,
-        },
-      },
-    };
-    this.hp = {
-      value: undefined,
-      max: {
-        current: data.hp.max || math.bignumber(0),
-        total: undefined,
-      },
-      regen: {
-        rate: {
-          current: data.hp.regen.rate || math.bignumber(0),
-          total: undefined,
-        },
         speed: {
-          current: data.hp.regen.speed || 0,
+          current: data.damage.speed || 0,
           total: undefined,
         },
-      },
-    };
-    this.magic = {
-      spell: {},
-      mana: {
+        multiple: {
+          value: {
+            current: data.damage.multiple.value || 0,
+            total: undefined,
+          },
+          chance: {
+            percent: {
+              current: data.damage.multiple.chance.percent || 0,
+              total: undefined,
+            },
+            amount: {
+              current: data.damage.multiple.chance.amount || 0,
+              total: undefined,
+            },
+          },
+        },
+      };
+      this.defense = {
+        perSecond: undefined,
+        value: {
+          current: data.defense.value || math.bignumber(0),
+          total: undefined,
+        },
+        chance: {
+          percent: {
+            current: data.defense.chance.percent || 0,
+            total: undefined,
+          },
+          amount: {
+            current: data.defense.chance.amount || math.bignumber(0),
+            total: undefined,
+          },
+        },
+      };
+      this.hp = {
         value: undefined,
         max: {
-          current: data.magic.mana.max || math.bignumber(0),
+          current: data.hp.max || math.bignumber(0),
           total: undefined,
         },
         regen: {
           rate: {
-            current: data.magic.mana.regen.rate || math.bignumber(0),
+            current: data.hp.regen.rate || math.bignumber(0),
             total: undefined,
           },
           speed: {
-            current: data.magic.mana.regen.speed || 0,
+            current: data.hp.regen.speed || 0,
             total: undefined,
           },
         },
-      },
-    };
-    this.loot = {
-      money: {
-        current: data.loot.money || math.bignumber(0),
-        total: undefined,
-      },
-      xp: {
-        current: data.loot.xp || math.bignumber(0),
-        total: undefined,
-      },
-    };
-    this.death = {
-      speed: {
-        current: data.death.speed.current || 0,
-        total: undefined,
-      },
-      max: {
-        current: data.death.max || 0,
-        total: undefined,
-      },
-      bool: false,
-      total: 0,
-    };
-    this.equipment = [];
-    this.bonus = {
-      data: [],
-      damage: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-        chance: {
-          percent: {
-            multiply: 0,
-            plus: 0,
+      };
+      this.magic = {
+        spell: {},
+        mana: {
+          value: undefined,
+          max: {
+            current: data.magic.mana.max || math.bignumber(0),
+            total: undefined,
           },
-          amount: {
+          regen: {
+            rate: {
+              current: data.magic.mana.regen.rate || math.bignumber(0),
+              total: undefined,
+            },
+            speed: {
+              current: data.magic.mana.regen.speed || 0,
+              total: undefined,
+            },
+          },
+        },
+      };
+      this.loot = {
+        money: {
+          current: data.loot.money || math.bignumber(0),
+          total: undefined,
+        },
+        xp: {
+          current: data.loot.xp || math.bignumber(0),
+          total: undefined,
+        },
+      };
+      this.death = {
+        speed: {
+          current: data.death.speed.current || 0,
+          total: undefined,
+        },
+        max: {
+          current: data.death.max || 0,
+          total: undefined,
+        },
+        bool: false,
+        total: 0,
+      };
+      this.equipment = [];
+      this.bonus = {
+        data: [],
+        damage: {
+          value: {
             multiply: math.bignumber(0),
             plus: math.bignumber(0),
-          },
-        },
-        speed: {
-          multiply: 0,
-          plus: 0,
-        },
-        multiple: {
-          value: {
-            multiply: 0,
-            plus: 0,
           },
           chance: {
             percent: {
@@ -1932,66 +1923,58 @@
               plus: 0,
             },
             amount: {
-              multiply: 0,
-              plus: 0,
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
             },
-          },
-        },
-      },
-      defense: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-        chance: {
-          percent: {
-            multiply: 0,
-            plus: 0,
-          },
-          amount: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-      },
-      loot: {
-        xp: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-        money: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-      },
-      hp: {
-        max: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-        regen: {
-          rate: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
           },
           speed: {
             multiply: 0,
             plus: 0,
           },
-        },
-      },
-      magic: {
-        spell: {
-          duration: {
-            multiply: 0,
-            plus: 0,
+          multiple: {
+            value: {
+              multiply: 0,
+              plus: 0,
+            },
+            chance: {
+              percent: {
+                multiply: 0,
+                plus: 0,
+              },
+              amount: {
+                multiply: 0,
+                plus: 0,
+              },
+            },
           },
-          coolDown: {
-            multiply: 0,
-            plus: 0,
+        },
+        defense: {
+          value: {
+            multiply: math.bignumber(0),
+            plus: math.bignumber(0),
+          },
+          chance: {
+            percent: {
+              multiply: 0,
+              plus: 0,
+            },
+            amount: {
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
+            },
           },
         },
-        mana: {
+        loot: {
+          xp: {
+            multiply: math.bignumber(0),
+            plus: math.bignumber(0),
+          },
+          money: {
+            multiply: math.bignumber(0),
+            plus: math.bignumber(0),
+          },
+        },
+        hp: {
           max: {
             multiply: math.bignumber(0),
             plus: math.bignumber(0),
@@ -2007,40 +1990,66 @@
             },
           },
         },
-      },
-      death: {
-        speed: {
-          multiply: 0,
-          plus: 0,
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
+        magic: {
+          spell: {
+            duration: {
+              multiply: 0,
+              plus: 0,
+            },
+            coolDown: {
+              multiply: 0,
+              plus: 0,
+            },
+          },
+          mana: {
+            max: {
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
+            },
+            regen: {
+              rate: {
+                multiply: math.bignumber(0),
+                plus: math.bignumber(0),
+              },
+              speed: {
+                multiply: 0,
+                plus: 0,
+              },
+            },
           },
         },
-        max: {
-          multiply: 0,
-          plus: 0,
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
+        death: {
+          speed: {
+            multiply: 0,
+            plus: 0,
+            cost: {
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
+            },
+          },
+          max: {
+            multiply: 0,
+            plus: 0,
+            cost: {
+              multiply: math.bignumber(0),
+              plus: math.bignumber(0),
+            },
           },
         },
-      },
-    };
-    this.level = data.level || 0;
-    this._ = {
-      coolDown: {
-        damage: data.damage.speed,
-        death: 0,
-        hp: data.hp.regen.speed,
-        mana: data.magic.mana.regen.speed,
-      },
-      dealtBy: {
-        
-      },
-    };
-  }
-  Enemy.prototype = {
+      };
+      this.level = data.level || 0;
+      this._ = {
+        coolDown: {
+          damage: data.damage.speed,
+          death: 0,
+          hp: data.hp.regen.speed,
+          mana: data.magic.mana.regen.speed,
+        },
+        dealtBy: {
+          
+        },
+      };
+    },
     attack: function(heroData, amount, instant) {
       var returnData = [];
       if (!instant) {
@@ -2260,6 +2269,10 @@
         return math.multiply(base, math.pow(increment, count));
       }
       break;
+      case "addBignumber": {
+        return math.add(base, math.multiply(increment, count));
+      }
+      break;
       case "add": {
         return base + count * increment;
       }
@@ -2461,11 +2474,11 @@
                 max: 5,
               }),
               increment: Math.configRandom({
-                min: 0.01,
+                min: 0.05,
                 max: 2,
               }),
               max: Math.configRandom({
-                min: 0,
+                min: 10,
                 max: 25,
                 round: true,
               }),
@@ -2474,7 +2487,7 @@
                   min: 50,
                   max: 150,
                 })), tempData),
-                increment: stats.multiply.base, //Balance this increment
+                increment: math.multiply(stats.multiply.base, 3), //Balance this increment
               },
             },
             amount: {
@@ -2483,11 +2496,11 @@
                 max: 2.5,
               })),
               increment: math.bignumber(Math.configRandom({
-                min: 0.05,
+                min: 0.1,
                 max: 1,
               })),
               max: Math.configRandom({
-                min: 0,
+                min: 20,
                 max: 50,
                 round: true,
               }),
@@ -2496,19 +2509,19 @@
                   min: 50,
                   max: 150,
                 })), tempData),
-                increment: stats.multiply.base, //This too, and those below
+                increment: math.multiply(stats.multiply.base, 1.5), //This too, and those below
               },
             },
           },
           speed: {
             base: tempDamageSpeed,
             increment: Math.configRandom({
-              min: 1,
-              max: 10,
+              min: 10,
+              max: 20,
               round: true,
             }),
             max: Math.configRandom({
-              min: 0,
+              min: 15,
               max: 30,
               round: true,
             }),
@@ -2517,7 +2530,7 @@
                 min: 50,
                 max: 150,
               })), tempData),
-              increment: stats.multiply.base,
+              increment: math.multiply(stats.multiply.base, 1.5),
             },
           },
           multiple: {
@@ -2542,7 +2555,7 @@
                   min: 50,
                   max: 150,
                 })), tempData),
-                increment: stats.multiply.base,
+                increment: math.multiply(stats.multiply.base, 2),
               },
             },
             chance: {
@@ -2552,11 +2565,11 @@
                   max: 5,
                 }),
                 increment: Math.configRandom({
-                  min: 0.01,
+                  min: 0.05,
                   max: 2,
                 }),
                 max: Math.configRandom({
-                  min: 0,
+                  min: 10,
                   max: 25,
                   round: true,
                 }),
@@ -2565,7 +2578,7 @@
                     min: 50,
                     max: 150,
                   })), tempData),
-                  increment: stats.multiply.base,
+                  increment: math.multiply(stats.multiply.base, 4),
                 },
               },
               amount: {
@@ -2588,7 +2601,7 @@
                     min: 50,
                     max: 150,
                   })), tempData),
-                  increment: stats.multiply.base,
+                  increment: math.multiply(stats.multiply.base, 3),
                 },
               },
             },
@@ -2616,11 +2629,11 @@
                 max: 5,
               }),
               increment: Math.configRandom({
-                min: 0.01,
+                min: 0.05,
                 max: 2,
               }),
               max: Math.configRandom({
-                min: 0,
+                min: 10,
                 max: 25,
                 round: true,
               }),
@@ -2629,7 +2642,7 @@
                   min: 50,
                   max: 150,
                 })), tempData),
-                increment: stats.multiply.base,
+                increment: math.multiply(stats.multiply.base, 3),
               },
             },
             amount: {
@@ -2638,11 +2651,11 @@
                 max: 2.5,
               })),
               increment: math.bignumber(Math.configRandom({
-                min: 0.05,
+                min: 0.1,
                 max: 1,
               })),
               max: Math.configRandom({
-                min: 0,
+                min: 20,
                 max: 50,
                 round: true,
               }),
@@ -2651,7 +2664,7 @@
                   min: 50,
                   max: 150,
                 })), tempData),
-                increment: stats.multiply.base,
+                increment: math.multiply(stats.multiply.base, 1.5),
               },
             },
           },
@@ -2694,7 +2707,7 @@
                 round: true,
               }),
               max: Math.configRandom({
-                min: 0,
+                min: 15,
                 max: 30,
                 round: true,
               }),
@@ -2703,7 +2716,7 @@
                   min: 50,
                   max: 150,
                 })), tempData),
-                increment: stats.multiply.base,
+                increment: math.multiply(stats.multiply.base, 1.5),
               },
             },
           },
@@ -2769,7 +2782,7 @@
                   round: true,
                 }),
                 max: Math.configRandom({
-                  min: 0,
+                  min: 15,
                   max: 30,
                   round: true,
                 }),
@@ -2778,7 +2791,7 @@
                     min: 50,
                     max: 150,
                   })), tempData),
-                  increment: stats.multiply.base,
+                  increment: math.multiply(stats.multiply.base, 1.5),
                 },
               },
             },
@@ -2788,12 +2801,12 @@
           speed: {
             base: tempDeathSpeed,
             increment: Math.configRandom({
-              min: 5,
+              min: 10,
               max: 25,
               round: true,
             }),
             max: Math.configRandom({
-              min: 0,
+              min: 20,
               max: 50,
               round: true,
             }),
@@ -2802,7 +2815,7 @@
                 min: 500,
                 max: 1500,
               })), tempData),
-              increment: stats.multiply.base,
+              increment: math.multiply(stats.multiply.base, 1.5),
             },
           },
           max: {
@@ -2814,7 +2827,7 @@
                 min: 500,
                 max: 1500,
               })), tempData),
-              increment: stats.multiply.base,
+              increment: math.multiply(stats.multiply.base, 6),
             },
           },
         },
@@ -2880,11 +2893,11 @@
           chance: {
             percent: Math.configRandom({
               min: 0.01,
-              max: 5,
+              max: 5 * (stats.zone.current <= stats.other.maxZone ? stats.zone.current / 20 : 5),
             }),
             amount: math.bignumber(Math.configRandom({
               min: 1.5,
-              max: 4.5,
+              max: 4.5 + (stats.zone.current <= stats.other.maxZone ? stats.zone.current / (stats.other.maxZone / 5.5) : 5.5),
             })),
           },
           speed: tempDamageSpeed,
@@ -2897,7 +2910,7 @@
             chance: {
               percent: Math.configRandom({
                 min: 0.01,
-                max: 5,
+                max: 5 * (stats.zone.current <= stats.other.maxZone ? stats.zone.current / 20 : 5),
               }),
               amount: Math.configRandom({
                 min: 1,
@@ -2915,11 +2928,11 @@
           chance: {
             percent: Math.configRandom({
               min: 0.01,
-              max: 5,
+              max: 5 * (stats.zone.current <= stats.other.maxZone ? stats.zone.current / 20 : 5),
             }),
             amount: math.bignumber(Math.configRandom({
               min: 1.5,
-              max: 4.5,
+              max: 4.5 + (stats.zone.current <= stats.other.maxZone ? stats.zone.current / (stats.other.maxZone / 5.5) : 5.5),
             })),
           },
         },
@@ -2977,7 +2990,7 @@
           }))),
         },
         level: Math.configRandom({
-          min: stats.zone.current - 5 < 0 ? 0 : stats.zone.current,
+          min: stats.zone.current <= 0 ? 0 : stats.zone.current - 5 >= 0 ? stats.zone.current - 5 : 0,
           max: stats.zone.current + 5,
           round: true
         }),
@@ -3012,11 +3025,11 @@
     var blockAmount = Math.configRandom({
       min: 0,
       max: 99,
-    }) <= heroData.defense.chance.percent.total ? heroData.defense.chance.amount.total : 1;
+    }) < heroData.defense.chance.percent.total ? heroData.defense.chance.amount.total : 1;
     var damageAmount = Math.configRandom({
       min: 0,
       max: 99,
-    }) <= enemyData.damage.chance.percent.total ? enemyData.damage.chance.amount.total : 1;
+    }) < enemyData.damage.chance.percent.total ? enemyData.damage.chance.amount.total : 1;
     returnData.damageAmount = math.multiply(amount || enemyData.damage.value.total, damageAmount);
     returnData.defenseAmount = math.multiply(heroData.defense.value.total, blockAmount);
     if (math.compare(returnData.defenseAmount, 0).toNumber() <= 0) {
@@ -3042,11 +3055,11 @@
     var blockAmount = Math.configRandom({
       min: 0,
       max: 99,
-    }) <= enemyData.defense.chance.percent.total ? enemyData.defense.chance.amount.total : 1;
+    }) < enemyData.defense.chance.percent.total ? enemyData.defense.chance.amount.total : 1;
     var damageAmount = Math.configRandom({
       min: 0,
       max: 99,
-    }) <= heroData.damage.chance.percent.total ? heroData.damage.chance.amount.total : 1;
+    }) < heroData.damage.chance.percent.total ? heroData.damage.chance.amount.total : 1;
     returnData.damageAmount = math.multiply(amount || heroData.damage.value.total, damageAmount);
     returnData.defenseAmount = math.multiply(enemyData.defense.value.total, blockAmount);
     if (math.compare(returnData.defenseAmount, 0).toNumber() <= 0) {
@@ -3487,7 +3500,7 @@ Cost bonus: x${math.bignumber.format(bonus.player.damage.value.cost.multiply, 5)
     $("div#clickData").html(tempRenderString);
   }
   
-  alert(`Hello there !!!
+  /*alert(`Hello there !!!
   First time here, right? I will tell you some quick tips !
   
   This is prototype version, so you may expect some bugs and locked features
@@ -3509,7 +3522,7 @@ Cost bonus: x${math.bignumber.format(bonus.player.damage.value.cost.multiply, 5)
   P.S: Turn on console to view this message again (F12), and if you saw any error, please tell me.
   
   Warning: did not have save feature yet so if you reload the page it will wipe out your progress !!!
-  `);
+  `);*/
   
   console.log(`
   This is prototype version, so you may expect some bugs and locked features
