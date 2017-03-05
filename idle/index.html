@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--Include .less css file before less.js script (Currently not work because of cross-origin issue not allow to load file over file://)-->
+    <!--<script src="https://cdn.rawgit.com/less/less.js/c60c3225624da08cfa6937651a3160ef0ced5ba1/dist/less.js"></script>-->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.9.3/math.js"></script>
+    <script src="mainLibraries.js"></script>
+    <script src="idleProject.js"></script>
+  </head>
+  <body>
+    <div id="uiData">
+      div#uiData
+    </div>
+    <div id="heroData" class="noselect">
+      div#heroData
+    </div>
+    <div id="enemyData" class="noselect">
+      div#enemyData
+    </div>
+    <div id="shopData" class="noselect">
+      div#shopData
+    </div>
+    <div id="optionData">
+      <div id="zoneData">
+        <span id="currentZoneTitle">Current zone:</span>
+        <input id="currentZone" type="number" value="0" max="0" min="0"/>
+        <span id="requiredKill">Required kill: 0</span>
+        <span id="beatedZone">Beated zone: 0</span>
+      </div>
+      <div id="clickData" class="noselect">
+      </div>
+      <div id="buyData">
+        <span id="buyAmountTitle">Buy amount:</span>
+        <input id="buyAmount" type="number" value="1" min="1"/>
+        <span id="heroVsEnemy">Hero: 0 | Enemy: 0</span>
+      </div>
+    </div>
+  </body>
+</html>
