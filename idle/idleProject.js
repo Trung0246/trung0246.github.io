@@ -287,11 +287,11 @@ var stats = {}, achievement = [], options = {}, task = [],
           total: _.get(stats, "click.total", 0),
         },
         money: {
-          current: _.get(stats, "money.current", 0).toString(),
-          total: _.get(stats, "money.total", 0).toString(),
-          prestige: _.get(stats, "money.prestige", 0).toString(),
-          offline: _.get(stats, "money.offine", 0).toString(),
-          online: _.get(stats, "money.online", 0).toString(),
+          current: _.get(stats, "money.current", math.bignumber(0)).toString(),
+          total: _.get(stats, "money.total", math.bignumber(0)).toString(),
+          prestige: _.get(stats, "money.prestige", math.bignumber(0)).toString(),
+          offline: _.get(stats, "money.offine", math.bignumber(0)).toString(),
+          online: _.get(stats, "money.online", math.bignumber(0)).toString(),
         },
         time: {
           total: _.get(stats, "time.total", 0),
@@ -303,8 +303,8 @@ var stats = {}, achievement = [], options = {}, task = [],
           current: _.get(stats, "upgrade.current", 0),
           total: _.get(stats, "upgrade.total", 0),
           spent: {
-            current: _.get(stats, "upgrade.spent.current", 0).toString(),
-            total: _.get(stats, "upgrade.spent.total", 0).toString(),
+            current: _.get(stats, "upgrade.spent.current", math.bignumber(0)).toString(),
+            total: _.get(stats, "upgrade.spent.total", math.bignumber(0)).toString(),
           },
         },
         hero: {
@@ -320,10 +320,10 @@ var stats = {}, achievement = [], options = {}, task = [],
             },
           },
           damage: {
-            perSecond: _.get(stats, "hero.damage.perSecond", 0).toString(),
-            current: _.get(stats, "hero.damage.current", 0).toString(),
-            offline: _.get(stats, "hero.damage.offline", 0).toString(),
-            total: _.get(stats, "hero.damage.total", 0).toString(),
+            perSecond: _.get(stats, "hero.damage.perSecond", math.bignumber(0)).toString(),
+            current: _.get(stats, "hero.damage.current", math.bignumber(0)).toString(),
+            offline: _.get(stats, "hero.damage.offline", math.bignumber(0)).toString(),
+            total: _.get(stats, "hero.damage.total", math.bignumber(0)).toString(),
             count: {
               current: _.get(stats, "hero.damage.count.current", 0),
               total: _.get(stats, "hero.damage.count.total", 0),
@@ -337,13 +337,13 @@ var stats = {}, achievement = [], options = {}, task = [],
               },
               highest: {
                 value: _.get(stats, "hero.damage.chance.highest.value", 0),
-                amount: _.get(stats, "hero.damage.chance.highest.amount", 0).toString(),
+                amount: _.get(stats, "hero.damage.chance.highest.amount", math.bignumber(0)).toString(),
               },
             },
           },
           defense: {
-            current: _.get(stats, "hero.defense.current", 0).toString(),
-            total: _.get(stats, "hero.defense.total", 0).toString(),
+            current: _.get(stats, "hero.defense.current", math.bignumber(0)).toString(),
+            total: _.get(stats, "hero.defense.total", math.bignumber(0)).toString(),
             count: {
               current: _.get(stats, "hero.defense.count.current", 0),
               total: _.get(stats, "hero.defense.count.total", 0),
@@ -357,7 +357,7 @@ var stats = {}, achievement = [], options = {}, task = [],
               },
               highest: {
                 value: _.get(stats, "hero.defense.chance.highest.value", 0),
-                amount: _.get(stats, "hero.defense.chance.highest.amount", 0).toString(),
+                amount: _.get(stats, "hero.defense.chance.highest.amount", math.bignumber(0)).toString(),
               },
             },
           },
@@ -382,79 +382,79 @@ var stats = {}, achievement = [], options = {}, task = [],
               total: _.get(stats, "enemy.boss.deah.total", 0),
             },
             damage: {
-              perSecond: _.get(stats, "enemy.boss.damage.perSecond", 0).toString(),
-              current: _.get(stats, "enemy.boss.damage.current", 0).toString(),
-              offline: _.get(stats, "enemy.boss.damage.offline", 0).toString(),
-              total: _.get(stats, "enemy.boss.damage.total", 0).toString(),
+              perSecond: _.get(stats, "enemy.boss.damage.perSecond", math.bignumber(0)).toString(),
+              current: _.get(stats, "enemy.boss.damage.current", math.bignumber(0)).toString(),
+              offline: _.get(stats, "enemy.boss.damage.offline", math.bignumber(0)).toString(),
+              total: _.get(stats, "enemy.boss.damage.total", math.bignumber(0)).toString(),
               count: {
                 current: _.get(stats, "enemy.boss.damage.count.current", 0),
                 total: _.get(stats, "enemy.boss.damage.count.total", 0),
               },
               chance: {
-                current: _.get(stats, "enemy.boss.damage.chance.current", 0).toString(),
-                total: _.get(stats, "enemy.boss.damage.chance.total", 0).toString(),
+                current: _.get(stats, "enemy.boss.damage.chance.current", math.bignumber(0)).toString(),
+                total: _.get(stats, "enemy.boss.damage.chance.total", math.bignumber(0)).toString(),
                 count: {
                   current: _.get(stats, "enemy.boss.damage.chance.count.current", 0),
                   total: _.get(stats, "enemy.boss.damage.chance.count.total", 0),
                 },
                 highest: {
                   value: _.get(stats, "enemy.boss.damage.chance.highest.value", 0),
-                  amount: _.get(stats, "enemy.boss.damage.chance.highest.amount", 0).toString(),
+                  amount: _.get(stats, "enemy.boss.damage.chance.highest.amount", math.bignumber(0)).toString(),
                 },
               },
             },
             defense: {
-              current: _.get(stats, "enemy.boss.defense.current", 0).toString(),
-              total: _.get(stats, "enemy.boss.defense.total", 0).toString(),
+              current: _.get(stats, "enemy.boss.defense.current", math.bignumber(0)).toString(),
+              total: _.get(stats, "enemy.boss.defense.total", math.bignumber(0)).toString(),
               chance: {
-                current: _.get(stats, "enemy.boss.defense.chance.current", 0).toString(),
-                total: _.get(stats, "enemy.boss.defense.chance.total", 0).toString(),
+                current: _.get(stats, "enemy.boss.defense.chance.current", math.bignumber(0)).toString(),
+                total: _.get(stats, "enemy.boss.defense.chance.total", math.bignumber(0)).toString(),
                 count: {
                   current: _.get(stats, "enemy.boss.defense.chance.count.current", 0),
                   total: _.get(stats, "enemy.boss.defense.chance.count.total", 0),
                 },
                 highest: {
                   value: _.get(stats, "enemy.boss.defense.chance.highest.value", 0),
-                  amount: _.get(stats, "enemy.boss.defense.chance.highest.amount", 0).toString(),
+                  amount: _.get(stats, "enemy.boss.defense.chance.highest.amount", math.bignumber(0)).toString(),
                 },
               },
             },
           },
           damage: {
-            perSecond: _.get(stats, "enemy.damage.perSecond", 0).toString(),
-            current: _.get(stats, "enemy.damage.current", 0).toString(),
-            offline: _.get(stats, "enemy.damage.offline", 0).toString(),
-            total: _.get(stats, "enemy.damage.total", 0).toString(),
+            perSecond: _.get(stats, "enemy.damage.perSecond", math.bignumber(0)).toString(),
+            current: _.get(stats, "enemy.damage.current", math.bignumber(0)).toString(),
+            offline: _.get(stats, "enemy.damage.offline", math.bignumber(0)).toString(),
+            total: _.get(stats, "enemy.damage.total", math.bignumber(0)).toString(),
             count: {
               current: _.get(stats, "enemy.damage.count.current", 0),
               total: _.get(stats, "enemy.damage.count.total", 0),
             },
             chance: {
-              current: _.get(stats, "enemy.damage.chance.current", 0).toString(),
-              total: _.get(stats, "enemy.damage.chance.total", 0).toString(),
+              current: _.get(stats, "enemy.damage.chance.current", math.bignumber(0)).toString(),
+              total: _.get(stats, "enemy.damage.chance.total", math.bignumber(0)).toString(),
               count: {
                 current: _.get(stats, "enemy.damage.chance.count.current", 0),
                 total: _.get(stats, "enemy.damage.chance.count.total", 0),
               },
               highest: {
                 value: _.get(stats, "enemy.damage.chance.highest.value", 0),
-                amount: _.get(stats, "enemy.damage.chance.highest.amount", 0).toString(),
+                amount: _.get(stats, "enemy.damage.chance.highest.amount", math.bignumber(0)).toString(),
               },
             },
           },
           defense: {
-            current: _.get(stats, "enemy.defense.current", 0).toString(),
-            total: _.get(stats, "enemy.defense.total", 0).toString(),
+            current: _.get(stats, "enemy.defense.current", math.bignumber(0)).toString(),
+            total: _.get(stats, "enemy.defense.total", math.bignumber(0)).toString(),
             chance: {
-              current: _.get(stats, "enemy.defense.chance.current", 0).toString(),
-              total: _.get(stats, "enemy.defense.chance.total", 0).toString(),
+              current: _.get(stats, "enemy.defense.chance.current", math.bignumber(0)).toString(),
+              total: _.get(stats, "enemy.defense.chance.total", math.bignumber(0)).toString(),
               count: {
                 current: _.get(stats, "enemy.defense.chance.count.current", 0),
                 total: _.get(stats, "enemy.defense.chance.count.total", 0),
               },
               highest: {
                 value: _.get(stats, "enemy.defense.chance.highest.value", 0),
-                amount: _.get(stats, "enemy.defense.chance.highest.amount", 0).toString(),
+                amount: _.get(stats, "enemy.defense.chance.highest.amount", math.bignumber(0)).toString(),
               },
             },
           },
@@ -477,12 +477,10 @@ var stats = {}, achievement = [], options = {}, task = [],
       };
     };
     stats.apply(storeData ? storeData.stats : undefined);
-    if (storeData) {
-      $("input#currentZone").attr({
-        max: stats.zone.current,
-      });
-      $("input#currentZone").val(stats.zone.current);
-    }
+    $("input#currentZone").val(stats.zone.current);
+    $("input#currentZone").attr({
+      max: stats.zone.current,
+    });
   })();
   
   //Bonus data
@@ -3131,6 +3129,7 @@ var stats = {}, achievement = [], options = {}, task = [],
       if (stats.zone.current > stats.zone.beat) {
         stats.enemy.death.required.count ++;
       }
+      enemyRender();
       return returnData;
     },
     revive: function(instant) {
@@ -4277,11 +4276,11 @@ Warning: did not have save feature yet so if you reload the page it will wipe ou
     shopObj = 0;
     return false;
   });
-  var inputBuyAmount = $("input#buyAmount")
+  var inputBuyAmount = $("input#buyAmount");
   inputBuyAmount.change(function() {
     stats.other.buyAmount = Number(inputBuyAmount.val());
   });
-  var inputCurrentZone = $("input#currentZone")
+  var inputCurrentZone = $("input#currentZone");
   inputCurrentZone.change(function() {
     killAllEnemy(true);
     stats.zone.current = Number(inputCurrentZone.val());
