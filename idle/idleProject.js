@@ -1265,97 +1265,6 @@ var stats = {}, achievement = [], options = {}, task = [],
   
   //Player data
   (function() {
-    /*player.damage = {
-      value: {
-        current: undefined,
-        total: undefined,
-        base: math.bignumber(2),
-        count: 0,
-        increment: stats.multiply.lost,
-        cost: {
-          base: math.bignumber(1.5),
-          increment: stats.multiply.base,
-          current: undefined,
-          total: undefined,
-        },
-      },
-      chance: {
-        percent: {
-          current: undefined,
-          total: undefined,
-          base: 0,
-          count: 0,
-          increment: math.bignumber(0),
-          cost: {
-            base: math.bignumber(0),
-            increment: math.bignumber(0),
-            current: undefined,
-            total: undefined,
-          },
-          max: 0,
-        },
-        amount: {
-          current: undefined,
-          total: undefined,
-          base: math.bignumber(0),
-          count: 0,
-          increment: math.bignumber(0),
-          cost: {
-            base: math.bignumber(0),
-            increment: math.bignumber(0),
-            current: undefined,
-            total: undefined,
-          },
-          max: 0,
-        },
-      },
-      multiple: {
-        value: {
-          current: undefined,
-          total: undefined,
-          base: 1,
-          count: 0,
-          increment: 0,
-          cost: {
-            base: math.bignumber(0),
-            increment: math.bignumber(0),
-            current: undefined,
-            total: undefined,
-          },
-          max: 0,
-        },
-        chance: {
-          percent: {
-            current: undefined,
-            total: undefined,
-            base: 0,
-            count: 0,
-            increment: 0,
-            cost: {
-              base: math.bignumber(0),
-              increment: math.bignumber(0),
-              current: undefined,
-              total: undefined,
-            },
-            max: 0,
-          },
-          amount: {
-            current: undefined,
-            total: undefined,
-            base: 1,
-            count: 0,
-            increment: 0,
-            cost: {
-              base: math.bignumber(0),
-              increment: math.bignumber(0),
-              current: undefined,
-              total: undefined,
-            },
-            max: 0,
-          },
-        },
-      },
-    };*/
     player.apply = function(data) {
       player.damage = {
         value: {
@@ -1560,6 +1469,11 @@ var stats = {}, achievement = [], options = {}, task = [],
       realDamage: undefined,
       damageLeft: math.bignumber(0),
     };
+    if (!enemyData) {
+      return {
+        isDead: true,
+      };
+    }
     var blockAmount = Math.configRandom({
       min: 0,
       max: 99,
