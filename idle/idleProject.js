@@ -479,7 +479,7 @@ var stats = {}, achievement = [], options = {}, task = [],
     stats.apply(storeData ? storeData.stats : undefined);
     $("input#currentZone").val(stats.zone.current);
     $("input#currentZone").attr({
-      max: stats.zone.current,
+      max: stats.zone.beat + 1,
     });
   })();
   
