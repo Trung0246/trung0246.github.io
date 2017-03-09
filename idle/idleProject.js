@@ -477,6 +477,11 @@ var stats = {}, achievement = [], options = {}, task = [],
       };
     };
     stats.apply(storeData ? storeData.stats : undefined);
+    if (storeData) {
+      $("input#currentZone").attr({
+        max: stats.zone.beat + 1,
+      });
+    }
   })();
   
   //Bonus data
