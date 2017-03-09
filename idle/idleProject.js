@@ -1816,7 +1816,7 @@ var stats = {}, achievement = [], options = {}, task = [],
         max: {
           current: undefined,
           total: undefined,
-          base: Number(data.death.max.base || 0),
+          base: Number(data.death.max.base || Infinity),
           count: Number(data.death.max.count || 0),
           increment: Number(data.death.max.increment || 0),
           cost: {
