@@ -2,19 +2,10 @@
 body {
   margin: 0px 0px 0px 0px;
   padding: 0px 0px 0px 0px;
+  //font-size: 3vh;
 }
-
-//Variables
-@mainBorder: 2px solid;
-@mainLength: 60%;
-@heightLimit: 94.5%;
-
+//http://jsfiddle.net/Supremacy2k/t5h6vqxj/
 //Functions
-.mainData(@position: absolute, @width: @mainLength / 2%, @overflow: auto) {
-  position: @position;
-  width: @width;
-  overflow: @overflow;
-}
 .pointerHover {
   cursor: pointer;
 }
@@ -30,93 +21,408 @@ body {
 .spacing {
   white-space: pre;
 }
+.setBorder (@border: gray, @width: 1px) {
+  border: @width solid @border;
+  border-radius: 5px;
+}
+.alignTextCenter(@height) {
+  text-align: center;
+  vertical-align: middle;
+  line-height: @height;
+}
+
+.barHolder(@top, @bottom, @color: black, @right: 10px) {
+  overflow: hidden;
+  text-align: center;
+  position: absolute;
+  top: @top;
+  bottom: @bottom;
+  left: 0px;
+  right: @right;
+  .setBorder(@color);
+}
+.barHolder2(@left, @width, @color: black) {
+  overflow: hidden;
+  display: inline-block;
+  box-sizing: border-box;
+  position: absolute;
+  top: 0px;
+  left: @left;
+  width: @width;
+  height: 100%;
+  background-color: @color;
+}
+.barShow {
+  position: absolute;
+  left: 0px;
+  right: 0px;
+}
+.barHolderData(@amount, @color) {
+  width: @amount;
+  height: 100%;
+  background-color: @color;
+}
+
+//Variables
+@mainH: 95vh;
+@leftW: 65%;
+@holderH: 4em;//67.5px;
 
 //Main part
 div {
-  &#uiData {
-    .mainData();
-    width: @mainLength;
-    border: @mainBorder black;
-    text-align: center;
-  }
-  &#heroData {
-    .mainData();
-    top: 26px;
-    height: @heightLimit;
-    border: @mainBorder blue;
-  }
-  &#enemyData {
-    .mainData();
-    top: 26px;
-    left: @mainLength / 2;
-    height: @heightLimit;
-    border: @mainBorder red;
-  }
-  &#shopData {
-    .mainData(absolute, (100% - @mainLength) * 0.985);
-    top: 0%;
-    height: @heightLimit - 40%;
-    right: 0%;
-    border: @mainBorder green;
-  }
-  &#optionData {
-    .mainData(absolute, (100% - @mainLength) * 0.985);
-    //top: @heightLimit - 40%;
-    bottom: 95% - @heightLimit;
-    height: @heightLimit * 0.471;
-    right: 0%;
-    border: @mainBorder aqua;
-    @betweenWidth: 49.5%;
-    @betweenHeight: 75px;
-    #zoneData {
-      width: @betweenWidth;
-      height: @betweenHeight;
-      border: @mainBorder brown;
-      #currentZoneTitle {
-        position: absolute;
-      }
-      input#currentZone {
-        position: absolute;
-        left: 110px;
-        width: 60px;
-        text-align: center;
-      }
-      #requiredKill {
-        position: absolute;
-        top: 25px;
-      }
-      #beatedZone {
-        position: absolute;
-        top: 50px;
-      }
-    }
-    #clickData {
-      border: @mainBorder gray;
-      position: absolute;
-      right: 0px;
-      top: 0px;
-      height: @betweenHeight * 1.8;
+  &#all {
+    box-sizing: border-box;
+    position: relative;
+    top: 1px;
+    height: @mainH;
+    & #mainData {
       display: inline-block;
-      width: @betweenWidth;
-    }
-    #buyData {
-      border: @mainBorder orange;
-      width: @betweenWidth;
-      height: @betweenHeight * 0.75;
-      #buyAmountTitle {
-        position: absolute;
+      position: absolute;
+      bottom: 0px;
+      top: 0px;
+      width: @leftW;
+      padding: 0px;
+      & #statsData {
+        overflow: auto;
+        position: relative;
+        top: 0px;
+        left: 0px;
+        right: 0px;
+        height: 1.75em;//28.5px;
+        margin-bottom: 5px;
+        .alignTextCenter(1.75em);
+        .setBorder(black);
       }
-      input#buyAmount {
+      & #fightData {
         position: absolute;
-        left: 110px;
-        width: 60px;
+        left: 0px;
+        right: 0px;
+        top: calc(1.75em + 0.1px);
+        bottom: 0px;
+        margin-top: 5px;
+        cursor: default;
+        @divide: 3;
+        & #heroData {
+          overflow: auto;
+          display: inline-block;
+          box-sizing: border-box;
+          float: left;
+          position: absolute;
+          width: 49.75%;
+          min-height: 30px;
+          height: 100%;
+          padding: 5px;
+          .setBorder(blue, 3px);
+        }
+        & #enemyData {
+          overflow: auto;
+          display: inline-block;
+          box-sizing: border-box;
+          float: right;
+          position: absolute;
+          right: 0px;
+          width: 49.75%;
+          min-height: 30px;
+          height: 100%;
+          padding: 5px;
+          .setBorder(red, 3px);
+        }
+        & .fightHolder {
+          position: relative;
+          height: @holderH;
+          left: 0px;
+          right: 0px;
+          margin-bottom: 5px;
+          .setBorder(black);
+          & .fightTitle {
+            overflow-x: scroll;
+            overflow-y: hidden;
+            padding-left: 2.5px;
+            position: absolute;
+            left: 0px;
+            right: 1.45em;
+            height: 2.425em;
+            .setBorder(black);
+            & .fightTitleHolder {
+              width: 200%;
+            }
+          }
+          & .fightExpand {
+            .pointerHover();
+            position: absolute;
+            right: 0px;
+            width: 1.35em;
+            height: 2.425em;
+            .alignTextCenter(2.4em);
+            .setBorder(black);
+          }
+          & .fightMain {
+            position: absolute;
+            bottom: 0px;
+            top: 2.5em;//41px;
+            left: 0px;
+            right: 0px;
+            @pos: 30%;
+            & .fightXpHolder {
+              .barHolder((0 / @divide) * 100%, (2 / @divide) * 100%);
+              & .fightXpShow {
+                .barShow();
+              }
+              & .fightXpData {
+                .barHolderData(0%, MediumOrchid);
+              }
+            }
+            & .fightHpHolder {
+              .barHolder((1 / @divide) * 100%, (1 / @divide) * 100%);
+              & .fightHpShow {
+                .barShow();
+              }
+              & .fightHpData {
+                .barHolderData(@pos, red);
+              }
+              & .fightHpRegenHolder {
+                .barHolder2(@pos, 15%, chartreuse);
+                & .fightHpRegenData {
+                  .barHolderData(45%, yellow);
+                }
+              }
+            }
+            & .fightManaHolder {
+              .barHolder((2 / @divide) * 100%, (0 / @divide) * 100%);
+              & .fightManaShow {
+                .barShow();
+              }
+              & .fightManaData {
+                .barHolderData(@pos, blue);
+              }
+              & .fightManaRegenHolder {
+                .barHolder2(@pos, 20%, LightSkyBlue);
+                & .fightManaRegenData {
+                  .barHolderData(45%, DodgerBlue);
+                }
+              }
+            }
+            & .fightAttackHolder {
+              overflow: hidden;
+              position: absolute;
+              right: 0px;
+              top: 0px;
+              bottom: 0px;
+              width: 8px;
+              .setBorder(black);
+              & .fightAttackData {
+                position: absolute;
+                background-color: brown;
+                height: 100%;
+                bottom: 0px;
+                left: 0px;
+                right: 0px;
+              }
+            }
+          }
+        }
+        & .heroNewSlotHolder {
+          left: 0px;
+          right: 0px;
+          min-height: @holderH;
+          .setBorder(black);
+          text-align: center;
+          & .heroNewSlotTitle {
+            font-size: 1.1em;
+          }
+        }
+        & .heroNewHolder {
+          background-color: lightgray;
+        }
+      }
+    }
+    & #uiData {
+      overflow: auto;
+      display: inline-block;
+      position: absolute;
+      top: 0px;
+      left: @leftW + 0.25;
+      bottom: 0px;
+      right: 0px;
+      & #showData {
+        box-sizing: border-box;
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        right: 0px;
+        bottom: 2.7em;
+        cursor: default;
+        margin-bottom: 5px;
+        .setBorder(black);
+        & #showWrapper {
+          position: absolute;
+          left: 0px;
+          right: 0px;
+          top: 0px;
+          bottom: 0px;
+          overflow: auto;
+          & #mainShow {
+            & #clickUpgradeData {
+              display: none;
+            }
+            & #fightUpgradeData {
+              & .fightUpgradeHolder {
+                display: none;
+              }
+              & .fightShowHolder {
+                display: none;
+              }
+            }
+          }
+          & #optionShow {
+            display: none;
+            position: absolute;
+            top: 0px;
+            bottom: 0px;
+            left: 0px;
+            right: 0px;
+            padding: 2.5px;
+            & #optionSaveButton {
+              .alignTextCenter(auto);
+              .setBorder(gray);
+            }
+            & input#autoSaveInput {
+              display: inline-block;
+              margin-top: 2px;
+              width: 45px;
+              .alignTextCenter(auto);
+            }
+            & input#buyAmountInput {
+              display: inline-block;
+              margin-top: 2px;
+              width: 45px;
+              .alignTextCenter(auto);
+            }
+          }
+          & #statsShow {
+            display: none;
+          }
+          & #upgradeShow {
+            display: none;
+            & .upgradeShowData {
+              text-align: center;
+              display: inline-block;
+              box-sizing: border-box;
+              padding: 0px 5px 0px 5px;
+              margin: 5px 0px 0px 5px;
+              .setBorder(grey, 2px);
+            }
+          }
+          & #adventureShow {
+            display: none;
+            position: absolute;
+            left: 0px;
+            right: 0px;
+            top: 0px;
+            bottom: 0px;
+            & .adventureHolder {
+              position: absolute;
+              left: 0px;
+              right: 0px;
+              text-align: center;
+              margin: 2.5px 2.5px 0px 2.5px;
+              .setBorder(gray, 2px);
+              & .zoneInput {
+                width: 50%;
+                text-align: center;
+              }
+            }
+          }
+          & #achievementShow {
+            padding: 2.5px;
+            & .achievementHolder {
+              width: 40px;
+              height: 40px;
+              display: inline-block;
+              margin-bottom: 2.5px;
+              .alignTextCenter(40px);
+              .setBorder(gray, 2px);
+            }
+          }
+        }
+        & #detailShow {
+          display: none;
+          overflow: auto;
+          position: absolute;
+          left: 0px;
+          right: 0px;//17
+          bottom: 0px;
+          height: 150px;
+          background-color: white;
+          .setBorder(gray, 2px);
+          & #detailClose {
+            position: absolute;
+            right: 0px;
+            top: -1px;
+            font-size: 20px;
+            z-index: 1;
+          }
+          & #detailUpgrade {
+            & #buyUpgradeButton {
+              position: relative;
+              left: 0px;
+              right: 0px;
+              top: 0px;
+              height: 23px;
+              .alignTextCenter(23px);
+              .setBorder(darkgray, 2px);
+            }
+          }
+        }
+      }
+      & #optionData {
+        overflow-x: scroll;
+        display: inline-block;
+        position: absolute;
+        bottom: 0px;
+        right: 0px;
+        left: 0px;
+        height: 2.7em;
         text-align: center;
-      }
-      #heroVsEnemy {
-        position: absolute;
-        top: 105px;
+        vertical-align: middle;
+        .setBorder(black);
+        & #optionWrap {
+          position: absolute;
+          width: 1000%;
+          & .optionDataButton {
+            display: inline;
+            box-sizing: border-box;
+            float: left;
+            top: 0px;
+            bottom: 0px;
+            height: 1.68em;
+            margin-right: 5px;
+            padding: 0px 2.5px 0px 2.5px;
+            .alignTextCenter(150%);
+            .setBorder(brown, 2px);
+          }
+        }
       }
     }
+  }
+  &#creditData {
+    text-align: center;
+    box-sizing: border-box;
+    position: absolute;
+    top: calc(@mainH + 0.5px);
+    right: 0px;
+    left: 0px;
+    cursor: default;
+    .setBorder(black);
   }
 }
 
+.fa-arrow-up {
+  color: lightgray;
+}
+.divideLine {
+  left: 0px;
+  right: 0px;
+  border: 1px dashed lightgray;
+  margin: 5px 0px 5px 0px;
+}
