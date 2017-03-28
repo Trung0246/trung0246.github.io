@@ -4,7 +4,7 @@ math.config({
 });
 
 //Main variable code
-var stats = {}, achievement = [], options = {}, task = [],
+var stats = {}, achievement = {}, options = {}, task = [],
     enemy = {
       active: [],
       dead: [],
@@ -15,9 +15,9 @@ var stats = {}, achievement = [], options = {}, task = [],
       wait: [],
       inactive: [],
     }, upgrade = {}, bonus = {},
-    equipment = [], player = {}, temp = {};
+    equipment = [], player = {}, temp = {}, render = {}, option = {};
 
-  var forceStop = false, noSave = false;
+  var forceStop = false, noSave = false, gameSpeed = 1;
 //(function() {
   //Check storage
   var storeData = store.get("saveSlot1");
@@ -27,6 +27,7 @@ var stats = {}, achievement = [], options = {}, task = [],
     var tempList, tempData, loopCount;
     store.set("saveSlot1", {
       stats: stats.extract(),
+      bonus: bonus.extract(),
       player: player.extract(),
       hero: {
         active: (function() {
@@ -52,29 +53,40 @@ var stats = {}, achievement = [], options = {}, task = [],
         })(),
       },
     });
+    return true;
   }
+  
+  //Option data
+  (function() {
+    
+  })();
   
   //Stats data
   (function() {
     stats.level = {
       base: 10,
-      lost: 6.1,
+      lost: 7.25,
     };
     stats.multiply = {};
-    stats.multiply.base = math.bignumber(1.2);
+    stats.multiply.base = math.bignumber(1.125);
     stats.multiply.lost = lostCalculate(stats.multiply.base, stats.level.base, stats.level.lost);
-    stats.multiply.high = math.bignumber(1.5);
     stats.apply = function(obj) {
       obj = obj || {};
       stats.zone = {
-        highest: Number(_.get(obj, "zone.highest", 0)),
-        current: Number(_.get(obj, "zone.current", 0)),
-        beat: Number(_.get(obj, "zone.beat", 0)),
+        main: {
+          highest: Number(_.get(obj, "zone.main.highest", 0)),
+          current: Number(_.get(obj, "zone.main.current", 0)),
+          beat: Number(_.get(obj, "zone.main.beat", 0)),
+          required: {
+            count: Number(_.get(obj, "zone.main.required.count", 0)),
+            max: Number(_.get(obj, "zone.main.required.max", 10)),
+          },
+        },
       };
       stats.prestige = {
-        current: Number(_.get(obj, "prestige.current", 0)),
-        total: Number(_.get(obj, "prestige.total", 0)),
-        multiply: math.pow(lostCalculate(stats.multiply.base, 10, 3.9), 50),
+        count: Number(_.get(obj, "prestige.count", 0)),
+        increment: math.pow(lostCalculate(stats.multiply.base, stats.level.base, stats.level.base - stats.level.lost), 50),
+        multiply: math.bignumber(_.get(obj, "prestige.multiply", 0)),
       };
       stats.clicks = {
         current: Number(_.get(obj, "clicks.current", 0)),
@@ -163,10 +175,6 @@ var stats = {}, achievement = [], options = {}, task = [],
         death: {
           current: Number(_.get(obj, "enemy.death.current", 0)),
           total: Number(_.get(obj, "enemy.death.total", 0)),
-          required: {
-            count: Number(_.get(obj, "enemy.death.required.count", 0)),
-            max: Number(_.get(obj, "enemy.death.required.max", 10)),
-          },
         },
         boss: {
           current: Number(_.get(obj, "enemy.boss.current", 0)),
@@ -264,21 +272,37 @@ var stats = {}, achievement = [], options = {}, task = [],
           min: 1,
           max: 10,
         }))),
+        hpMul: 2,
+        hpBase: 25,
+        manaBase: 10,
+        speedMul: 6.75,
+        randomRange: {
+          min: 0.8,
+          max: 1.2,
+        },
         nextHero: Number(_.get(obj, "other.nextHero", 10)),
         nextEnemy: Number(_.get(obj, "other.nextEnemy", 15)),
         maxZone: Number(_.get(obj, "other.maxZone", 1000)),
-        shopType: "upgrade",
-        shopObj: 0,
+        showType: "upgrade",
+        showObj: 0,
+        detailType: "",
       };
     };
     stats.extract = function() {
       return {
         zone: {
-          highest: _.get(stats, "zone.highest", 0),
-          current: _.get(stats, "zone.current", 0),
-          beat: _.get(stats, "zone.beat", 0),
+          main: {
+            highest: _.get(stats, "zone.main.highest", 0),
+            current: _.get(stats, "zone.main.current", 0),
+            beat: _.get(stats, "zone.main.beat", 0),
+            required: {
+              count: _.get(stats, "zone.main.required.count", 0),
+              max: _.get(stats, "zone.main.required.max", 10),
+            },
+          },
         },
         prestige: {
+          count: _.get(stats, "prestige.count", 0),
           current: _.get(stats, "prestige.current", 0),
           total: _.get(stats, "prestige.total", 0),
         },
@@ -369,10 +393,6 @@ var stats = {}, achievement = [], options = {}, task = [],
           death: {
             current: _.get(stats, "enemy.death.current", 0),
             total: _.get(stats, "enemy.death.total", 0),
-            required: {
-              count: _.get(stats, "enemy.death.required.count", 0),
-              max: _.get(stats, "enemy.death.required.max", 10),
-            },
           },
           boss: {
             current: _.get(stats, "enemy.boss.current", 0),
@@ -477,646 +497,1195 @@ var stats = {}, achievement = [], options = {}, task = [],
       };
     };
     stats.apply(storeData ? storeData.stats : undefined);
-    $("input#currentZone").val(stats.zone.current);
-    $("input#currentZone").attr({
-      max: stats.zone.beat + 1,
-    });
   })();
   
   //Bonus data
   (function() {
-    bonus.data = [];
-    bonus.player = {
-      damage: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-        chance: {
-          percent: {
-            multiply: 0,
-            plus: 0,
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-          amount: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-        },
-        multiple: {
-          value: {
-            multiply: 0,
-            plus: 0,
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-          chance: {
-            percent: {
-              multiply: 0,
-              plus: 0,
-              cost: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-            amount: {
-              multiply: 0,
-              plus: 0,
-              cost: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-          },
-        },
-      },
-    };
-    bonus.hero = {
-      damage: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-        chance: {
-          percent: {
-            multiply: 0,
-            plus: 0,
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-          amount: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-        },
-        speed: {
-          multiply: 0,
-          plus: 0,
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-        multiple: {
-          value: {
-            multiply: 0,
-            plus: 0,
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-          chance: {
-            percent: {
-              multiply: 0,
-              plus: 0,
-              cost: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-            amount: {
-              multiply: 0,
-              plus: 0,
-              cost: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-          },
-        },
-      },
-      defense: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-        chance: {
-          percent: {
-            multiply: 0,
-            plus: 0,
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-          amount: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-        },
-      },
-      magic: {
-        spell: {
-          damage: {
-            value: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-            chance: {
-              percent: {
-                multiply: 0,
-                plus: 0,
-              },
-              amount: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-            speed: {
-              multiply: 0,
-              plus: 0,
-            },
-            multiple: {
-              value: {
-                multiply: 0,
-                plus: 0,
-                cost: {
-                  multiply: math.bignumber(0),
-                  plus: math.bignumber(0),
-                },
-              },
-              chance: {
-                percent: {
-                  multiply: 0,
-                  plus: 0,
-                  cost: {
-                    multiply: math.bignumber(0),
-                    plus: math.bignumber(0),
-                  },
-                },
-                amount: {
-                  multiply: 0,
-                  plus: 0,
-                  cost: {
-                    multiply: math.bignumber(0),
-                    plus: math.bignumber(0),
-                  },
-                },
-              },
-            },
-          },
-          defense: {
-            value: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-            chance: {
-              percent: {
-                multiply: 0,
-                plus: 0,
-              },
-              amount: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-          },
-          //TODO: missed hp, mana, gold, xp
-        },
-        mana: {
-          max: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-          regen: {
-            rate: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-              cost: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-            speed: {
-              multiply: 0,
-              plus: 0,
-              cost: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-          },
-        },
-      },
-      hp: {
-        max: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-          cost: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-        regen: {
-          rate: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-          speed: {
-            multiply: 0,
-            plus: 0,
-            cost: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-        },
-      },
-    };
-    bonus.enemy = {
-      damage: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-        chance: {
-          percent: {
-            multiply: 0,
-            plus: 0,
-          },
-          amount: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-        speed: {
-          multiply: 0,
-          plus: 0,
-        },
-        multiple: {
-          value: {
-            multiply: 0,
-            plus: 0,
-          },
-          chance: {
-            percent: {
-              multiply: 0,
-              plus: 0,
-            },
-            amount: {
-              multiply: 0,
-              plus: 0,
-            },
-          },
-        },
-      },
-      defense: {
-        value: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-        chance: {
-          percent: {
-            multiply: 0,
-            plus: 0,
-          },
-          amount: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-        },
-      },
-      magic: {
-        spell: {
-          damage: {
-            value: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-            chance: {
-              percent: {
-                multiply: 0,
-                plus: 0,
-              },
-              amount: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-            speed: {
-              multiply: 0,
-              plus: 0,
-            },
-            multiple: {
-              value: {
-                multiply: 0,
-                plus: 0,
-                cost: {
-                  multiply: math.bignumber(0),
-                  plus: math.bignumber(0),
-                },
-              },
-              chance: {
-                percent: {
-                  multiply: 0,
-                  plus: 0,
-                  cost: {
-                    multiply: math.bignumber(0),
-                    plus: math.bignumber(0),
-                  },
-                },
-                amount: {
-                  multiply: 0,
-                  plus: 0,
-                  cost: {
-                    multiply: math.bignumber(0),
-                    plus: math.bignumber(0),
-                  },
-                },
-              },
-            },
-          },
-          defense: {
-            value: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-            chance: {
-              percent: {
-                multiply: 0,
-                plus: 0,
-              },
-              amount: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-            },
-          },
-          //TODO: missed hp, mana
-        },
-        mana: {
-          max: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-          regen: {
-            rate: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-            speed: {
-              multiply: 0,
-              plus: 0,
-            },
-          },
-        },
-      },
-      hp: {
-        max: {
-          multiply: math.bignumber(0),
-          plus: math.bignumber(0),
-        },
-        regen: {
-          rate: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
-          },
-          speed: {
-            multiply: 0,
-            plus: 0,
-          },
-        },
-      },
-      boss: {
+    //TODO: all like (all damage, all defense,...) and include enemy
+    bonus.special = {};
+    bonus.apply = function(data) {
+      bonus.data = [];
+      if (_.get(data, "data")) {
+        var tempBonus;
+        for (var loopCount = 0; loopCount < data.data.length; loopCount ++) {
+          tempBonus = new Bonus({
+            object: undefined,
+            type: data.data[loopCount].type,
+            data: undefined,
+          });
+          tempBonus.apply(data.data[loopCount].data);
+          bonus.data.push(tempBonus);
+        }
+      }
+      bonus.hero = {
         damage: {
           value: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
+            multiply: math.bignumber(_.get(data, "hero.damage.value.multiply", 0)),
+            plus: math.bignumber(_.get(data, "hero.damage.value.plus", 0)),
+            cost: {
+              multiply: math.bignumber(_.get(data, "hero.damage.value.cost.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.damage.value.cost.plus", 0)),
+            },
           },
           chance: {
             percent: {
-              multiply: 0,
-              plus: 0,
+              multiply: Number(_.get(data, "hero.damage.chance.percent.multiply", 0)),
+              plus: Number(_.get(data, "hero.damage.chance.percent.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "hero.damage.chance.percent.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.damage.chance.percent.cost.plus", 0)),
+              },
             },
             amount: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
+              multiply: math.bignumber(_.get(data, "hero.damage.chance.amount.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.damage.chance.amount.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "hero.damage.chance.amount.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.damage.chance.amount.cost.plus", 0)),
+              },
             },
           },
           speed: {
-            multiply: 0,
-            plus: 0,
+            multiply: Number(_.get(data, "hero.damage.speed.multiply", 0)),
+            plus: Number(_.get(data, "hero.damage.speed.plus", 0)),
+            cost: {
+              multiply: math.bignumber(_.get(data, "hero.damage.speed.cost.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.damage.speed.cost.plus", 0)),
+            },
           },
           multiple: {
             value: {
-              multiply: 0,
-              plus: 0,
+              multiply: Number(_.get(data, "hero.damage.multiple.value.multiply", 0)),
+              plus: Number(_.get(data, "hero.damage.multiple.value.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "hero.damage.multiple.value.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.damage.multiple.value.cost.plus", 0)),
+              },
             },
             chance: {
               percent: {
-                multiply: 0,
-                plus: 0,
+                multiply: Number(_.get(data, "hero.damage.multiple.chance.percent.multiply", 0)),
+                plus: Number(_.get(data, "hero.damage.multiple.chance.percent.plus", 0)),
+                cost: {
+                  multiply: math.bignumber(_.get(data, "hero.damage.multiple.chance.percent.cost.multiply", 0)),
+                  plus: math.bignumber(_.get(data, "hero.damage.multiple.chance.percent.cost.plus", 0)),
+                },
               },
               amount: {
-                multiply: 0,
-                plus: 0,
+                multiply: Number(_.get(data, "hero.damage.multiple.chance.amount.multiply", 0)),
+                plus: Number(_.get(data, "hero.damage.multiple.chance.amount.plus", 0)),
+                cost: {
+                  multiply: math.bignumber(_.get(data, "hero.damage.multiple.chance.amount.cost.multiply", 0)),
+                  plus: math.bignumber(_.get(data, "hero.damage.multiple.chance.amount.cost.plus", 0)),
+                },
               },
             },
           },
         },
         defense: {
           value: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
+            multiply: math.bignumber(_.get(data, "hero.defense.value.multiply", 0)),
+            plus: math.bignumber(_.get(data, "hero.defense.value.plus", 0)),
+            cost: {
+              multiply: math.bignumber(_.get(data, "hero.defense.value.cost.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.defense.value.cost.plus", 0)),
+            },
           },
           chance: {
             percent: {
-              multiply: 0,
-              plus: 0,
+              multiply: Number(_.get(data, "hero.defense.chance.percent.multiply", 0)),
+              plus: Number(_.get(data, "hero.defense.chance.percent.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "hero.defense.chance.percent.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.defense.chance.percent.cost.plus", 0)),
+              },
             },
             amount: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-          },
-        },
-        magic: {
-          spell: {
-            damage: {
-              value: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-              chance: {
-                percent: {
-                  multiply: 0,
-                  plus: 0,
-                },
-                amount: {
-                  multiply: math.bignumber(0),
-                  plus: math.bignumber(0),
-                },
-              },
-              speed: {
-                multiply: 0,
-                plus: 0,
-              },
-              multiple: {
-                value: {
-                  multiply: 0,
-                  plus: 0,
-                  cost: {
-                    multiply: math.bignumber(0),
-                    plus: math.bignumber(0),
-                  },
-                },
-                chance: {
-                  percent: {
-                    multiply: 0,
-                    plus: 0,
-                    cost: {
-                      multiply: math.bignumber(0),
-                      plus: math.bignumber(0),
-                    },
-                  },
-                  amount: {
-                    multiply: 0,
-                    plus: 0,
-                    cost: {
-                      multiply: math.bignumber(0),
-                      plus: math.bignumber(0),
-                    },
-                  },
-                },
-              },
-            },
-            defense: {
-              value: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-              chance: {
-                percent: {
-                  multiply: 0,
-                  plus: 0,
-                },
-                amount: {
-                  multiply: math.bignumber(0),
-                  plus: math.bignumber(0),
-                },
-              },
-            },
-            //TODO: missed hp, mana
-          },
-          mana: {
-            max: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
-            },
-            regen: {
-              rate: {
-                multiply: math.bignumber(0),
-                plus: math.bignumber(0),
-              },
-              speed: {
-                multiply: 0,
-                plus: 0,
+              multiply: math.bignumber(_.get(data, "hero.defense.chance.amount.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.defense.chance.amount.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "hero.defense.chance.amount.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.defense.chance.amount.cost.plus", 0)),
               },
             },
           },
         },
         hp: {
           max: {
-            multiply: math.bignumber(0),
-            plus: math.bignumber(0),
+            multiply: math.bignumber(_.get(data, "hero.hp.max.multiply", 0)),
+            plus: math.bignumber(_.get(data, "hero.hp.max.plus", 0)),
+            cost: {
+              multiply: math.bignumber(_.get(data, "hero.hp.max.cost.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.hp.max.cost.plus", 0)),
+            },
           },
           regen: {
             rate: {
-              multiply: math.bignumber(0),
-              plus: math.bignumber(0),
+              multiply: math.bignumber(_.get(data, "hero.hp.regen.rate.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.hp.regen.rate.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "hero.hp.regen.rate.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.hp.regen.rate.cost.plus", 0)),
+              },
             },
             speed: {
-              multiply: 0,
-              plus: 0,
+              multiply: Number(_.get(data, "hero.hp.regen.speed.multiply", 0)),
+              plus: Number(_.get(data, "hero.hp.regen.speed.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "hero.hp.regen.speed.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.hp.regen.speed.cost.plus", 0)),
+              },
             },
           },
         },
-      },
-    };
-    bonus.money = {
-      enemy: {
-        multiply: math.bignumber(0),
-        plus: math.bignumber(0),
-      },
-      boss: {
-        multiply: math.bignumber(0),
-        plus: math.bignumber(0),
-      },
-      all: {
-        multiply: math.bignumber(0),
-        plus: math.bignumber(0),
-      },
-      cost: {
-        multiply: math.bignumber(0),
-        plus: math.bignumber(0),
-      },
-    };
-    bonus.xp = {
-      enemy: {
-        multiply: math.bignumber(0),
-        plus: math.bignumber(0),
-      },
-      boss: {
-        multiply: math.bignumber(0),
-        plus: math.bignumber(0),
-      },
-      all: {
-        multiply: math.bignumber(0),
-        plus: math.bignumber(0),
-      },
-      max: {
-        multiply: math.bignumber(0),
-        plus: math.bignumber(0),
-      },
-    };
-    //TODO: all like (all damage, all defense,...) and include enemy
-    bonus.special = {};
-    bonus.apply = function(obj) {
-      
+        magic: {
+          spell: {
+            max: {
+              multiply: Number(_.get(data, "hero.magic.spell.max.multiply", 0)),
+              plus: Number(_.get(data, "hero.magic.spell.max.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "hero.magic.spell.max.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.magic.spell.max.cost.plus", 0)),
+              },
+            },
+            duration: {
+              multiply: Number(_.get(data, "hero.magic.spell.duration.multiply", 0)),
+              plus: Number(_.get(data, "hero.magic.spell.duration.plus", 0)),
+            },
+            delay: {
+              multiply: Number(_.get(data, "hero.magic.spell.delay.multiply", 0)),
+              plus: Number(_.get(data, "hero.magic.spell.delay.plus", 0)),
+            },
+            coolDown: {
+              multiply: Number(_.get(data, "hero.magic.spell.coolDown.multiply", 0)),
+              plus: Number(_.get(data, "hero.magic.spell.coolDown.plus", 0)),
+            },
+          },
+          mana: {
+            max: {
+              multiply: math.bignumber(_.get(data, "hero.magic.mana.max.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.magic.mana.max.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "hero.magic.mana.max.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.magic.mana.max.cost.plus", 0)),
+              },
+            },
+            regen: {
+              rate: {
+                multiply: math.bignumber(_.get(data, "hero.magic.mana.regen.rate.multiply", 0)),
+                plus: math.bignumber(_.get(data, "hero.magic.mana.regen.rate.plus", 0)),
+                cost: {
+                  multiply: math.bignumber(_.get(data, "hero.magic.mana.regen.rate.cost.multiply", 0)),
+                  plus: math.bignumber(_.get(data, "hero.magic.mana.regen.rate.cost.plus", 0)),
+                },
+              },
+              speed: {
+                multiply: Number(_.get(data, "hero.magic.mana.regen.speed.multiply", 0)),
+                plus: Number(_.get(data, "hero.magic.mana.regen.speed.plus", 0)),
+                cost: {
+                  multiply: math.bignumber(_.get(data, "hero.magic.mana.regen.speed.cost.multiply", 0)),
+                  plus: math.bignumber(_.get(data, "hero.magic.mana.regen.speed.cost.plus", 0)),
+                },
+              },
+            },
+          },
+        },
+        death: {
+          speed: {
+            multiply: Number(_.get(data, "hero.death.speed.multiply", 0)),
+            plus: Number(_.get(data, "hero.death.speed.plus", 0)),
+            cost: {
+              multiply: math.bignumber(_.get(data, "hero.death.speed.cost.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.death.speed.cost.plus", 0)),
+            },
+          },
+          max: {
+            multiply: Number(_.get(data, "hero.death.max.multiply", 0)),
+            plus: Number(_.get(data, "hero.death.max.plus", 0)),
+            cost: {
+              multiply: math.bignumber(_.get(data, "hero.death.max.cost.multiply", 0)),
+              plus: math.bignumber(_.get(data, "hero.death.max.cost.plus", 0)),
+            },
+          },
+        },
+      };
+      bonus.enemy = {
+        all: {
+          damage: {
+            value: {
+              multiply: math.bignumber(_.get(data, "enemy.all.damage.value.multiply", 0)),
+              plus: math.bignumber(_.get(data, "enemy.all.damage.value.plus", 0)),
+            },
+            chance: {
+              percent: {
+                multiply: Number(_.get(data, "enemy.all.damage.chance.percent.multiply", 0)),
+                plus: Number(_.get(data, "enemy.all.damage.chance.percent.plus", 0)),
+              },
+              amount: {
+                multiply: math.bignumber(_.get(data, "enemy.all.damage.chance.amount.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.all.damage.chance.amount.plus", 0)),
+              },
+            },
+            speed: {
+              multiply: Number(_.get(data, "enemy.all.damage.speed.multiply", 0)),
+              plus: Number(_.get(data, "enemy.all.damage.speed.plus", 0)),
+            },
+            multiple: {
+              value: {
+                multiply: Number(_.get(data, "enemy.all.damage.multiple.value.multiply", 0)),
+                plus: Number(_.get(data, "enemy.all.damage.multiple.value.plus", 0)),
+              },
+              chance: {
+                percent: {
+                  multiply: Number(_.get(data, "enemy.all.damage.multiple.chance.percent.multiply", 0)),
+                  plus: Number(_.get(data, "enemy.all.damage.multiple.chance.percent.plus", 0)),
+                },
+                amount: {
+                  multiply: Number(_.get(data, "enemy.all.damage.multiple.chance.amount.multiply", 0)),
+                  plus: Number(_.get(data, "enemy.all.damage.multiple.chance.amount.plus", 0)),
+                },
+              },
+            },
+          },
+          defense: {
+            value: {
+              multiply: math.bignumber(_.get(data, "enemy.all.defense.value.multiply", 0)),
+              plus: math.bignumber(_.get(data, "enemy.all.defense.value.plus", 0)),
+            },
+            chance: {
+              percent: {
+                multiply: Number(_.get(data, "enemy.all.defense.chance.percent.multiply", 0)),
+                plus: Number(_.get(data, "enemy.all.defense.chance.percent.plus", 0)),
+              },
+              amount: {
+                multiply: math.bignumber(_.get(data, "enemy.all.defense.chance.amount.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.all.defense.chance.amount.plus", 0)),
+              },
+            },
+          },
+          hp: {
+            max: {
+              multiply: math.bignumber(_.get(data, "enemy.all.hp.max.multiply", 0)),
+              plus: math.bignumber(_.get(data, "enemy.all.hp.max.plus", 0)),
+            },
+            regen: {
+              rate: {
+                multiply: math.bignumber(_.get(data, "enemy.all.hp.regen.rate.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.all.hp.regen.rate.plus", 0)),
+              },
+              speed: {
+                multiply: Number(_.get(data, "enemy.all.hp.regen.speed.multiply", 0)),
+                plus: Number(_.get(data, "enemy.all.hp.regen.speed.plus", 0)),
+              },
+            },
+          },
+          magic: {
+            spell: {
+              max: {
+                multiply: Number(_.get(data, "enemy.all.magic.spell.max.multiply", 0)),
+                plus: Number(_.get(data, "enemy.all.magic.spell.max.plus", 0)),
+              },
+              duration: {
+                multiply: Number(_.get(data, "enemy.all.magic.spell.duration.multiply", 0)),
+                plus: Number(_.get(data, "enemy.all.magic.spell.duration.plus", 0)),
+              },
+              delay: {
+                multiply: Number(_.get(data, "enemy.all.magic.spell.delay.multiply", 0)),
+                plus: Number(_.get(data, "enemy.all.magic.spell.delay.plus", 0)),
+              },
+              coolDown: {
+                multiply: Number(_.get(data, "enemy.all.magic.spell.coolDown.multiply", 0)),
+                plus: Number(_.get(data, "enemy.all.magic.spell.coolDown.plus", 0)),
+              },
+            },
+            mana: {
+              max: {
+                multiply: math.bignumber(_.get(data, "enemy.all.magic.mana.max.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.all.magic.mana.max.plus", 0)),
+              },
+              regen: {
+                rate: {
+                  multiply: math.bignumber(_.get(data, "enemy.all.magic.mana.regen.rate.multiply", 0)),
+                  plus: math.bignumber(_.get(data, "enemy.all.magic.mana.regen.rate.plus", 0)),
+                },
+                speed: {
+                  multiply: Number(_.get(data, "enemy.all.magic.mana.regen.speed.multiply", 0)),
+                  plus: Number(_.get(data, "enemy.all.magic.mana.regen.speed.plus", 0)),
+                },
+              },
+            },
+          },
+          death: {
+            speed: {
+              multiply: Number(_.get(data, "enemy.all.death.speed.multiply", 0)),
+              plus: Number(_.get(data, "enemy.all.death.speed.plus", 0)),
+            },
+            max: {
+              multiply: Number(_.get(data, "enemy.all.death.max.multiply", 0)),
+              plus: Number(_.get(data, "enemy.all.death.max.plus", 0)),
+            },
+          },
+        },
+        normal: {
+          damage: {
+            value: {
+              multiply: math.bignumber(_.get(data, "enemy.normal.damage.value.multiply", 0)),
+              plus: math.bignumber(_.get(data, "enemy.normal.damage.value.plus", 0)),
+            },
+            chance: {
+              percent: {
+                multiply: Number(_.get(data, "enemy.normal.damage.chance.percent.multiply", 0)),
+                plus: Number(_.get(data, "enemy.normal.damage.chance.percent.plus", 0)),
+              },
+              amount: {
+                multiply: math.bignumber(_.get(data, "enemy.normal.damage.chance.amount.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.normal.damage.chance.amount.plus", 0)),
+              },
+            },
+            speed: {
+              multiply: Number(_.get(data, "enemy.normal.damage.speed.multiply", 0)),
+              plus: Number(_.get(data, "enemy.normal.damage.speed.plus", 0)),
+            },
+            multiple: {
+              value: {
+                multiply: Number(_.get(data, "enemy.normal.damage.multiple.value.multiply", 0)),
+                plus: Number(_.get(data, "enemy.normal.damage.multiple.value.plus", 0)),
+              },
+              chance: {
+                percent: {
+                  multiply: Number(_.get(data, "enemy.normal.damage.multiple.chance.percent.multiply", 0)),
+                  plus: Number(_.get(data, "enemy.normal.damage.multiple.chance.percent.plus", 0)),
+                },
+                amount: {
+                  multiply: Number(_.get(data, "enemy.normal.damage.multiple.chance.amount.multiply", 0)),
+                  plus: Number(_.get(data, "enemy.normal.damage.multiple.chance.amount.plus", 0)),
+                },
+              },
+            },
+          },
+          defense: {
+            value: {
+              multiply: math.bignumber(_.get(data, "enemy.normal.defense.value.multiply", 0)),
+              plus: math.bignumber(_.get(data, "enemy.normal.defense.value.plus", 0)),
+            },
+            chance: {
+              percent: {
+                multiply: Number(_.get(data, "enemy.normal.defense.chance.percent.multiply", 0)),
+                plus: Number(_.get(data, "enemy.normal.defense.chance.percent.plus", 0)),
+              },
+              amount: {
+                multiply: math.bignumber(_.get(data, "enemy.normal.defense.chance.amount.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.normal.defense.chance.amount.plus", 0)),
+              },
+            },
+          },
+          hp: {
+            max: {
+              multiply: math.bignumber(_.get(data, "enemy.normal.hp.max.multiply", 0)),
+              plus: math.bignumber(_.get(data, "enemy.normal.hp.max.plus", 0)),
+            },
+            regen: {
+              rate: {
+                multiply: math.bignumber(_.get(data, "enemy.normal.hp.regen.rate.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.normal.hp.regen.rate.plus", 0)),
+              },
+              speed: {
+                multiply: Number(_.get(data, "enemy.normal.hp.regen.speed.multiply", 0)),
+                plus: Number(_.get(data, "enemy.normal.hp.regen.speed.plus", 0)),
+              },
+            },
+          },
+          magic: {
+            spell: {
+              max: {
+                multiply: Number(_.get(data, "enemy.normal.magic.spell.max.multiply", 0)),
+                plus: Number(_.get(data, "enemy.normal.magic.spell.max.plus", 0)),
+              },
+              duration: {
+                multiply: Number(_.get(data, "enemy.normal.magic.spell.duration.multiply", 0)),
+                plus: Number(_.get(data, "enemy.normal.magic.spell.duration.plus", 0)),
+              },
+              delay: {
+                multiply: Number(_.get(data, "enemy.normal.magic.spell.delay.multiply", 0)),
+                plus: Number(_.get(data, "enemy.normal.magic.spell.delay.plus", 0)),
+              },
+              coolDown: {
+                multiply: Number(_.get(data, "enemy.normal.magic.spell.coolDown.multiply", 0)),
+                plus: Number(_.get(data, "enemy.normal.magic.spell.coolDown.plus", 0)),
+              },
+            },
+            mana: {
+              max: {
+                multiply: math.bignumber(_.get(data, "enemy.normal.magic.mana.max.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.normal.magic.mana.max.plus", 0)),
+              },
+              regen: {
+                rate: {
+                  multiply: math.bignumber(_.get(data, "enemy.normal.magic.mana.regen.rate.multiply", 0)),
+                  plus: math.bignumber(_.get(data, "enemy.normal.magic.mana.regen.rate.plus", 0)),
+                },
+                speed: {
+                  multiply: Number(_.get(data, "enemy.normal.magic.mana.regen.speed.multiply", 0)),
+                  plus: Number(_.get(data, "enemy.normal.magic.mana.regen.speed.plus", 0)),
+                },
+              },
+            },
+          },
+          death: {
+            speed: {
+              multiply: Number(_.get(data, "enemy.normal.death.speed.multiply", 0)),
+              plus: Number(_.get(data, "enemy.normal.death.speed.plus", 0)),
+            },
+            max: {
+              multiply: Number(_.get(data, "enemy.normal.death.max.multiply", 0)),
+              plus: Number(_.get(data, "enemy.normal.death.max.plus", 0)),
+            },
+          },
+        },
+        boss: {
+          damage: {
+            value: {
+              multiply: math.bignumber(_.get(data, "enemy.boss.damage.value.multiply", 0)),
+              plus: math.bignumber(_.get(data, "enemy.boss.damage.value.plus", 0)),
+            },
+            chance: {
+              percent: {
+                multiply: Number(_.get(data, "enemy.boss.damage.chance.percent.multiply", 0)),
+                plus: Number(_.get(data, "enemy.boss.damage.chance.percent.plus", 0)),
+              },
+              amount: {
+                multiply: math.bignumber(_.get(data, "enemy.boss.damage.chance.amount.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.boss.damage.chance.amount.plus", 0)),
+              },
+            },
+            speed: {
+              multiply: Number(_.get(data, "enemy.boss.damage.speed.multiply", 0)),
+              plus: Number(_.get(data, "enemy.boss.damage.speed.plus", 0)),
+            },
+            multiple: {
+              value: {
+                multiply: Number(_.get(data, "enemy.boss.damage.multiple.value.multiply", 0)),
+                plus: Number(_.get(data, "enemy.boss.damage.multiple.value.plus", 0)),
+              },
+              chance: {
+                percent: {
+                  multiply: Number(_.get(data, "enemy.boss.damage.multiple.chance.percent.multiply", 0)),
+                  plus: Number(_.get(data, "enemy.boss.damage.multiple.chance.percent.plus", 0)),
+                },
+                amount: {
+                  multiply: Number(_.get(data, "enemy.boss.damage.multiple.chance.amount.multiply", 0)),
+                  plus: Number(_.get(data, "enemy.boss.damage.multiple.chance.amount.plus", 0)),
+                },
+              },
+            },
+          },
+          defense: {
+            value: {
+              multiply: math.bignumber(_.get(data, "enemy.boss.defense.value.multiply", 0)),
+              plus: math.bignumber(_.get(data, "enemy.boss.defense.value.plus", 0)),
+            },
+            chance: {
+              percent: {
+                multiply: Number(_.get(data, "enemy.boss.defense.chance.percent.multiply", 0)),
+                plus: Number(_.get(data, "enemy.boss.defense.chance.percent.plus", 0)),
+              },
+              amount: {
+                multiply: math.bignumber(_.get(data, "enemy.boss.defense.chance.amount.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.boss.defense.chance.amount.plus", 0)),
+              },
+            },
+          },
+          hp: {
+            max: {
+              multiply: math.bignumber(_.get(data, "enemy.boss.hp.max.multiply", 0)),
+              plus: math.bignumber(_.get(data, "enemy.boss.hp.max.plus", 0)),
+            },
+            regen: {
+              rate: {
+                multiply: math.bignumber(_.get(data, "enemy.boss.hp.regen.rate.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.boss.hp.regen.rate.plus", 0)),
+              },
+              speed: {
+                multiply: Number(_.get(data, "enemy.boss.hp.regen.speed.multiply", 0)),
+                plus: Number(_.get(data, "enemy.boss.hp.regen.speed.plus", 0)),
+              },
+            },
+          },
+          magic: {
+            spell: {
+              max: {
+                multiply: Number(_.get(data, "enemy.boss.magic.spell.max.multiply", 0)),
+                plus: Number(_.get(data, "enemy.boss.magic.spell.max.plus", 0)),
+              },
+              duration: {
+                multiply: Number(_.get(data, "enemy.boss.magic.spell.duration.multiply", 0)),
+                plus: Number(_.get(data, "enemy.boss.magic.spell.duration.plus", 0)),
+              },
+              delay: {
+                multiply: Number(_.get(data, "enemy.boss.magic.spell.delay.multiply", 0)),
+                plus: Number(_.get(data, "enemy.boss.magic.spell.delay.plus", 0)),
+              },
+              coolDown: {
+                multiply: Number(_.get(data, "enemy.boss.magic.spell.coolDown.multiply", 0)),
+                plus: Number(_.get(data, "enemy.boss.magic.spell.coolDown.plus", 0)),
+              },
+            },
+            mana: {
+              max: {
+                multiply: math.bignumber(_.get(data, "enemy.boss.magic.mana.max.multiply", 0)),
+                plus: math.bignumber(_.get(data, "enemy.boss.magic.mana.max.plus", 0)),
+              },
+              regen: {
+                rate: {
+                  multiply: math.bignumber(_.get(data, "enemy.boss.magic.mana.regen.rate.multiply", 0)),
+                  plus: math.bignumber(_.get(data, "enemy.boss.magic.mana.regen.rate.plus", 0)),
+                },
+                speed: {
+                  multiply: Number(_.get(data, "enemy.boss.magic.mana.regen.speed.multiply", 0)),
+                  plus: Number(_.get(data, "enemy.boss.magic.mana.regen.speed.plus", 0)),
+                },
+              },
+            },
+          },
+          death: {
+            speed: {
+              multiply: Number(_.get(data, "enemy.boss.death.speed.multiply", 0)),
+              plus: Number(_.get(data, "enemy.boss.death.speed.plus", 0)),
+            },
+            max: {
+              multiply: Number(_.get(data, "enemy.boss.death.max.multiply", 0)),
+              plus: Number(_.get(data, "enemy.boss.death.max.plus", 0)),
+            },
+          },
+        },
+      };
+      bonus.money = {
+        enemy: {
+          multiply: math.bignumber(_.get(data, "money.enemy.multiply", 0)),
+          plus: math.bignumber(_.get(data, "money.enemy.plus", 0)),
+        },
+        boss: {
+          multiply: math.bignumber(_.get(data, "money.boss.multiply", 0)),
+          plus: math.bignumber(_.get(data, "money.boss.plus", 0)),
+        },
+        all: {
+          multiply: math.bignumber(_.get(data, "money.all.multiply", 0)),
+          plus: math.bignumber(_.get(data, "money.all.plus", 0)),
+        },
+        cost: {
+          multiply: math.bignumber(_.get(data, "money.cost.multiply", 0)),
+          plus: math.bignumber(_.get(data, "money.cost.plus", 0)),
+        },
+      };
+      bonus.xp = {
+        enemy: {
+          multiply: math.bignumber(_.get(data, "xp.enemy.multiply", 0)),
+          plus: math.bignumber(_.get(data, "xp.enemy.plus", 0)),
+        },
+        boss: {
+          multiply: math.bignumber(_.get(data, "xp.boss.multiply", 0)),
+          plus: math.bignumber(_.get(data, "xp.boss.plus", 0)),
+        },
+        all: {
+          multiply: math.bignumber(_.get(data, "xp.all.multiply", 0)),
+          plus: math.bignumber(_.get(data, "xp.all.plus", 0)),
+        },
+        max: {
+          multiply: math.bignumber(_.get(data, "xp.max.multiply", 0)),
+          plus: math.bignumber(_.get(data, "xp.max.plus", 0)),
+        },
+      };
     };
     bonus.extract = function() {
-      
+      return {
+        data: (function() {
+          var returnData = [];
+          for (var loopCount = 0; loopCount < bonus.data.length; loopCount ++) {
+            returnData.push(bonus.data[loopCount].extract());
+          }
+          return returnData;
+        })(),
+        hero: {
+          damage: {
+            value: {
+              multiply: bonus.hero.damage.value.multiply.toString(),
+              plus: bonus.hero.damage.value.plus.toString(),
+              cost: {
+                multiply: bonus.hero.damage.value.cost.multiply.toString(),
+                plus: bonus.hero.damage.value.cost.plus.toString(),
+              },
+            },
+            chance: {
+              percent: {
+                multiply: bonus.hero.damage.chance.percent.multiply,
+                plus: bonus.hero.damage.chance.percent.plus,
+                cost: {
+                  multiply: bonus.hero.damage.chance.percent.cost.multiply.toString(),
+                  plus: bonus.hero.damage.chance.percent.cost.plus.toString(),
+                },
+              },
+              amount: {
+                multiply: bonus.hero.damage.chance.amount.multiply.toString(),
+                plus: bonus.hero.damage.chance.amount.plus.toString(),
+                cost: {
+                  multiply: bonus.hero.damage.chance.amount.cost.multiply.toString(),
+                  plus: bonus.hero.damage.chance.amount.cost.plus.toString(),
+                },
+              },
+            },
+            speed: {
+              multiply: bonus.hero.damage.speed.multiply,
+              plus: bonus.hero.damage.speed.plus,
+              cost: {
+                multiply: bonus.hero.damage.speed.cost.multiply.toString(),
+                plus: bonus.hero.damage.speed.cost.plus.toString(),
+              },
+            },
+            multiple: {
+              value: {
+                multiply: bonus.hero.damage.multiple.value.multiply,
+                plus: bonus.hero.damage.multiple.value.plus,
+                cost: {
+                  multiply: bonus.hero.damage.multiple.value.cost.multiply.toString(),
+                  plus: bonus.hero.damage.multiple.value.cost.plus.toString(),
+                },
+              },
+              chance: {
+                percent: {
+                  multiply: bonus.hero.damage.multiple.chance.percent.multiply,
+                  plus: bonus.hero.damage.multiple.chance.percent.plus,
+                  cost: {
+                    multiply: bonus.hero.damage.multiple.chance.percent.cost.multiply.toString(),
+                    plus: bonus.hero.damage.multiple.chance.percent.cost.plus.toString(),
+                  },
+                },
+                amount: {
+                  multiply: bonus.hero.damage.multiple.chance.amount.multiply,
+                  plus: bonus.hero.damage.multiple.chance.amount.plus,
+                  cost: {
+                    multiply: bonus.hero.damage.multiple.chance.amount.cost.multiply.toString(),
+                    plus: bonus.hero.damage.multiple.chance.amount.cost.plus.toString(),
+                  },
+                },
+              },
+            },
+          },
+          defense: {
+            value: {
+              multiply: bonus.hero.defense.value.multiply.toString(),
+              plus: bonus.hero.defense.value.plus.toString(),
+              cost: {
+                multiply: bonus.hero.defense.value.cost.multiply.toString(),
+                plus: bonus.hero.defense.value.cost.plus.toString(),
+              },
+            },
+            chance: {
+              percent: {
+                multiply: bonus.hero.defense.chance.percent.multiply,
+                plus: bonus.hero.defense.chance.percent.plus,
+                cost: {
+                  multiply: bonus.hero.defense.chance.percent.cost.multiply.toString(),
+                  plus: bonus.hero.defense.chance.percent.cost.plus.toString(),
+                },
+              },
+              amount: {
+                multiply: bonus.hero.defense.chance.amount.multiply.toString(),
+                plus: bonus.hero.defense.chance.amount.plus.toString(),
+                cost: {
+                  multiply: bonus.hero.defense.chance.amount.cost.multiply.toString(),
+                  plus: bonus.hero.defense.chance.amount.cost.plus.toString(),
+                },
+              },
+            },
+          },
+          hp: {
+            max: {
+              multiply: bonus.hero.hp.max.multiply.toString(),
+              plus: bonus.hero.hp.max.plus.toString(),
+              cost: {
+                multiply: bonus.hero.hp.max.cost.multiply.toString(),
+                plus: bonus.hero.hp.max.cost.plus.toString(),
+              },
+            },
+            regen: {
+              rate: {
+                multiply: bonus.hero.hp.regen.rate.multiply.toString(),
+                plus: bonus.hero.hp.regen.rate.plus.toString(),
+                cost: {
+                  multiply: bonus.hero.hp.regen.rate.cost.multiply.toString(),
+                  plus: bonus.hero.hp.regen.rate.cost.plus.toString(),
+                },
+              },
+              speed: {
+                multiply: bonus.hero.hp.regen.speed.multiply,
+                plus: bonus.hero.hp.regen.speed.plus,
+                cost: {
+                  multiply: bonus.hero.hp.regen.speed.cost.multiply.toString(),
+                  plus: bonus.hero.hp.regen.speed.cost.plus.toString(),
+                },
+              },
+            },
+          },
+          magic: {
+            spell: {
+              max: {
+                multiply: bonus.hero.magic.spell.max.multiply,
+                plus: bonus.hero.magic.spell.max.plus,
+                cost: {
+                  multiply: bonus.hero.magic.spell.max.cost.multiply.toString(),
+                  plus: bonus.hero.magic.spell.max.cost.plus.toString(),
+                },
+              },
+              duration: {
+                multiply: bonus.hero.magic.spell.duration.multiply,
+                plus: bonus.hero.magic.spell.duration.plus,
+              },
+              delay: {
+                multiply: bonus.hero.magic.spell.delay.multiply,
+                plus: bonus.hero.magic.spell.delay.plus,
+              },
+              coolDown: {
+                multiply: bonus.hero.magic.spell.coolDown.multiply,
+                plus: bonus.hero.magic.spell.coolDown.plus,
+              },
+            },
+            mana: {
+              max: {
+                multiply: bonus.hero.magic.mana.max.multiply.toString(),
+                plus: bonus.hero.magic.mana.max.plus.toString(),
+                cost: {
+                  multiply: bonus.hero.magic.mana.max.cost.multiply.toString(),
+                  plus: bonus.hero.magic.mana.max.cost.plus.toString(),
+                },
+              },
+              regen: {
+                rate: {
+                  multiply: bonus.hero.magic.mana.regen.rate.multiply.toString(),
+                  plus: bonus.hero.magic.mana.regen.rate.plus.toString(),
+                  cost: {
+                    multiply: bonus.hero.magic.mana.regen.rate.cost.multiply.toString(),
+                    plus: bonus.hero.magic.mana.regen.rate.cost.plus.toString(),
+                  },
+                },
+                speed: {
+                  multiply: bonus.hero.magic.mana.regen.speed.multiply,
+                  plus: bonus.hero.magic.mana.regen.speed.plus,
+                  cost: {
+                    multiply: bonus.hero.magic.mana.regen.speed.cost.multiply.toString(),
+                    plus: bonus.hero.magic.mana.regen.speed.cost.plus.toString(),
+                  },
+                },
+              },
+            },
+          },
+          death: {
+            speed: {
+              multiply: bonus.hero.death.speed.multiply,
+              plus: bonus.hero.death.speed.plus,
+              cost: {
+                multiply: bonus.hero.death.speed.cost.multiply.toString(),
+                plus: bonus.hero.death.speed.cost.plus.toString(),
+              },
+            },
+            max: {
+              multiply: bonus.hero.death.max.multiply,
+              plus: bonus.hero.death.max.plus,
+              cost: {
+                multiply: bonus.hero.death.max.cost.multiply.toString(),
+                plus: bonus.hero.death.max.cost.plus.toString(),
+              },
+            },
+          },
+        },
+        enemy: {
+          all: {
+            damage: {
+              value: {
+                multiply: bonus.enemy.all.damage.value.multiply.toString(),
+                plus: bonus.enemy.all.damage.value.plus.toString(),
+              },
+              chance: {
+                percent: {
+                  multiply: bonus.enemy.all.damage.chance.percent.multiply,
+                  plus: bonus.enemy.all.damage.chance.percent.plus,
+                },
+                amount: {
+                  multiply: bonus.enemy.all.damage.chance.amount.multiply.toString(),
+                  plus: bonus.enemy.all.damage.chance.amount.plus.toString(),
+                },
+              },
+              speed: {
+                multiply: bonus.enemy.all.damage.speed.multiply,
+                plus: bonus.enemy.all.damage.speed.plus,
+              },
+              multiple: {
+                value: {
+                  multiply: bonus.enemy.all.damage.multiple.value.multiply,
+                  plus: bonus.enemy.all.damage.multiple.value.plus,
+                },
+                chance: {
+                  percent: {
+                    multiply: bonus.enemy.all.damage.multiple.chance.percent.multiply,
+                    plus: bonus.enemy.all.damage.multiple.chance.percent.plus,
+                  },
+                  amount: {
+                    multiply: bonus.enemy.all.damage.multiple.chance.amount.multiply,
+                    plus: bonus.enemy.all.damage.multiple.chance.amount.plus,
+                  },
+                },
+              },
+            },
+            defense: {
+              value: {
+                multiply: bonus.enemy.all.defense.value.multiply.toString(),
+                plus: bonus.enemy.all.defense.value.plus.toString(),
+              },
+              chance: {
+                percent: {
+                  multiply: bonus.enemy.all.defense.chance.percent.multiply,
+                  plus: bonus.enemy.all.defense.chance.percent.plus,
+                },
+                amount: {
+                  multiply: bonus.enemy.all.defense.chance.amount.multiply.toString(),
+                  plus: bonus.enemy.all.defense.chance.amount.plus.toString(),
+                },
+              },
+            },
+            hp: {
+              max: {
+                multiply: bonus.enemy.all.hp.max.multiply.toString(),
+                plus: bonus.enemy.all.hp.max.plus.toString(),
+              },
+              regen: {
+                rate: {
+                  multiply: bonus.enemy.all.hp.regen.rate.multiply.toString(),
+                  plus: bonus.enemy.all.hp.regen.rate.plus.toString(),
+                },
+                speed: {
+                  multiply: bonus.enemy.all.hp.regen.speed.multiply,
+                  plus: bonus.enemy.all.hp.regen.speed.plus,
+                },
+              },
+            },
+            magic: {
+              spell: {
+                max: {
+                  multiply: bonus.enemy.all.magic.spell.max.multiply,
+                  plus: bonus.enemy.all.magic.spell.max.plus,
+                },
+                duration: {
+                  multiply: bonus.enemy.all.magic.spell.duration.multiply,
+                  plus: bonus.enemy.all.magic.spell.duration.plus,
+                },
+                delay: {
+                  multiply: bonus.enemy.all.magic.spell.delay.multiply,
+                  plus: bonus.enemy.all.magic.spell.delay.plus,
+                },
+                coolDown: {
+                  multiply: bonus.enemy.all.magic.spell.coolDown.multiply,
+                  plus: bonus.enemy.all.magic.spell.coolDown.plus,
+                },
+              },
+              mana: {
+                max: {
+                  multiply: bonus.enemy.all.magic.mana.max.multiply.toString(),
+                  plus: bonus.enemy.all.magic.mana.max.plus.toString(),
+                },
+                regen: {
+                  rate: {
+                    multiply: bonus.enemy.all.magic.mana.regen.rate.multiply.toString(),
+                    plus: bonus.enemy.all.magic.mana.regen.rate.plus.toString(),
+                  },
+                  speed: {
+                    multiply: bonus.enemy.all.magic.mana.regen.speed.multiply,
+                    plus: bonus.enemy.all.magic.mana.regen.speed.plus,
+                  },
+                },
+              },
+            },
+            death: {
+              speed: {
+                multiply: bonus.enemy.all.death.speed.multiply,
+                plus: bonus.enemy.all.death.speed.plus,
+              },
+              max: {
+                multiply: bonus.enemy.all.death.max.multiply,
+                plus: bonus.enemy.all.death.max.plus,
+              },
+            },
+          },
+          normal: {
+            damage: {
+              value: {
+                multiply: bonus.enemy.normal.damage.value.multiply.toString(),
+                plus: bonus.enemy.normal.damage.value.plus.toString(),
+              },
+              chance: {
+                percent: {
+                  multiply: bonus.enemy.normal.damage.chance.percent.multiply,
+                  plus: bonus.enemy.normal.damage.chance.percent.plus,
+                },
+                amount: {
+                  multiply: bonus.enemy.normal.damage.chance.amount.multiply.toString(),
+                  plus: bonus.enemy.normal.damage.chance.amount.plus.toString(),
+                },
+              },
+              speed: {
+                multiply: bonus.enemy.normal.damage.speed.multiply,
+                plus: bonus.enemy.normal.damage.speed.plus,
+              },
+              multiple: {
+                value: {
+                  multiply: bonus.enemy.normal.damage.multiple.value.multiply,
+                  plus: bonus.enemy.normal.damage.multiple.value.plus,
+                },
+                chance: {
+                  percent: {
+                    multiply: bonus.enemy.normal.damage.multiple.chance.percent.multiply,
+                    plus: bonus.enemy.normal.damage.multiple.chance.percent.plus,
+                  },
+                  amount: {
+                    multiply: bonus.enemy.normal.damage.multiple.chance.amount.multiply,
+                    plus: bonus.enemy.normal.damage.multiple.chance.amount.plus,
+                  },
+                },
+              },
+            },
+            defense: {
+              value: {
+                multiply: bonus.enemy.normal.defense.value.multiply.toString(),
+                plus: bonus.enemy.normal.defense.value.plus.toString(),
+              },
+              chance: {
+                percent: {
+                  multiply: bonus.enemy.normal.defense.chance.percent.multiply,
+                  plus: bonus.enemy.normal.defense.chance.percent.plus,
+                },
+                amount: {
+                  multiply: bonus.enemy.normal.defense.chance.amount.multiply.toString(),
+                  plus: bonus.enemy.normal.defense.chance.amount.plus.toString(),
+                },
+              },
+            },
+            hp: {
+              max: {
+                multiply: bonus.enemy.normal.hp.max.multiply.toString(),
+                plus: bonus.enemy.normal.hp.max.plus.toString(),
+              },
+              regen: {
+                rate: {
+                  multiply: bonus.enemy.normal.hp.regen.rate.multiply.toString(),
+                  plus: bonus.enemy.normal.hp.regen.rate.plus.toString(),
+                },
+                speed: {
+                  multiply: bonus.enemy.normal.hp.regen.speed.multiply,
+                  plus: bonus.enemy.normal.hp.regen.speed.plus,
+                },
+              },
+            },
+            magic: {
+              spell: {
+                max: {
+                  multiply: bonus.enemy.normal.magic.spell.max.multiply,
+                  plus: bonus.enemy.normal.magic.spell.max.plus,
+                },
+                duration: {
+                  multiply: bonus.enemy.normal.magic.spell.duration.multiply,
+                  plus: bonus.enemy.normal.magic.spell.duration.plus,
+                },
+                delay: {
+                  multiply: bonus.enemy.normal.magic.spell.delay.multiply,
+                  plus: bonus.enemy.normal.magic.spell.delay.plus,
+                },
+                coolDown: {
+                  multiply: bonus.enemy.normal.magic.spell.coolDown.multiply,
+                  plus: bonus.enemy.normal.magic.spell.coolDown.plus,
+                },
+              },
+              mana: {
+                max: {
+                  multiply: bonus.enemy.normal.magic.mana.max.multiply.toString(),
+                  plus: bonus.enemy.normal.magic.mana.max.plus.toString(),
+                },
+                regen: {
+                  rate: {
+                    multiply: bonus.enemy.normal.magic.mana.regen.rate.multiply.toString(),
+                    plus: bonus.enemy.normal.magic.mana.regen.rate.plus.toString(),
+                  },
+                  speed: {
+                    multiply: bonus.enemy.normal.magic.mana.regen.speed.multiply,
+                    plus: bonus.enemy.normal.magic.mana.regen.speed.plus,
+                  },
+                },
+              },
+            },
+            death: {
+              speed: {
+                multiply: bonus.enemy.normal.death.speed.multiply,
+                plus: bonus.enemy.normal.death.speed.plus,
+              },
+              max: {
+                multiply: bonus.enemy.normal.death.max.multiply,
+                plus: bonus.enemy.normal.death.max.plus,
+              },
+            },
+          },
+          boss: {
+            damage: {
+              value: {
+                multiply: bonus.enemy.boss.damage.value.multiply.toString(),
+                plus: bonus.enemy.boss.damage.value.plus.toString(),
+              },
+              chance: {
+                percent: {
+                  multiply: bonus.enemy.boss.damage.chance.percent.multiply,
+                  plus: bonus.enemy.boss.damage.chance.percent.plus,
+                },
+                amount: {
+                  multiply: bonus.enemy.boss.damage.chance.amount.multiply.toString(),
+                  plus: bonus.enemy.boss.damage.chance.amount.plus.toString(),
+                },
+              },
+              speed: {
+                multiply: bonus.enemy.boss.damage.speed.multiply,
+                plus: bonus.enemy.boss.damage.speed.plus,
+              },
+              multiple: {
+                value: {
+                  multiply: bonus.enemy.boss.damage.multiple.value.multiply,
+                  plus: bonus.enemy.boss.damage.multiple.value.plus,
+                },
+                chance: {
+                  percent: {
+                    multiply: bonus.enemy.boss.damage.multiple.chance.percent.multiply,
+                    plus: bonus.enemy.boss.damage.multiple.chance.percent.plus,
+                  },
+                  amount: {
+                    multiply: bonus.enemy.boss.damage.multiple.chance.amount.multiply,
+                    plus: bonus.enemy.boss.damage.multiple.chance.amount.plus,
+                  },
+                },
+              },
+            },
+            defense: {
+              value: {
+                multiply: bonus.enemy.boss.defense.value.multiply.toString(),
+                plus: bonus.enemy.boss.defense.value.plus.toString(),
+              },
+              chance: {
+                percent: {
+                  multiply: bonus.enemy.boss.defense.chance.percent.multiply,
+                  plus: bonus.enemy.boss.defense.chance.percent.plus,
+                },
+                amount: {
+                  multiply: bonus.enemy.boss.defense.chance.amount.multiply.toString(),
+                  plus: bonus.enemy.boss.defense.chance.amount.plus.toString(),
+                },
+              },
+            },
+            hp: {
+              max: {
+                multiply: bonus.enemy.boss.hp.max.multiply.toString(),
+                plus: bonus.enemy.boss.hp.max.plus.toString(),
+              },
+              regen: {
+                rate: {
+                  multiply: bonus.enemy.boss.hp.regen.rate.multiply.toString(),
+                  plus: bonus.enemy.boss.hp.regen.rate.plus.toString(),
+                },
+                speed: {
+                  multiply: bonus.enemy.boss.hp.regen.speed.multiply,
+                  plus: bonus.enemy.boss.hp.regen.speed.plus,
+                },
+              },
+            },
+            magic: {
+              spell: {
+                max: {
+                  multiply: bonus.enemy.boss.magic.spell.max.multiply,
+                  plus: bonus.enemy.boss.magic.spell.max.plus,
+                },
+                duration: {
+                  multiply: bonus.enemy.boss.magic.spell.duration.multiply,
+                  plus: bonus.enemy.boss.magic.spell.duration.plus,
+                },
+                delay: {
+                  multiply: bonus.enemy.boss.magic.spell.delay.multiply,
+                  plus: bonus.enemy.boss.magic.spell.delay.plus,
+                },
+                coolDown: {
+                  multiply: bonus.enemy.boss.magic.spell.coolDown.multiply,
+                  plus: bonus.enemy.boss.magic.spell.coolDown.plus,
+                },
+              },
+              mana: {
+                max: {
+                  multiply: bonus.enemy.boss.magic.mana.max.multiply.toString(),
+                  plus: bonus.enemy.boss.magic.mana.max.plus.toString(),
+                },
+                regen: {
+                  rate: {
+                    multiply: bonus.enemy.boss.magic.mana.regen.rate.multiply.toString(),
+                    plus: bonus.enemy.boss.magic.mana.regen.rate.plus.toString(),
+                  },
+                  speed: {
+                    multiply: bonus.enemy.boss.magic.mana.regen.speed.multiply,
+                    plus: bonus.enemy.boss.magic.mana.regen.speed.plus,
+                  },
+                },
+              },
+            },
+            death: {
+              speed: {
+                multiply: bonus.enemy.boss.death.speed.multiply,
+                plus: bonus.enemy.boss.death.speed.plus,
+              },
+              max: {
+                multiply: bonus.enemy.boss.death.max.multiply,
+                plus: bonus.enemy.boss.death.max.plus,
+              },
+            },
+          },
+        },
+        money: {
+          enemy: {
+            multiply: bonus.money.enemy.multiply.toString(),
+            plus: bonus.money.enemy.plus.toString(),
+          },
+          boss: {
+            multiply: bonus.money.boss.multiply.toString(),
+            plus: bonus.money.boss.plus.toString(),
+          },
+          all: {
+            multiply: bonus.money.all.multiply.toString(),
+            plus: bonus.money.all.plus.toString(),
+          },
+          cost: {
+            multiply: bonus.money.cost.multiply.toString(),
+            plus: bonus.money.cost.plus.toString(),
+          },
+        },
+        xp: {
+          enemy: {
+            multiply: bonus.xp.enemy.multiply.toString(),
+            plus: bonus.xp.enemy.plus.toString(),
+          },
+          boss: {
+            multiply: bonus.xp.boss.multiply.toString(),
+            plus: bonus.xp.boss.plus.toString(),
+          },
+          all: {
+            multiply: bonus.xp.all.multiply.toString(),
+            plus: bonus.xp.all.plus.toString(),
+          },
+          max: {
+            multiply: bonus.xp.max.multiply.toString(),
+            plus: bonus.xp.max.plus.toString(),
+          },
+        },
+      };
     };
+    bonus.apply(storeData ? storeData.bonus : undefined);
   })();
   
   //Upgrade data
@@ -1140,6 +1709,7 @@ var stats = {}, achievement = [], options = {}, task = [],
       return this.list[this.type].call(param || this);
     },
     apply: function(data) {
+      this.click = data.click || this.list[this.type].click || function() {};
       return this.list[this.type].apply(this, data);
     },
     extract: function() {
@@ -1151,33 +1721,33 @@ var stats = {}, achievement = [], options = {}, task = [],
     list: {
       heroLevelUp: {
         template: function(obj) {
-          obj.data = {
+          return {
             damage: {
               previous: math.bignumber(0),
-              increment: math.bignumber(0),
+              increment: lostCalculate(obj.object.damage.value.increment, 10, 3),
             },
             defense: {
               previous: math.bignumber(0),
-              increment: math.bignumber(0),
+              increment: lostCalculate(obj.object.defense.value.increment, 10, 3),
             },
             hp: {
               max: {
                 previous: math.bignumber(0),
-                increment: math.bignumber(0),
+                increment: lostCalculate(obj.object.hp.max.increment, 10, 3),
               },
               rate: {
                 previous: math.bignumber(0),
-                increment: math.bignumber(0),
+                increment: lostCalculate(obj.object.hp.regen.rate.increment, 10, 3),
               },
             },
             mana: {
               max: {
                 previous: math.bignumber(0),
-                increment: math.bignumber(0),
+                increment: lostCalculate(obj.object.magic.mana.max.increment, 10, 3),
               },
               rate: {
                 previous: math.bignumber(0),
-                increment: math.bignumber(0),
+                increment: lostCalculate(obj.object.magic.mana.regen.rate.increment, 10, 3),
               },
             },
           };
@@ -1252,6 +1822,13 @@ var stats = {}, achievement = [], options = {}, task = [],
         },
       },
     },
+  };
+  
+  function Spell(data) {
+    
+  }
+  Spell.prototype = {
+    
   };
   
   function Equipment(data) {
@@ -1355,6 +1932,72 @@ var stats = {}, achievement = [], options = {}, task = [],
           },
         },
       };
+      player.bonus = {
+        damage: {
+          value: {
+            multiply: math.bignumber(_.get(data, "bonus.damage.value.multiply", 0)),
+            plus: math.bignumber(_.get(data, "bonus.damage.value.plus", 0)),
+            cost: {
+              multiply: math.bignumber(_.get(data, "bonus.damage.value.cost.multiply", 0)),
+              plus: math.bignumber(_.get(data, "bonus.damage.value.cost.plus", 0)),
+            },
+          },
+          chance: {
+            percent: {
+              multiply: Number(_.get(data, "bonus.damage.chance.percent.multiply", 0)),
+              plus: Number(_.get(data, "bonus.damage.chance.percent.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "bonus.damage.chance.percent.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "bonus.damage.chance.percent.cost.plus", 0)),
+              },
+            },
+            amount: {
+              multiply: math.bignumber(_.get(data, "bonus.damage.chance.amount.multiply", 0)),
+              plus: math.bignumber(_.get(data, "bonus.damage.chance.amount.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "bonus.damage.chance.amount.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "bonus.damage.chance.amount.cost.plus", 0)),
+              },
+            },
+          },
+          speed: {
+            multiply: Number(_.get(data, "bonus.damage.speed.multiply", 0)),
+            plus: Number(_.get(data, "bonus.damage.speed.plus", 0)),
+            cost: {
+              multiply: math.bignumber(_.get(data, "bonus.damage.speed.cost.multiply", 0)),
+              plus: math.bignumber(_.get(data, "bonus.damage.speed.cost.plus", 0)),
+            },
+          },
+          multiple: {
+            value: {
+              multiply: Number(_.get(data, "bonus.damage.multiple.value.multiply", 0)),
+              plus: Number(_.get(data, "bonus.damage.multiple.value.plus", 0)),
+              cost: {
+                multiply: math.bignumber(_.get(data, "bonus.damage.multiple.value.cost.multiply", 0)),
+                plus: math.bignumber(_.get(data, "bonus.damage.multiple.value.cost.plus", 0)),
+              },
+            },
+            chance: {
+              percent: {
+                multiply: Number(_.get(data, "bonus.damage.multiple.chance.percent.multiply", 0)),
+                plus: Number(_.get(data, "bonus.damage.multiple.chance.percent.plus", 0)),
+                cost: {
+                  multiply: math.bignumber(_.get(data, "bonus.damage.multiple.chance.percent.cost.multiply", 0)),
+                  plus: math.bignumber(_.get(data, "bonus.damage.multiple.chance.percent.cost.plus", 0)),
+                },
+              },
+              amount: {
+                multiply: Number(_.get(data, "bonus.damage.multiple.chance.amount.multiply", 0)),
+                plus: Number(_.get(data, "bonus.damage.multiple.chance.amount.plus", 0)),
+                cost: {
+                  multiply: math.bignumber(_.get(data, "bonus.damage.multiple.chance.amount.cost.multiply", 0)),
+                  plus: math.bignumber(_.get(data, "bonus.damage.multiple.chance.amount.cost.plus", 0)),
+                },
+              },
+            },
+          },
+        },
+      };
     };
     player.extract = function() {
       return {
@@ -1425,100 +2068,160 @@ var stats = {}, achievement = [], options = {}, task = [],
             },
           },
         },
+        bonus: {
+          damage: {
+            value: {
+              multiply: player.bonus.damage.value.multiply.toString(),
+              plus: player.bonus.damage.value.plus.toString(),
+              cost: {
+                multiply: player.bonus.damage.value.cost.multiply.toString(),
+                plus: player.bonus.damage.value.cost.plus.toString(),
+              },
+            },
+            chance: {
+              percent: {
+                multiply: player.bonus.damage.chance.percent.multiply,
+                plus: player.bonus.damage.chance.percent.plus,
+                cost: {
+                  multiply: player.bonus.damage.chance.percent.cost.multiply.toString(),
+                  plus: player.bonus.damage.chance.percent.cost.plus.toString(),
+                },
+              },
+              amount: {
+                multiply: player.bonus.damage.chance.amount.multiply.toString(),
+                plus: player.bonus.damage.chance.amount.plus.toString(),
+                cost: {
+                  multiply: player.bonus.damage.chance.amount.cost.multiply.toString(),
+                  plus: player.bonus.damage.chance.amount.cost.plus.toString(),
+                },
+              },
+            },
+            speed: {
+              multiply: player.bonus.damage.speed.multiply,
+              plus: player.bonus.damage.speed.plus,
+              cost: {
+                multiply: player.bonus.damage.speed.cost.multiply.toString(),
+                plus: player.bonus.damage.speed.cost.plus.toString(),
+              },
+            },
+            multiple: {
+              value: {
+                multiply: player.bonus.damage.multiple.value.multiply,
+                plus: player.bonus.damage.multiple.value.plus,
+                cost: {
+                  multiply: player.bonus.damage.multiple.value.cost.multiply.toString(),
+                  plus: player.bonus.damage.multiple.value.cost.plus.toString(),
+                },
+              },
+              chance: {
+                percent: {
+                  multiply: player.bonus.damage.multiple.chance.percent.multiply,
+                  plus: player.bonus.damage.multiple.chance.percent.plus,
+                  cost: {
+                    multiply: player.bonus.damage.multiple.chance.percent.cost.multiply.toString(),
+                    plus: player.bonus.damage.multiple.chance.percent.cost.plus.toString(),
+                  },
+                },
+                amount: {
+                  multiply: player.bonus.damage.multiple.chance.amount.multiply,
+                  plus: player.bonus.damage.multiple.chance.amount.plus,
+                  cost: {
+                    multiply: player.bonus.damage.multiple.chance.amount.cost.multiply.toString(),
+                    plus: player.bonus.damage.multiple.chance.amount.cost.plus.toString(),
+                  },
+                },
+              },
+            },
+          },
+        },
       };
+    };
+    player.attack = function(enemyData, amount) {
+      var returnData = {
+        target: undefined,
+        damageAmount: undefined,
+        defenseAmount: undefined,
+        realDamage: undefined,
+        damageLeft: math.bignumber(0),
+      };
+      var blockAmount = Math.configRandom({
+        min: 0,
+        max: 99,
+      }) <= enemyData.defense.chance.percent.total ? enemyData.defense.chance.amount.total : 1;
+      var damageAmount = Math.configRandom({
+        min: 0,
+        max: 99,
+      }) <= player.damage.chance.percent.total ? player.damage.chance.amount.total : 1;
+      returnData.damageAmount = math.multiply(amount || player.damage.value.total, damageAmount);
+      returnData.defenseAmount = math.multiply(enemyData.defense.value.total, blockAmount);
+      if (math.compare(returnData.defenseAmount, 0).toNumber() <= 0) {
+        returnData.defenseAmount = 1;
+      }
+      returnData.realDamage = math.divide(returnData.damageAmount, returnData.defenseAmount);
+      var tempPreviousHp = enemyData.hp.value.toString();
+      enemyData.hp.value = math.subtract(enemyData.hp.value, (math.compare(returnData.realDamage, 0).toNumber() <= 0 ? 0 : returnData.realDamage));
+      if (math.compare(enemyData.hp.value, 0).toNumber() <= 0) {
+        returnData.damageLeft = math.abs(enemyData.hp.value);
+        enemyData.kill();
+      }
+      returnData.target = enemyData;
+      return returnData;
+    };
+    player.update = function() {
+      //Damage
+      objCurrentCal(player.damage.value, "bignumber");
+      objCurrentCal(player.damage.chance.percent, "add");
+      objCurrentCal(player.damage.chance.amount, "bignumber");
+      objCurrentCal(player.damage.multiple.value, "add");
+      objCurrentCal(player.damage.multiple.chance.percent, "add");
+      objCurrentCal(player.damage.multiple.chance.amount, "add");
+      objCurrentCal(player.damage.value, "cost");
+      objCurrentCal(player.damage.chance.percent, "cost");
+      objCurrentCal(player.damage.chance.amount, "cost");
+      objCurrentCal(player.damage.multiple.value, "cost");
+      objCurrentCal(player.damage.multiple.chance.percent, "cost");
+      objCurrentCal(player.damage.multiple.chance.amount, "cost");
+      //Total
+      objTotalCal(player.damage.value, "bignumber", [player.bonus.damage.value.multiply], [player.bonus.damage.value.plus]);
+      objTotalCal(player.damage.chance.percent, "add", [player.bonus.damage.chance.percent.multiply], [player.bonus.damage.chance.percent.plus]);
+      objTotalCal(player.damage.chance.amount, "bignumber", [player.bonus.damage.chance.amount.multiply], [player.bonus.damage.chance.amount.plus]);
+      objTotalCal(player.damage.multiple.value, "add", [player.bonus.damage.multiple.value.multiply], [player.bonus.damage.multiple.value.plus]);
+      objTotalCal(player.damage.multiple.chance.percent, "bignumber", [player.bonus.damage.multiple.chance.percent.multiply], [player.bonus.damage.multiple.chance.percent.plus]);
+      objTotalCal(player.damage.multiple.chance.amount, "add", [player.bonus.damage.multiple.chance.amount.multiply], [player.bonus.damage.multiple.chance.amount.plus]);
+      objTotalCal(player.damage.value, "cost", [player.bonus.damage.value.cost.multiply], [player.bonus.damage.value.cost.plus]);
+      objTotalCal(player.damage.chance.percent, "cost", [player.bonus.damage.chance.percent.cost.multiply], [player.bonus.damage.chance.percent.cost.plus]);
+      objTotalCal(player.damage.chance.amount, "cost", [player.bonus.damage.chance.amount.cost.multiply], [player.bonus.damage.chance.amount.cost.plus]);
+      objTotalCal(player.damage.multiple.value, "cost", [player.bonus.damage.multiple.value.cost.multiply], [player.bonus.damage.multiple.value.cost.plus]);
+      objTotalCal(player.damage.multiple.chance.percent, "cost", [player.bonus.damage.multiple.chance.percent.cost.multiply], [player.bonus.damage.multiple.chance.percent.cost.plus]);
+      objTotalCal(player.damage.multiple.chance.amount, "cost", [player.bonus.damage.multiple.chance.amount.cost.multiply], [player.bonus.damage.multiple.chance.amount.cost.plus]);
+    };
+    player.buy = function(stringLocation, amount, isCost) {
+      var tempObj = _.get(player, stringLocation), tempBonus = _.get(player, "bonus." + stringLocation), tempCost, returnData = {
+        cost: undefined,
+        amount: undefined,
+        bought: false,
+        max: false,
+      };
+      if (tempObj.count + amount > tempObj.max && tempObj.max !== undefined && !isCost) {
+        amount = tempObj.max - tempObj.count;
+        if (amount <= 0) {
+          returnData.max = true;
+        }
+      }
+      tempCost = totalCalculate("bignumber", costCalculate(tempObj.cost.base, tempObj.cost.increment, tempObj.count, amount), [tempBonus.cost.multiply, _.get(player.bonus, stringLocation + ".cost.multiply")], [tempBonus.cost.plus, _.get(player.bonus, stringLocation + ".cost.plus")]);
+      if (math.compare(stats.money.current, tempCost).toNumber() > -1 && amount > 0 && !isCost) {
+        stats.money.current = math.subtract(stats.money.current, tempCost);
+        tempObj.count += amount;
+        returnData.bought = true;
+        player.update();
+      }
+      returnData.cost = tempCost;
+      returnData.amount = amount;
+      return returnData;
     };
     player.apply(storeData ? storeData.player : undefined);
-    updatePlayer();
+    player.update();
   })();
-  
-  function updatePlayer() {
-    //Damage
-    objCurrentCal(player.damage.value, "bignumber");
-    objCurrentCal(player.damage.chance.percent, "add");
-    objCurrentCal(player.damage.chance.amount, "bignumber");
-    objCurrentCal(player.damage.multiple.value, "add");
-    objCurrentCal(player.damage.multiple.chance.percent, "add");
-    objCurrentCal(player.damage.multiple.chance.amount, "add");
-    objCurrentCal(player.damage.value, "cost");
-    objCurrentCal(player.damage.chance.percent, "cost");
-    objCurrentCal(player.damage.chance.amount, "cost");
-    objCurrentCal(player.damage.multiple.value, "cost");
-    objCurrentCal(player.damage.multiple.chance.percent, "cost");
-    objCurrentCal(player.damage.multiple.chance.amount, "cost");
-    //Total
-    objTotalCal(player.damage.value, "bignumber", [bonus.player.damage.value.multiply], [bonus.player.damage.value.plus]);
-    objTotalCal(player.damage.chance.percent, "add", [bonus.player.damage.chance.percent.multiply], [bonus.player.damage.chance.percent.plus]);
-    objTotalCal(player.damage.chance.amount, "bignumber", [bonus.player.damage.chance.amount.multiply], [bonus.player.damage.chance.amount.plus]);
-    objTotalCal(player.damage.multiple.value, "add", [bonus.player.damage.multiple.value.multiply], [bonus.player.damage.multiple.value.plus]);
-    objTotalCal(player.damage.multiple.chance.percent, "bignumber", [bonus.player.damage.multiple.chance.percent.multiply], [bonus.player.damage.multiple.chance.percent.plus]);
-    objTotalCal(player.damage.multiple.chance.amount, "bignumber", [bonus.player.damage.multiple.chance.amount.multiply], [bonus.player.damage.multiple.chance.amount.plus]);
-    objTotalCal(player.damage.value, "cost", [bonus.player.damage.value.cost.multiply], [bonus.player.damage.value.cost.plus]);
-    objTotalCal(player.damage.chance.percent, "cost", [bonus.player.damage.chance.percent.cost.multiply], [bonus.player.damage.chance.percent.cost.plus]);
-    objTotalCal(player.damage.chance.amount, "cost", [bonus.player.damage.chance.amount.cost.multiply], [bonus.player.damage.chance.amount.cost.plus]);
-    objTotalCal(player.damage.multiple.value, "cost", [bonus.player.damage.multiple.value.cost.multiply], [bonus.player.damage.multiple.value.cost.plus]);
-    objTotalCal(player.damage.multiple.chance.percent, "cost", [bonus.player.damage.multiple.chance.percent.cost.multiply], [bonus.player.damage.multiple.chance.percent.cost.plus]);
-    objTotalCal(player.damage.multiple.chance.amount, "cost", [bonus.player.damage.multiple.chance.amount.cost.multiply], [bonus.player.damage.multiple.chance.amount.cost.plus]);
-  }
-  function playerAttack(enemyData, amount) {
-    var returnData = {
-      target: undefined,
-      damageAmount: undefined,
-      defenseAmount: undefined,
-      realDamage: undefined,
-      damageLeft: math.bignumber(0),
-    };
-    if (!enemyData) {
-      return {
-        isDead: true,
-      };
-    }
-    var blockAmount = Math.configRandom({
-      min: 0,
-      max: 99,
-    }) <= enemyData.defense.chance.percent.total ? enemyData.defense.chance.amount.total : 1;
-    var damageAmount = Math.configRandom({
-      min: 0,
-      max: 99,
-    }) <= player.damage.chance.percent.total ? player.damage.chance.amount.total : 1;
-    returnData.damageAmount = math.multiply(amount || player.damage.value.total, damageAmount);
-    returnData.defenseAmount = math.multiply(enemyData.defense.value.total, blockAmount);
-    if (math.compare(returnData.defenseAmount, 0).toNumber() <= 0) {
-      returnData.defenseAmount = 1;
-    }
-    returnData.realDamage = math.divide(returnData.damageAmount, returnData.defenseAmount);
-    var tempPreviousHp = enemyData.hp.value.toString();
-    enemyData.hp.value = math.subtract(enemyData.hp.value, (math.compare(returnData.realDamage, 0).toNumber() <= 0 ? 0 : returnData.realDamage));
-    if (math.compare(enemyData.hp.value, 0).toNumber() <= 0) {
-      returnData.damageLeft = math.abs(enemyData.hp.value);
-      enemyData.kill();
-    }
-    returnData.target = enemyData;
-    return returnData;
-  }
-  function upgradePlayer(stringArray, amount, isCost) {
-    var tempObj = getObjData(player, stringArray), tempBonus = getObjData(bonus, [].concat("player", stringArray)), tempCost, returnData = {
-      cost: undefined,
-      amount: undefined,
-      bought: false,
-      max: false,
-    };
-    if (tempObj.count + amount > tempObj.max && tempObj.max !== undefined && !isCost) {
-      amount = tempObj.max - tempObj.count;
-      if (amount <= 0) {
-        returnData.max = true;
-      }
-    }
-    tempCost = math.add(math.multiply(costCalculate(tempObj.cost.base, tempObj.cost.increment, tempObj.count, amount), math.add(tempBonus.cost.multiply, 1)), tempBonus.cost.plus);
-    if (math.compare(stats.money.current, tempCost).toNumber() > -1 && amount > 0 && !isCost) {
-      stats.money.current = math.subtract(stats.money.current, tempCost);
-      tempObj.count += amount;
-      returnData.bought = true;
-      updatePlayer();
-    }
-    returnData.cost = tempCost;
-    returnData.amount = amount;
-    return returnData;
-  }
   
   function Hero(data) {
   }
@@ -1842,36 +2545,7 @@ var stats = {}, achievement = [], options = {}, task = [],
         xpBonus: new Bonus({
           object: tempHero,
           type: "heroLevelUp",
-          data: {
-            damage: {
-              previous: math.bignumber(0),
-              increment: lostCalculate(tempHero.damage.value.increment, 10, 3),
-            },
-            defense: {
-              previous: math.bignumber(0),
-              increment: lostCalculate(tempHero.defense.value.increment, 10, 3),
-            },
-            hp: {
-              max: {
-                previous: math.bignumber(0),
-                increment: lostCalculate(tempHero.hp.max.increment, 10, 3),
-              },
-              rate: {
-                previous: math.bignumber(0),
-                increment: lostCalculate(tempHero.hp.regen.rate.increment, 10, 3),
-              },
-            },
-            mana: {
-              max: {
-                previous: math.bignumber(0),
-                increment: lostCalculate(tempHero.magic.mana.max.increment, 10, 3),
-              },
-              rate: {
-                previous: math.bignumber(0),
-                increment: lostCalculate(tempHero.magic.mana.regen.rate.increment, 10, 3),
-              },
-            },
-          },
+          data: undefined,
         }) || undefined,
       };
       if (data._.xpBonus) {
@@ -1885,8 +2559,9 @@ var stats = {}, achievement = [], options = {}, task = [],
             tempBonus = new Bonus({
               object: tempHero,
               type: data.bonus.data[loopCount].type,
-              data: data.bonus.data[loopCount].data,
+              data: undefined,
             });
+            tempBonus.apply(data.bonus.data[loopCount].data);
             tempBonusList.push(tempBonus);
           }
           return tempBonusList;
@@ -2035,6 +2710,10 @@ var stats = {}, achievement = [], options = {}, task = [],
               multiply: Number(data.bonus.magic.spell.duration.multiply || 0),
               plus: Number(data.bonus.magic.spell.duration.plus || 0),
             },
+            delay: {
+              multiply: Number(data.bonus.magic.spell.delay.multiply || 0),
+              plus: Number(data.bonus.magic.spell.delay.plus || 0),
+            },
             coolDown: {
               multiply: Number(data.bonus.magic.spell.coolDown.multiply || 0),
               plus: Number(data.bonus.magic.spell.coolDown.plus || 0),
@@ -2095,18 +2774,17 @@ var stats = {}, achievement = [], options = {}, task = [],
       var returnData = [];
       if (!instant) {
         this._.coolDown.damage --;
-        if (this._.coolDown.damage <= 0) {
-          this._.coolDown.damage = 0;
-          this._.coolDown.damage = this.damage.speed.total;
-        } else {
+        if (this._.coolDown.damage > 0) {
           return;
+        } else {
+          this._.coolDown.damage = this.damage.speed.total;
         }
       }
       if (!enemyData) {
         var splashAmount = Math.configRandom({
           min: 0,
           max: 99,
-        }) < this.damage.multiple.chance.percent.total ? this.damage.multiple.chance.amount : this.damage.multiple.value.total;
+        }) < this.damage.multiple.chance.percent.total ? this.damage.multiple.chance.amount.total : this.damage.multiple.value.total;
         for (var attackCount = 0; attackCount < splashAmount; attackCount ++) {
           if (enemy.active.length <= 0) {
             break;
@@ -2127,10 +2805,10 @@ var stats = {}, achievement = [], options = {}, task = [],
       var returnData;
       switch (regenType) {
         case "hp": {
+          this._.coolDown.hp --;
           if (this._.coolDown.hp <= 0 || instant) {
             this._.coolDown.hp = this.hp.regen.speed.total;
           } else {
-            this._.coolDown.hp --;
             return;
           }
           if (math.compare(this.hp.value, this.hp.max.total) < 0) {
@@ -2144,10 +2822,10 @@ var stats = {}, achievement = [], options = {}, task = [],
         }
         break;
         case "mana": {
+          this._.coolDown.mana --;
           if (this._.coolDown.mana <= 0 || instant) {
             this._.coolDown.mana = this.magic.mana.regen.speed.total;
           } else {
-            this._.coolDown.mana --;
             return;
           }
           if (math.compare(this.magic.mana.value, this.magic.mana.max.total) < 0) {
@@ -2179,8 +2857,8 @@ var stats = {}, achievement = [], options = {}, task = [],
       }
       return returnData;
     },
-    upgrade: function(stringArray, amount, isCost) {
-      var tempObj = getObjData(this, stringArray), tempBonus = getObjData(this, [].concat("bonus", stringArray)), tempCost, returnData = {
+    buy: function(stringLocation, amount, isCost) {
+      var tempObj = _.get(this, stringLocation), tempBonus = _.get(this, "bonus." + stringLocation), tempCost, returnData = {
         cost: undefined,
         amount: undefined,
         bought: false,
@@ -2192,7 +2870,7 @@ var stats = {}, achievement = [], options = {}, task = [],
           returnData.max = true;
         }
       }
-      tempCost = totalCalculate("bignumber", costCalculate(tempObj.cost.base, tempObj.cost.increment, tempObj.count, amount), [tempBonus.cost.multiply], [tempBonus.cost.plus]);
+      tempCost = totalCalculate("bignumber", costCalculate(tempObj.cost.base, tempObj.cost.increment, tempObj.count, amount), [tempBonus.cost.multiply, _.get(bonus.hero, stringLocation + ".cost.multiply")], [tempBonus.cost.plus, _.get(bonus.hero, stringLocation + ".cost.plus")]);
       if (math.compare(stats.money.current, tempCost).toNumber() > -1 && amount > 0 && !isCost) {
         stats.money.current = math.subtract(stats.money.current, tempCost);
         tempObj.count += amount;
@@ -2210,7 +2888,19 @@ var stats = {}, achievement = [], options = {}, task = [],
       this.death.total ++;
       hero.dead.push(this);
       hero.active.splice(hero.active.indexOf(this), 1);
+      render.downHero(this);
       return returnData;
+    },
+    erase: function() {
+      this.death.bool = true;
+      hero.inactive.push(this);
+      var activeIndexOf = hero.active.indexOf(this), deadIndexOf = hero.dead.indexOf(this);
+      if (activeIndexOf > -1) {
+        hero.active.splice(activeIndexOf, 1);
+      }
+      hero.dead.splice(deadIndexOf, 1);
+      render.removeHero(this);
+      return true;
     },
     revive: function(instant) {
       if (this._.coolDown.death > 0 && !instant) {
@@ -2246,21 +2936,118 @@ var stats = {}, achievement = [], options = {}, task = [],
       objCurrentCal(this.damage.multiple.chance.percent, "cost");
       objCurrentCal(this.damage.multiple.chance.amount, "cost");
       //Total
-      objTotalCal(this.damage.value, "bignumber", [this.bonus.damage.value.multiply], [this.bonus.damage.value.plus]);
-      objTotalCal(this.damage.chance.percent, "add", [this.bonus.damage.chance.percent.multiply], [this.bonus.damage.chance.percent.plus]);
-      objTotalCal(this.damage.chance.amount, "bignumber", [this.bonus.damage.chance.amount.multiply], [this.bonus.damage.chance.amount.plus]);
-      objTotalCal(this.damage.speed, "add", [this.bonus.damage.speed.multiply], [this.bonus.damage.speed.plus]);
-      objTotalCal(this.damage.multiple.value, "add", [this.bonus.damage.multiple.value.multiply], [this.bonus.damage.multiple.value.plus]);
-      objTotalCal(this.damage.multiple.chance.percent, "add", [this.bonus.damage.multiple.chance.percent.multiply], [this.bonus.damage.multiple.chance.percent.plus]);
-      objTotalCal(this.damage.multiple.chance.amount, "add", [this.bonus.damage.multiple.chance.amount.multiply], [this.bonus.damage.multiple.chance.amount.plus]);
-      //console.log(this);
-      objTotalCal(this.damage.value, "cost", [this.bonus.damage.value.cost.multiply], [this.bonus.damage.value.cost.plus]);
-      objTotalCal(this.damage.chance.percent, "cost", [this.bonus.damage.chance.percent.cost.multiply], [this.bonus.damage.chance.percent.cost.plus]);
-      objTotalCal(this.damage.chance.amount, "cost", [this.bonus.damage.chance.amount.cost.multiply], [this.bonus.damage.chance.amount.cost.plus]);
-      objTotalCal(this.damage.speed, "cost", [this.bonus.damage.speed.cost.multiply], [this.bonus.damage.speed.cost.plus]);
-      objTotalCal(this.damage.multiple.value, "cost", [this.bonus.damage.multiple.value.cost.multiply], [this.bonus.damage.multiple.value.cost.plus]);
-      objTotalCal(this.damage.multiple.chance.percent, "cost", [this.bonus.damage.multiple.chance.percent.cost.multiply], [this.bonus.damage.multiple.chance.percent.cost.plus]);
-      objTotalCal(this.damage.multiple.chance.amount, "cost", [this.bonus.damage.multiple.chance.amount.cost.multiply], [this.bonus.damage.multiple.chance.amount.cost.plus]);
+      objTotalCal(this.damage.value, "bignumber", [
+        this.bonus.damage.value.multiply,
+        bonus.hero.damage.value.multiply
+      ], [
+        this.bonus.damage.value.plus,
+        bonus.hero.damage.value.plus
+      ]);
+      objTotalCal(this.damage.chance.percent, "add", [
+        this.bonus.damage.chance.percent.multiply,
+        bonus.hero.damage.chance.percent.multiply
+      ], [
+        this.bonus.damage.chance.percent.plus,
+        bonus.hero.damage.chance.percent.plus
+      ]);
+      objTotalCal(this.damage.chance.amount, "bignumber", [
+        this.bonus.damage.chance.amount.multiply,
+        bonus.hero.damage.chance.amount.multiply
+      ], [
+        this.bonus.damage.chance.amount.plus,
+        bonus.hero.damage.chance.amount.plus
+      ]);
+      objTotalCal(this.damage.speed, "add", [
+        this.bonus.damage.speed.multiply,
+        bonus.hero.damage.speed.multiply
+      ], [
+        this.bonus.damage.speed.plus,
+        bonus.hero.damage.speed.plus
+      ]);
+      objTotalCal(this.damage.multiple.value, "add", [
+        this.bonus.damage.multiple.value.multiply,
+        bonus.hero.damage.multiple.value.multiply
+      ], [
+        this.bonus.damage.multiple.value.plus,
+        bonus.hero.damage.multiple.value.plus
+      ]);
+      objTotalCal(this.damage.multiple.chance.percent, "add", [
+        this.bonus.damage.multiple.chance.percent.multiply,
+        bonus.hero.damage.multiple.chance.percent.multiply
+      ], [
+        this.bonus.damage.multiple.chance.percent.plus,
+        bonus.hero.damage.multiple.chance.percent.plus
+      ]);
+      objTotalCal(this.damage.multiple.chance.amount, "add", [
+        this.bonus.damage.multiple.chance.amount.multiply,
+        bonus.hero.damage.multiple.chance.amount.multiply
+      ], [
+        this.bonus.damage.multiple.chance.amount.plus,
+        bonus.hero.damage.multiple.chance.amount.plus
+      ]);
+      objTotalCal(this.damage.value, "cost", [
+        this.bonus.damage.value.cost.multiply,
+        bonus.hero.damage.value.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.damage.value.cost.plus,
+        bonus.hero.damage.value.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.damage.chance.percent, "cost", [
+        this.bonus.damage.chance.percent.cost.multiply,
+        bonus.hero.damage.chance.percent.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.damage.chance.percent.cost.plus,
+        bonus.hero.damage.chance.percent.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.damage.chance.amount, "cost", [
+        this.bonus.damage.chance.amount.cost.multiply,
+        bonus.hero.damage.chance.amount.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.damage.chance.amount.cost.plus,
+        bonus.hero.damage.chance.amount.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.damage.speed, "cost", [
+        this.bonus.damage.speed.cost.multiply,
+        bonus.hero.damage.speed.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.damage.speed.cost.plus,
+        bonus.hero.damage.speed.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.damage.multiple.value, "cost", [
+        this.bonus.damage.multiple.value.cost.multiply,
+        bonus.hero.damage.multiple.value.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.damage.multiple.value.cost.plus,
+        bonus.hero.damage.multiple.value.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.damage.multiple.chance.percent, "cost", [
+        this.bonus.damage.multiple.chance.percent.cost.multiply,
+        bonus.hero.damage.multiple.chance.percent.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.damage.multiple.chance.percent.cost.plus,
+        bonus.hero.damage.multiple.chance.percent.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.damage.multiple.chance.amount, "cost", [
+        this.bonus.damage.multiple.chance.amount.cost.multiply,
+        bonus.hero.damage.multiple.chance.amount.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.damage.multiple.chance.amount.cost.plus,
+        bonus.hero.damage.multiple.chance.amount.cost.plus,
+        bonus.money.cost.plus
+      ]);
       //Defense
       objCurrentCal(this.defense.value, "bignumber");
       objCurrentCal(this.defense.chance.percent, "add");
@@ -2269,16 +3056,64 @@ var stats = {}, achievement = [], options = {}, task = [],
       objCurrentCal(this.defense.chance.percent, "cost");
       objCurrentCal(this.defense.chance.amount, "cost");
       //Total
-      objTotalCal(this.defense.value, "bignumber", [this.bonus.defense.value.multiply], [this.bonus.defense.value.plus]);
-      objTotalCal(this.defense.chance.percent, "add", [this.bonus.defense.chance.percent.multiply], [this.bonus.defense.chance.percent.plus]);
-      objTotalCal(this.defense.chance.amount, "bignumber", [this.bonus.defense.chance.amount.multiply], [this.bonus.defense.chance.amount.plus]);
-      objTotalCal(this.defense.value, "cost", [this.bonus.defense.value.cost.multiply], [this.bonus.defense.value.cost.plus]);
-      objTotalCal(this.defense.chance.percent, "cost", [this.bonus.defense.chance.percent.cost.multiply], [this.bonus.defense.chance.percent.cost.plus]);
-      objTotalCal(this.defense.chance.amount, "cost", [this.bonus.defense.chance.amount.cost.multiply], [this.bonus.defense.chance.amount.cost.plus]);
+      objTotalCal(this.defense.value, "bignumber", [
+        this.bonus.defense.value.multiply,
+        bonus.hero.defense.value.multiply
+      ], [
+        this.bonus.defense.value.plus,
+        bonus.hero.defense.value.plus
+      ]);
+      objTotalCal(this.defense.chance.percent, "add", [
+        this.bonus.defense.chance.percent.multiply,
+        bonus.hero.defense.chance.percent.multiply
+      ], [
+        this.bonus.defense.chance.percent.plus,
+        bonus.hero.defense.chance.percent.plus
+      ]);
+      objTotalCal(this.defense.chance.amount, "bignumber", [
+        this.bonus.defense.chance.amount.multiply,
+        bonus.hero.defense.chance.amount.multiply
+      ], [
+        this.bonus.defense.chance.amount.plus,
+        bonus.hero.defense.chance.amount.plus
+      ]);
+      objTotalCal(this.defense.value, "cost", [
+        this.bonus.defense.value.cost.multiply,
+        bonus.hero.defense.value.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.defense.value.cost.plus,
+        bonus.hero.defense.value.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.defense.chance.percent, "cost", [
+        this.bonus.defense.chance.percent.cost.multiply,
+        bonus.hero.defense.chance.percent.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.defense.chance.percent.cost.plus,
+        bonus.hero.defense.chance.percent.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.defense.chance.amount, "cost", [
+        this.bonus.defense.chance.amount.cost.multiply,
+        bonus.hero.defense.chance.amount.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.defense.chance.amount.cost.plus,
+        bonus.hero.defense.chance.amount.cost.plus,
+        bonus.money.cost.plus
+      ]);
       //Xp
       objCurrentCal(this.xp.max, "bignumber");
       //Total
-      objTotalCal(this.xp.max, "bignumber", [this.bonus.xp.max.multiply], [this.bonus.xp.max.plus]);
+      objTotalCal(this.xp.max, "bignumber", [
+        this.bonus.xp.max.multiply,
+        bonus.xp.max.multiply
+      ], [
+        this.bonus.xp.max.plus,
+        bonus.xp.max.plus
+      ]);
       //Hp
       objCurrentCal(this.hp.max, "bignumber");
       objCurrentCal(this.hp.regen.rate, "bignumber");
@@ -2287,12 +3122,54 @@ var stats = {}, achievement = [], options = {}, task = [],
       objCurrentCal(this.hp.regen.rate, "cost");
       objCurrentCal(this.hp.regen.speed, "cost");
       //Total
-      objTotalCal(this.hp.max, "bignumber", [this.bonus.hp.max.multiply], [this.bonus.hp.max.plus]);
-      objTotalCal(this.hp.regen.rate, "bignumber", [this.bonus.hp.regen.rate.multiply], [this.bonus.hp.regen.rate.plus]);
-      objTotalCal(this.hp.regen.speed, "add", [this.bonus.hp.regen.speed.multiply], [this.bonus.hp.regen.speed.plus]);
-      objTotalCal(this.hp.max, "cost", [this.bonus.hp.max.cost.multiply], [this.bonus.hp.max.cost.plus]);
-      objTotalCal(this.hp.regen.rate, "cost", [this.bonus.hp.regen.rate.cost.multiply], [this.bonus.hp.regen.rate.cost.plus]);
-      objTotalCal(this.hp.regen.speed, "cost", [this.bonus.hp.regen.speed.cost.multiply], [this.bonus.hp.regen.speed.cost.plus]);
+      objTotalCal(this.hp.max, "bignumber", [
+        this.bonus.hp.max.multiply,
+        bonus.hero.hp.max.multiply
+      ], [
+        this.bonus.hp.max.plus,
+        bonus.hero.hp.max.plus
+      ]);
+      objTotalCal(this.hp.regen.rate, "bignumber", [
+        this.bonus.hp.regen.rate.multiply,
+        bonus.hero.hp.regen.rate.multiply
+      ], [
+        this.bonus.hp.regen.rate.plus,
+        bonus.hero.hp.regen.rate.plus
+      ]);
+      objTotalCal(this.hp.regen.speed, "add", [
+        this.bonus.hp.regen.speed.multiply,
+        bonus.hero.hp.regen.speed.multiply
+      ], [
+        this.bonus.hp.regen.speed.plus,
+        bonus.hero.hp.regen.speed.plus
+      ]);
+      objTotalCal(this.hp.max, "cost", [
+        this.bonus.hp.max.cost.multiply,
+        bonus.hero.hp.max.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.hp.max.cost.plus,
+        bonus.hero.hp.max.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.hp.regen.rate, "cost", [
+        this.bonus.hp.regen.rate.cost.multiply,
+        bonus.hero.hp.regen.rate.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.hp.regen.rate.cost.plus,
+        bonus.hero.hp.regen.rate.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.hp.regen.speed, "cost", [
+        this.bonus.hp.regen.speed.cost.multiply,
+        bonus.hero.hp.regen.speed.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.hp.regen.speed.cost.plus,
+        bonus.hero.hp.regen.speed.cost.plus,
+        bonus.money.cost.plus
+      ]);
       //Mana
       objCurrentCal(this.magic.mana.max, "bignumber");
       objCurrentCal(this.magic.mana.regen.rate, "bignumber");
@@ -2301,22 +3178,92 @@ var stats = {}, achievement = [], options = {}, task = [],
       objCurrentCal(this.magic.mana.regen.rate, "cost");
       objCurrentCal(this.magic.mana.regen.speed, "cost");
       //Total
-      objTotalCal(this.magic.mana.max, "bignumber", [this.bonus.magic.mana.max.multiply], [this.bonus.magic.mana.max.plus]);
-      objTotalCal(this.magic.mana.regen.rate, "bignumber", [this.bonus.magic.mana.regen.rate.multiply], [this.bonus.magic.mana.regen.rate.plus]);
-      objTotalCal(this.magic.mana.regen.speed, "add", [this.bonus.magic.mana.regen.speed.multiply], [this.bonus.magic.mana.regen.speed.plus]);
-      objTotalCal(this.magic.mana.max, "cost", [this.bonus.magic.mana.max.cost.multiply], [this.bonus.magic.mana.max.cost.plus]);
-      objTotalCal(this.magic.mana.regen.rate, "cost", [this.bonus.magic.mana.regen.rate.cost.multiply], [this.bonus.magic.mana.regen.rate.cost.plus]);
-      objTotalCal(this.magic.mana.regen.speed, "cost", [this.bonus.magic.mana.regen.speed.cost.multiply], [this.bonus.magic.mana.regen.speed.cost.plus]);
+      objTotalCal(this.magic.mana.max, "bignumber", [
+        this.bonus.magic.mana.max.multiply,
+        bonus.hero.magic.mana.max.multiply
+      ], [
+        this.bonus.magic.mana.max.plus,
+        bonus.hero.magic.mana.max.plus
+      ]);
+      objTotalCal(this.magic.mana.regen.rate, "bignumber", [
+        this.bonus.magic.mana.regen.rate.multiply,
+        bonus.hero.magic.mana.regen.rate.multiply
+      ], [
+        this.bonus.magic.mana.regen.rate.plus,
+        bonus.hero.magic.mana.regen.rate.plus
+      ]);
+      objTotalCal(this.magic.mana.regen.speed, "add", [
+        this.bonus.magic.mana.regen.speed.multiply,
+        bonus.hero.magic.mana.regen.speed.multiply
+      ], [
+        this.bonus.magic.mana.regen.speed.plus,
+        bonus.hero.magic.mana.regen.speed.plus
+      ]);
+      objTotalCal(this.magic.mana.max, "cost", [
+        this.bonus.magic.mana.max.cost.multiply,
+        bonus.hero.magic.mana.max.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.magic.mana.max.cost.plus,
+        bonus.hero.magic.mana.max.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.magic.mana.regen.rate, "cost", [
+        this.bonus.magic.mana.regen.rate.cost.multiply,
+        bonus.hero.magic.mana.regen.rate.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.magic.mana.regen.rate.cost.plus,
+        bonus.hero.magic.mana.regen.rate.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.magic.mana.regen.speed, "cost", [
+        this.bonus.magic.mana.regen.speed.cost.multiply,
+        bonus.hero.magic.mana.regen.speed.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.magic.mana.regen.speed.cost.plus,
+        bonus.hero.magic.mana.regen.speed.cost.plus,
+        bonus.money.cost.plus
+      ]);
       //Death
       objCurrentCal(this.death.speed, "subtract");
       objCurrentCal(this.death.max, "add");
       objCurrentCal(this.death.speed, "cost");
       objCurrentCal(this.death.max, "cost");
       //Total
-      objTotalCal(this.death.speed, "add", [this.bonus.death.speed.multiply], [this.bonus.death.speed.plus]);
-      objTotalCal(this.death.max, "add", [this.bonus.death.max.multiply], [this.bonus.death.max.plus]);
-      objTotalCal(this.death.speed, "cost", [this.bonus.death.speed.cost.multiply], [this.bonus.death.speed.cost.plus]);
-      objTotalCal(this.death.max, "cost", [this.bonus.death.max.cost.multiply], [this.bonus.death.max.cost.plus]);
+      objTotalCal(this.death.speed, "add", [
+        this.bonus.death.speed.multiply,
+        bonus.hero.death.speed.multiply
+      ], [
+        this.bonus.death.speed.plus,
+        bonus.hero.death.speed.plus
+      ]);
+      objTotalCal(this.death.max, "add", [
+        this.bonus.death.max.multiply,
+        bonus.hero.death.max.multiply
+      ], [
+        this.bonus.death.max.plus,
+        bonus.hero.death.max.plus
+      ]);
+      objTotalCal(this.death.speed, "cost", [
+        this.bonus.death.speed.cost.multiply,
+        bonus.hero.death.speed.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.death.speed.cost.plus,
+        bonus.hero.death.speed.cost.plus,
+        bonus.money.cost.plus
+      ]);
+      objTotalCal(this.death.max, "cost", [
+        this.bonus.death.max.cost.multiply,
+        bonus.hero.death.max.cost.multiply,
+        bonus.money.cost.multiply
+      ], [
+        this.bonus.death.max.cost.plus,
+        bonus.hero.death.max.cost.plus,
+        bonus.money.cost.plus
+      ]);
     },
     extract: function() {
       var tempHero = this;
@@ -2699,6 +3646,10 @@ var stats = {}, achievement = [], options = {}, task = [],
                 multiply: this.bonus.magic.spell.duration.multiply,
                 plus: this.bonus.magic.spell.duration.plus,
               },
+              delay: {
+                multiply: this.bonus.magic.spell.delay.multiply,
+                plus: this.bonus.magic.spell.delay.plus,
+              },
               coolDown: {
                 multiply: this.bonus.magic.spell.coolDown.multiply,
                 plus: this.bonus.magic.spell.coolDown.plus,
@@ -2765,8 +3716,7 @@ var stats = {}, achievement = [], options = {}, task = [],
   Enemy.prototype = {
     apply: function(data) {
       data = data || {};
-      data.boss = data.boss || false;
-      data = data || {};
+      this.boss = data.boss || false;
       this.hash = randomString();
       this.damage = {
         perSecond: undefined,
@@ -2840,7 +3790,12 @@ var stats = {}, achievement = [], options = {}, task = [],
         },
       };
       this.magic = {
-        spell: {},
+        spell: {
+          max: {
+            current: 0,
+            total: undefined,
+          },
+        },
         mana: {
           value: undefined,
           max: {
@@ -2964,7 +3919,15 @@ var stats = {}, achievement = [], options = {}, task = [],
         },
         magic: {
           spell: {
+            max: {
+              multiply: 0,
+              plus: 0,
+            },
             duration: {
+              multiply: 0,
+              plus: 0,
+            },
+            delay: {
               multiply: 0,
               plus: 0,
             },
@@ -3026,18 +3989,17 @@ var stats = {}, achievement = [], options = {}, task = [],
       var returnData = [];
       if (!instant) {
         this._.coolDown.damage --;
-        if (this._.coolDown.damage <= 0) {
-          this._.coolDown.damage = 0;
-          this._.coolDown.damage = this.damage.speed.total;
-        } else {
+        if (this._.coolDown.damage > 0) {
           return;
+        } else {
+          this._.coolDown.damage = this.damage.speed.total;
         }
       }
       if (!heroData) {
         var splashAmount = Math.configRandom({
           min: 0,
           max: 99,
-        }) < this.damage.multiple.chance.percent.total ? this.damage.multiple.chance.amount : this.damage.multiple.value.total;
+        }) < this.damage.multiple.chance.percent.total ? this.damage.multiple.chance.amount.total : this.damage.multiple.value.total;
         for (var attackCount = 0; attackCount < splashAmount; attackCount ++) {
           if (hero.active.length <= 0) {
             break;
@@ -3058,10 +4020,10 @@ var stats = {}, achievement = [], options = {}, task = [],
       var returnData;
       switch (regenType) {
         case "hp": {
+          this._.coolDown.hp --;
           if (this._.coolDown.hp <= 0 || instant) {
             this._.coolDown.hp = this.hp.regen.speed.total;
           } else {
-            this._.coolDown.hp --;
             return;
           }
           if (math.compare(this.hp.value, this.hp.max.total) < 0) {
@@ -3075,10 +4037,10 @@ var stats = {}, achievement = [], options = {}, task = [],
         }
         break;
         case "mana": {
+          this._.coolDown.mana --;
           if (this._.coolDown.mana <= 0 || instant) {
             this._.coolDown.mana = this.magic.mana.regen.speed.total;
           } else {
-            this._.coolDown.mana --;
             return;
           }
           if (math.compare(this.magic.mana.value, this.magic.mana.max.total) < 0) {
@@ -3126,11 +4088,22 @@ var stats = {}, achievement = [], options = {}, task = [],
         stats.money.current = math.add(stats.money.current, this.loot.money.total);
       }
       this._.dealtBy = {};
-      if (stats.zone.current > stats.zone.beat) {
-        stats.enemy.death.required.count ++;
+      if (stats.zone.main.current > stats.zone.main.beat) {
+        stats.zone.main.required.count ++;
       }
-      enemyRender();
+      render.downEnemy(this);
       return returnData;
+    },
+    erase: function() {
+      this.death.bool = true;
+      enemy.inactive.push(this);
+      var activeIndexOf = enemy.active.indexOf(this), deadIndexOf = enemy.dead.indexOf(this);
+      if (activeIndexOf > -1) {
+        enemy.active.splice(activeIndexOf, 1);
+      }
+      enemy.dead.splice(deadIndexOf, 1);
+      render.removeEnemy(this);
+      return true;
     },
     revive: function(instant) {
       if (this._.coolDown.death > 0 && !instant) {
@@ -3150,38 +4123,737 @@ var stats = {}, achievement = [], options = {}, task = [],
     update: function() {
       //Bonus
       updateBonus(this.bonus.data);
+      var tempData, tempData2;
+      if (this.boss === true) {
+        tempData =  bonus.enemy.boss;
+        tempData2 = "boss";
+      } else {
+        tempData = bonus.enemy.normal;
+        tempData2 = "enemy";
+      }
       //Damage
-      objTotalCal(this.damage.value, "bignumber", [this.bonus.damage.value.multiply], [this.bonus.damage.value.plus]);
-      objTotalCal(this.damage.chance.percent, "add", [this.bonus.damage.chance.percent.multiply], [this.bonus.damage.chance.percent.plus]);
-      objTotalCal(this.damage.chance.amount, "bignumber", [this.bonus.damage.chance.amount.multiply], [this.bonus.damage.chance.amount.plus]);
-      objTotalCal(this.damage.speed, "add", [this.bonus.damage.speed.multiply], [this.bonus.damage.speed.plus]);
-      objTotalCal(this.damage.multiple.value, "add", [this.bonus.damage.multiple.value.multiply], [this.bonus.damage.multiple.value.plus]);
-      objTotalCal(this.damage.multiple.chance.percent, "add", [this.bonus.damage.multiple.chance.percent.multiply], [this.bonus.damage.multiple.chance.percent.plus]);
-      objTotalCal(this.damage.multiple.chance.amount, "add", [this.bonus.damage.multiple.chance.amount.multiply], [this.bonus.damage.multiple.chance.amount.plus]);
+      objTotalCal(this.damage.value, "bignumber", [
+        this.bonus.damage.value.multiply,
+        tempData.damage.value.multiply,
+        bonus.enemy.all.damage.value.multiply
+      ], [
+        this.bonus.damage.value.plus,
+        tempData.damage.value.plus,
+        bonus.enemy.all.damage.value.plus
+      ]);
+      objTotalCal(this.damage.chance.percent, "add", [
+        this.bonus.damage.chance.percent.multiply,
+        tempData.damage.chance.percent.multiply,
+        bonus.enemy.all.damage.chance.percent.multiply
+      ], [
+        this.bonus.damage.chance.percent.plus,
+        tempData.damage.chance.percent.plus,
+        bonus.enemy.all.damage.chance.percent.plus
+      ]);
+      objTotalCal(this.damage.chance.amount, "bignumber", [
+        this.bonus.damage.chance.amount.multiply,
+        tempData.damage.chance.amount.multiply,
+        bonus.enemy.all.damage.chance.amount.multiply
+      ], [
+        this.bonus.damage.chance.amount.plus,
+        tempData.damage.chance.amount.plus,
+        bonus.enemy.all.damage.chance.amount.plus
+      ]);
+      objTotalCal(this.damage.speed, "add", [
+        this.bonus.damage.speed.multiply,
+        tempData.damage.speed.multiply,
+        bonus.enemy.all.damage.speed.multiply
+      ], [
+        this.bonus.damage.speed.plus,
+        tempData.damage.speed.plus,
+        bonus.enemy.all.damage.speed.plus
+      ]);
+      objTotalCal(this.damage.multiple.value, "add", [
+        this.bonus.damage.multiple.value.multiply,
+        tempData.damage.multiple.value.multiply,
+        bonus.enemy.all.damage.multiple.value.multiply
+      ], [
+        this.bonus.damage.multiple.value.plus,
+        tempData.damage.multiple.value.plus,
+        bonus.enemy.all.damage.multiple.value.plus
+      ]);
+      objTotalCal(this.damage.multiple.chance.percent, "add", [
+        this.bonus.damage.multiple.chance.percent.multiply,
+        tempData.damage.multiple.chance.percent.multiply,
+        bonus.enemy.all.damage.multiple.chance.percent.multiply
+      ], [
+        this.bonus.damage.multiple.chance.percent.plus,
+        tempData.damage.multiple.chance.percent.plus,
+        bonus.enemy.all.damage.multiple.chance.percent.plus
+      ]);
+      objTotalCal(this.damage.multiple.chance.amount, "add", [
+        this.bonus.damage.multiple.chance.amount.multiply,
+        tempData.damage.multiple.chance.amount.multiply,
+        bonus.enemy.all.damage.multiple.chance.amount.multiply
+      ], [
+        this.bonus.damage.multiple.chance.amount.plus,
+        tempData.damage.multiple.chance.amount.plus,
+        bonus.enemy.all.damage.multiple.chance.amount.plus
+      ]);
       //Defense
-      objTotalCal(this.defense.value, "bignumber", [this.bonus.defense.value.multiply], [this.bonus.defense.value.plus]);
-      objTotalCal(this.defense.chance.percent, "add", [this.bonus.defense.chance.percent.multiply], [this.bonus.defense.chance.percent.plus]);
-      objTotalCal(this.defense.chance.amount, "bignumber", [this.bonus.defense.chance.amount.multiply], [this.bonus.defense.chance.amount.plus]);
+      objTotalCal(this.defense.value, "bignumber", [
+        this.bonus.defense.value.multiply,
+        tempData.defense.value.multiply,
+        bonus.enemy.all.defense.value.multiply
+      ], [
+        this.bonus.defense.value.plus,
+        tempData.defense.value.plus,
+        bonus.enemy.all.defense.value.plus
+      ]);
+      objTotalCal(this.defense.chance.percent, "add", [
+        this.bonus.defense.chance.percent.multiply,
+        tempData.defense.chance.percent.multiply,
+        bonus.enemy.all.defense.chance.percent.multiply
+      ], [
+        this.bonus.defense.chance.percent.plus,
+        tempData.defense.chance.percent.plus,
+        bonus.enemy.all.defense.chance.percent.plus
+      ]);
+      objTotalCal(this.defense.chance.amount, "bignumber", [
+        this.bonus.defense.chance.amount.multiply,
+        tempData.defense.chance.amount.multiply,
+        bonus.enemy.all.defense.chance.amount.multiply
+      ], [
+        this.bonus.defense.chance.amount.plus,
+        tempData.defense.chance.amount.plus,
+        bonus.enemy.all.defense.chance.amount.plus
+      ]);
       //Hp
-      objTotalCal(this.hp.max, "bignumber", [this.bonus.hp.max.multiply], [this.bonus.hp.max.plus]);
-      objTotalCal(this.hp.regen.rate, "bignumber", [this.bonus.hp.regen.rate.multiply], [this.bonus.hp.regen.rate.plus]);
-      objTotalCal(this.hp.regen.speed, "add", [this.bonus.hp.regen.speed.multiply], [this.bonus.hp.regen.speed.plus]);
+      objTotalCal(this.hp.max, "bignumber", [
+        this.bonus.hp.max.multiply,
+        tempData.hp.max.multiply,
+        bonus.enemy.all.hp.max.multiply
+      ], [
+        this.bonus.hp.max.plus,
+        tempData.hp.max.plus,
+        bonus.enemy.all.hp.max.plus
+      ]);
+      objTotalCal(this.hp.regen.rate, "bignumber", [
+        this.bonus.hp.regen.rate.multiply,
+        tempData.hp.regen.rate.multiply,
+        bonus.enemy.all.hp.regen.rate.multiply
+      ], [
+        this.bonus.hp.regen.rate.plus,
+        tempData.hp.regen.rate.plus,
+        bonus.enemy.all.hp.regen.rate.plus
+      ]);
+      objTotalCal(this.hp.regen.speed, "add", [
+        this.bonus.hp.regen.speed.multiply,
+        tempData.hp.regen.speed.multiply,
+        bonus.enemy.all.hp.regen.speed.multiply
+      ], [
+        this.bonus.hp.regen.speed.plus,
+        tempData.hp.regen.speed.plus,
+        bonus.enemy.all.hp.regen.speed.plus
+      ]);
       //Mana
-      objTotalCal(this.magic.mana.max, "bignumber", [this.bonus.magic.mana.max.multiply], [this.bonus.magic.mana.max.plus]);
-      objTotalCal(this.magic.mana.regen.rate, "bignumber", [this.bonus.magic.mana.regen.rate.multiply], [this.bonus.magic.mana.regen.rate.plus]);
-      objTotalCal(this.magic.mana.regen.speed, "add", [this.bonus.magic.mana.regen.speed.multiply], [this.bonus.magic.mana.regen.speed.plus]);
+      objTotalCal(this.magic.mana.max, "bignumber", [
+        this.bonus.magic.mana.max.multiply,
+        tempData.magic.mana.max.multiply,
+        bonus.enemy.all.magic.mana.max.multiply
+      ], [
+        this.bonus.magic.mana.max.plus,
+        tempData.magic.mana.max.plus,
+        bonus.enemy.all.magic.mana.max.plus
+      ]);
+      objTotalCal(this.magic.mana.regen.rate, "bignumber", [
+        this.bonus.magic.mana.regen.rate.multiply,
+        tempData.magic.mana.regen.rate.multiply,
+        bonus.enemy.all.magic.mana.regen.rate.multiply
+      ], [
+        this.bonus.magic.mana.regen.rate.plus,
+        tempData.magic.mana.regen.rate.plus,
+        bonus.enemy.all.magic.mana.regen.rate.plus
+      ]);
+      objTotalCal(this.magic.mana.regen.speed, "add", [
+        this.bonus.magic.mana.regen.speed.multiply,
+        tempData.magic.mana.regen.speed.multiply,
+        bonus.enemy.all.magic.mana.regen.speed.multiply
+      ], [
+        this.bonus.magic.mana.regen.speed.plus,
+        tempData.magic.mana.regen.speed.plus,
+        bonus.enemy.all.magic.mana.regen.speed.plus
+      ]);
       //Death
-      objTotalCal(this.death.speed, "add", [this.bonus.death.speed.multiply], [this.bonus.death.speed.plus]);
-      objTotalCal(this.death.max, "add", [this.bonus.death.max.multiply], [this.bonus.death.max.plus]);
+      objTotalCal(this.death.speed, "add", [
+        this.bonus.death.speed.multiply,
+        tempData.death.speed.multiply,
+        bonus.enemy.all.death.speed.multiply
+      ], [
+        this.bonus.death.speed.plus,
+        tempData.death.speed.plus,
+        bonus.enemy.all.death.speed.plus
+      ]);
+      objTotalCal(this.death.max, "add", [
+        this.bonus.death.max.multiply,
+        tempData.death.max.multiply,
+        bonus.enemy.all.death.max.multiply
+      ], [
+        this.bonus.death.max.plus,
+        tempData.death.max.plus,
+        bonus.enemy.all.death.max.plus
+      ]);
       //Loot
-      objTotalCal(this.loot.money, "bignumber", [this.bonus.loot.money.multiply], [this.bonus.loot.money.plus]);
-      objTotalCal(this.loot.xp, "bignumber", [this.bonus.loot.xp.multiply], [this.bonus.loot.xp.plus]);
+      objTotalCal(this.loot.money, "bignumber", [
+        this.bonus.loot.money.multiply,
+        bonus.money[tempData2].multiply,
+        bonus.money.all.multiply
+      ], [
+        this.bonus.loot.money.plus,
+        bonus.money[tempData2].plus,
+        bonus.money.all.plus
+      ]);
+      objTotalCal(this.loot.xp, "bignumber", [
+        this.bonus.loot.xp.multiply,
+        bonus.xp[tempData2].multiply,
+        bonus.xp.all.multiply
+      ], [
+        this.bonus.loot.xp.plus,
+        bonus.xp[tempData2].plus,
+        bonus.xp.all.plus
+      ]);
     },
   };
   
+  //Render
+  (function() {
+    //Hero and enemy render
+    render.updateHero = function(heroData) {
+      //Title
+      $(`#hero_${heroData.hash} .fightTitle .fightTitleHolder`).html(`${heroData._.coolDown.death > 0 ? "(Dead) - " : ""}Level: ${heroData.xp.max.count} - ${heroData.hash}`);
+      //Xp
+      $(`#hero_${heroData.hash} .fightMain .fightXpHolder .fightXpData`).css({
+        width: math.multiply(math.divide(heroData.xp.value, heroData.xp.max.total), 100).toNumber() + "%",
+      });
+      //Hp
+      var location;// = math.multiply(math.divide(heroData.hp.value, heroData.hp.max.total), 100).toNumber();
+      if (heroData._.coolDown.death > 0) {
+        location = 100 - (heroData._.coolDown.death / heroData.death.speed.total) * 100;
+        $(`#hero_${heroData.hash} .fightMain .fightHpHolder .fightHpData`).css({
+          width: location + "%",
+        });
+      } else {
+        location = math.multiply(math.divide(heroData.hp.value, heroData.hp.max.total), 100).toNumber();
+        $(`#hero_${heroData.hash} .fightMain .fightHpHolder .fightHpData`).css({
+          width: location + "%",
+        });
+      }
+      if (heroData._.coolDown.death > 0) {
+        $(`#hero_${heroData.hash} .fightMain .fightHpHolder .fightHpRegenHolder`).css({
+          left: location + "%",
+          width: "0%",
+        });
+      } else if (math.compare(math.add(heroData.hp.regen.rate.total, heroData.hp.value), heroData.hp.max.total).toNumber() > 0) {
+        $(`#hero_${heroData.hash} .fightMain .fightHpHolder .fightHpRegenHolder`).css({
+          left: location + "%",
+          right: "0%",
+          width: "auto",
+        });
+      } else {
+        $(`#hero_${heroData.hash} .fightMain .fightHpHolder .fightHpRegenHolder`).css({
+          left: location + "%",
+          width: math.multiply(math.divide(heroData.hp.regen.rate.total, heroData.hp.max.total), 100).toNumber() + "%",
+        });
+      }
+      $(`#hero_${heroData.hash} .fightMain .fightHpHolder .fightHpRegenHolder .fightHpRegenData`).css({
+        width: Number(100 - (heroData._.coolDown.hp / heroData.hp.regen.speed.total) * 100) + "%",
+      });
+      //Mana
+      location = math.multiply(math.divide(heroData.magic.mana.value, heroData.magic.mana.max.total), 100).toNumber();
+      $(`#hero_${heroData.hash} .fightMain .fightManaHolder .fightManaData`).css({
+        width: location + "%",
+      });
+      if (math.compare(math.add(heroData.magic.mana.regen.rate.total, heroData.magic.mana.value), heroData.magic.mana.max.total).toNumber() > 0) {
+        $(`#hero_${heroData.hash} .fightMain .fightManaHolder .fightManaRegenHolder`).css({
+          left: location + "%",
+          right: "0%",
+          width: "auto",
+        });
+      } else {
+        $(`#hero_${heroData.hash} .fightMain .fightManaHolder .fightManaRegenHolder`).css({
+          left: location + "%",
+          width: math.multiply(math.divide(heroData.magic.mana.regen.rate.total, heroData.magic.mana.max.total), 100).toNumber() + "%",
+        });
+      }
+      $(`#hero_${heroData.hash} .fightMain .fightManaHolder .fightManaRegenHolder .fightManaRegenData`).css({
+        width: Number(100 - (heroData._.coolDown.mana / heroData.magic.mana.regen.speed.total) * 100) + "%",
+      });
+      //Atks
+      $(`#hero_${heroData.hash} .fightMain .fightAttackHolder .fightAttackData`).css({
+        height: Number(100 - (heroData._.coolDown.damage / heroData.damage.speed.total) * 100) + "%",
+      });
+    };
+    render.downHero = function(heroData) {
+      $("div#heroData").append($(`#hero_${heroData.hash}`).detach());
+    };
+    render.addHero = function(heroData) {
+      var tempRender = $(`
+        <div class="fightHolder" id="hero_${heroData.hash}">
+          <div class="fightTitle">
+            <div class="fightTitleHolder">
+              Level: ${heroData.xp.max.count} - ${heroData.hash}
+            </div>
+          </div>
+          <div class="fightExpand">
+            +
+          </div>
+          <div class="fightMain">
+            <div class="fightXpHolder">
+              <span class="fightXpShow"></span>
+              <div class="fightXpData"></div>
+            </div>
+            <div class="fightHpHolder">
+              <span class="fightHpShow"></span>
+              <div class="fightHpData"></div>
+              <div class="fightHpRegenHolder">
+                <div class="fightHpRegenData"></div>
+              </div>
+            </div>
+            <div class="fightManaHolder">
+              <span class="fightManaShow"></span>
+              <div class="fightManaData"></div>
+              <div class="fightManaRegenHolder">
+                <div class="fightManaRegenData"></div>
+              </div>
+            </div>
+            <div class="fightAttackHolder">
+              <div class="fightAttackData"></div>
+            </div>
+          </div>
+        </div>
+      `);
+      tempRender.children(".fightExpand").click(function() {
+        render.chooseShow("fightUpgradeHolder", heroData);
+      });
+      $("div#heroData").append(tempRender);
+      render.updateHero(heroData);
+    };
+    render.removeHero = function(heroData) {
+      $(`#hero_${heroData.hash}`).remove();
+    };
+    
+    render.updateEnemy = function(enemyData) {
+      //Title
+      $(`#enemy_${enemyData.hash} .fightTitle .fightTitleHolder`).html(`${enemyData._.coolDown.death > 0 ? "(Dead) - " : ""}Level: ${enemyData.level} - ${enemyData.hash}`);
+      //Hp
+      var location;
+      if (enemyData._.coolDown.death > 0) {
+        location = 100 - (enemyData._.coolDown.death / enemyData.death.speed.total) * 100;
+        $(`#enemy_${enemyData.hash} .fightMain .fightHpHolder .fightHpData`).css({
+          width: location + "%",
+        });
+      } else {
+        location = math.multiply(math.divide(enemyData.hp.value, enemyData.hp.max.total), 100).toNumber();
+        $(`#enemy_${enemyData.hash} .fightMain .fightHpHolder .fightHpData`).css({
+          width: location + "%",
+        });
+      }
+      if (enemyData._.coolDown.death > 0) {
+        $(`#enemy_${enemyData.hash} .fightMain .fightHpHolder .fightHpRegenHolder`).css({
+          left: location + "%",
+          width: "0%",
+        });
+      } else if (math.compare(math.add(enemyData.hp.regen.rate.total, enemyData.hp.value), enemyData.hp.max.total).toNumber() > 0) {
+        $(`#enemy_${enemyData.hash} .fightMain .fightHpHolder .fightHpRegenHolder`).css({
+          left: location + "%",
+          right: "0%",
+          width: "auto",
+        });
+      } else {
+        $(`#enemy_${enemyData.hash} .fightMain .fightHpHolder .fightHpRegenHolder`).css({
+          left: location + "%",
+          width: math.multiply(math.divide(enemyData.hp.regen.rate.total, enemyData.hp.max.total), 100).toNumber() + "%",
+        });
+      }
+      $(`#enemy_${enemyData.hash} .fightMain .fightHpHolder .fightHpRegenHolder .fightHpRegenData`).css({
+        width: Number(100 - (enemyData._.coolDown.hp / enemyData.hp.regen.speed.total) * 100) + "%",
+      });
+      //Mana
+      location = math.multiply(math.divide(enemyData.magic.mana.value, enemyData.magic.mana.max.total), 100).toNumber();
+      $(`#enemy_${enemyData.hash} .fightMain .fightManaHolder .fightManaData`).css({
+        width: location + "%",
+      });
+      if (math.compare(math.add(enemyData.magic.mana.regen.rate.total, enemyData.magic.mana.value), enemyData.magic.mana.max.total).toNumber() > 0) {
+        $(`#enemy_${enemyData.hash} .fightMain .fightManaHolder .fightManaRegenHolder`).css({
+          left: location + "%",
+          right: "0%",
+          width: "auto",
+        });
+      } else {
+        $(`#enemy_${enemyData.hash} .fightMain .fightManaHolder .fightManaRegenHolder`).css({
+          left: location + "%",
+          width: math.multiply(math.divide(enemyData.magic.mana.regen.rate.total, enemyData.magic.mana.max.total), 100).toNumber() + "%",
+        });
+      }
+      $(`#enemy_${enemyData.hash} .fightMain .fightManaHolder .fightManaRegenHolder .fightManaRegenData`).css({
+        width: Number(100 - (enemyData._.coolDown.mana / enemyData.magic.mana.regen.speed.total) * 100) + "%",
+      });
+      //Atks
+      $(`#enemy_${enemyData.hash} .fightMain .fightAttackHolder .fightAttackData`).css({
+        height: Number(100 - (enemyData._.coolDown.damage / enemyData.damage.speed.total) * 100) + "%",
+      });
+    };
+    render.downEnemy = function(enemyData) {
+      $("div#enemyData").append($(`#enemy_${enemyData.hash}`).detach());
+    };
+    render.addEnemy = function(enemyData) {
+      var tempRender = $(`
+        <div class="fightHolder" id="enemy_${enemyData.hash}">
+          <div class="fightTitle">
+            <div class="fightTitleHolder">
+              Level: ${enemyData.level} - ${enemyData.hash}
+            </div>
+          </div>
+          <div class="fightExpand">
+            +
+          </div>
+          <div class="fightMain">
+            <div class="fightXpHolder">
+              <span class="fightXpShow"></span>
+              <div class="fightXpData"></div>
+            </div>
+            <div class="fightHpHolder">
+              <span class="fightHpShow"></span>
+              <div class="fightHpData"></div>
+              <div class="fightHpRegenHolder">
+                <div class="fightHpRegenData"></div>
+              </div>
+            </div>
+            <div class="fightManaHolder">
+              <span class="fightManaShow"></span>
+              <div class="fightManaData"></div>
+              <div class="fightManaRegenHolder">
+                <div class="fightManaRegenData"></div>
+              </div>
+            </div>
+            <div class="fightAttackHolder">
+              <div class="fightAttackData"></div>
+            </div>
+          </div>
+        </div>
+      `);
+      tempRender.click(function() {
+        if (math.compare(enemyData.hp.value, 0).toNumber() < 1) {
+          return;
+        }
+        player.attack(enemyData);
+      });
+      tempRender.children(".fightExpand").click(function(event) {
+        event.stopPropagation();
+        render.chooseShow("fightShowHolder", enemyData);
+      });
+      $("div#enemyData").append(tempRender);
+      render.updateEnemy(enemyData);
+    };
+    render.removeEnemy = function(enemyData) {
+      $(`#enemy_${enemyData.hash}`).remove();
+    };
+    
+    (function() {
+      $(`#clickUpgradeData #clickDamageValueUpgrade`).click(function() {
+        render.detailShow("damage.value");
+      });
+      $(`#clickUpgradeData #clickDamageChancePercentUpgrade`).click(function() {
+        render.detailShow("damage.chance.percent");
+      });
+      $(`#clickUpgradeData #clickDamageChanceAmountUpgrade`).click(function() {
+        render.detailShow("damage.chance.amount");
+      });
+      $(`#clickUpgradeData #clickDamageMultipleValueUpgrade`).click(function() {
+        render.detailShow("damage.multiple.value");
+      });
+      $(`#clickUpgradeData #clickDamageMultipleChancePercentUpgrade`).click(function() {
+        render.detailShow("damage.multiple.chance.percent");
+      });
+      $(`#clickUpgradeData #clickDamageMultipleChanceAmountUpgrade`).click(function() {
+        render.detailShow("damage.multiple.chance.amount");
+      });
+      $(`.fightUpgradeHolder .hpMaxUpgrade`).click(function() {
+        render.detailShow("hp.max");
+      });
+      $(`.fightUpgradeHolder .hpRegenRateUpgrade`).click(function() {
+        render.detailShow("hp.regen.rate");
+      });
+      $(`.fightUpgradeHolder .hpRegenSpeedUpgrade`).click(function() {
+        render.detailShow("hp.regen.speed");
+      });
+      $(`.fightUpgradeHolder .manaMaxUpgrade`).click(function() {
+        render.detailShow("magic.mana.max");
+      });
+      $(`.fightUpgradeHolder .manaRegenRateUpgrade`).click(function() {
+        render.detailShow("magic.mana.regen.rate");
+      });
+      $(`.fightUpgradeHolder .manaRegenSpeedUpgrade`).click(function() {
+        render.detailShow("magic.mana.regen.speed");
+      });
+      $(`.fightUpgradeHolder .damageValueUpgrade`).click(function() {
+        render.detailShow("damage.value");
+      });
+      $(`.fightUpgradeHolder .damageSpeedUpgrade`).click(function() {
+        render.detailShow("damage.speed");
+      });
+      $(`.fightUpgradeHolder .damageChancePercentUpgrade`).click(function() {
+        render.detailShow("damage.chance.percent");
+      });
+      $(`.fightUpgradeHolder .damageChanceAmountUpgrade`).click(function() {
+        render.detailShow("damage.chance.amount");
+      });
+      $(`.fightUpgradeHolder .defenseValueUpgrade`).click(function() {
+        render.detailShow("defense.value");
+      });
+      $(`.fightUpgradeHolder .defenseChancePercentUpgrade`).click(function() {
+        render.detailShow("defense.chance.percent");
+      });
+      $(`.fightUpgradeHolder .defenseChanceAmountUpgrade`).click(function() {
+        render.detailShow("defense.chance.amount");
+      });
+      $(`.fightUpgradeHolder .damageMultipleValueUpgrade`).click(function() {
+        render.detailShow("damage.multiple.value");
+      });
+      $(`.fightUpgradeHolder .damageMultipleChancePercentUpgrade`).click(function() {
+        render.detailShow("damage.multiple.chance.percent");
+      });
+      $(`.fightUpgradeHolder .damageMultipleChanceAmountUpgrade`).click(function() {
+        render.detailShow("damage.multiple.chance.amount");
+      });
+      $(`.fightUpgradeHolder .deathSpeedUpgrade`).click(function() {
+        render.detailShow("death.speed");
+      });
+      $(`.fightUpgradeHolder .deathMaxUpgrade`).click(function() {
+        render.detailShow("death.max");
+      });
+    })();
+    
+    var tempString, isDetail;
+    
+    //Money render
+    render.ui = function() {
+      var tempRenderString = "", loopCount;
+      tempRenderString = `Money: ${math.bignumber.format(stats.money.current)}`;
+      $("div#statsData").html(tempRenderString);
+    };
+    
+    //Show render
+    render.chooseShow = function(type, obj) {
+      closeDetail();
+      $(`.showShow`).css({
+        display: "none",
+      });
+      stats.showType = type;
+      switch (type) {
+        case "optionAdventure": {
+          stats.showObj = undefined;
+          $(`#adventureShow`).css({
+            display: "inline",
+          });
+        }
+        break;
+        case "optionOption": {
+          stats.showObj = undefined;
+          $(`#optionShow`).css({
+            display: "inline",
+          });
+        }
+        break;
+        case "upgradeShow": {
+          stats.showObj = undefined;
+          $(`#upgradeShow`).css({
+            display: "inline",
+          });
+        }
+        break;
+        case "clickUpgradeData": {
+          stats.showObj = player;
+          $(`#clickUpgradeData`).css({
+            display: "inline",
+          });
+        }
+        break;
+        case "fightUpgradeHolder": {
+          stats.showObj = obj;
+          $(`.fightUpgradeHolder`).css({
+            display: "inline",
+          });
+        }
+        break;
+        case "fightShowHolder": {
+          stats.showObj = obj;
+          $(`.fightShowHolder`).css({
+            display: "inline",
+          });
+        }
+        break;
+      }
+    };
+    render.show = function() {
+      var loopCount;
+      switch(stats.showType) {
+        case "optionAdventure": {
+          $(`#mainWorld .requiredKillCurrent`).html(stats.zone.main.required.count);
+          $(`#mainWorld .requiredKillRequired`).html(stats.zone.main.required.max);
+          $(`#mainWorld .beatedZone`).html(stats.zone.main.beat);
+          $(`#mainWorld input.zoneInput`).val(stats.zone.main.current);
+        }
+        break;
+        case "upgradeShow": {
+          
+        }
+        break;
+        case "clickUpgradeData": {
+          $(`#clickDamageValueShow`).html(math.bignumber.format(player.damage.value.total));
+          $(`#clickDamageChancePercentShow`).html(Number(player.damage.chance.percent.total.toFixed(5)));
+          $(`#clickDamageChanceAmountShow`).html(Number(player.damage.chance.amount.total.toFixed(5)));
+          $(`#clickDamageMultipleValueShow`).html(player.damage.multiple.value.total);
+          $(`#clickDamageMultipleChancePercentShow`).html(Number(player.damage.multiple.chance.percent.total.toFixed(5)));
+          $(`#clickDamageMultipleChanceAmountShow`).html(player.damage.multiple.chance.amount.total);
+        }
+        break;
+        case "fightUpgradeHolder": {
+          $(`.fightUpgradeHolder .hashShow`).html(stats.showObj.hash);
+          $(`.fightUpgradeHolder .hpValueShow`).html(math.bignumber.format(stats.showObj.hp.value));
+          $(`.fightUpgradeHolder .hpMaxShow`).html(math.bignumber.format(stats.showObj.hp.max.total));
+          $(`.fightUpgradeHolder .hpRegenRateShow`).html(math.bignumber.format(stats.showObj.hp.regen.rate.total));
+          $(`.fightUpgradeHolder .hpRegenSpeedShow`).html(stats.showObj.hp.regen.speed.total);
+          $(`.fightUpgradeHolder .manaValueShow`).html(math.bignumber.format(stats.showObj.magic.mana.value));
+          $(`.fightUpgradeHolder .manaMaxShow`).html(math.bignumber.format(stats.showObj.magic.mana.max.total));
+          $(`.fightUpgradeHolder .manaRegenRateShow`).html(math.bignumber.format(stats.showObj.magic.mana.regen.rate.total));
+          $(`.fightUpgradeHolder .manaRegenSpeedShow`).html(stats.showObj.magic.mana.regen.speed.total);
+          $(`.fightUpgradeHolder .levelShow`).html(stats.showObj.xp.max.count);
+          $(`.fightUpgradeHolder .xpValueShow`).html(math.bignumber.format(stats.showObj.xp.value));
+          $(`.fightUpgradeHolder .xpMaxShow`).html(math.bignumber.format(stats.showObj.xp.max.total));
+          $(`.fightUpgradeHolder .damageValueShow`).html(math.bignumber.format(stats.showObj.damage.value.total));
+          $(`.fightUpgradeHolder .damageSpeedShow`).html(stats.showObj.damage.speed.total);
+          $(`.fightUpgradeHolder .damageChancePercentShow`).html(Number(stats.showObj.damage.chance.percent.total.toFixed(5)));
+          $(`.fightUpgradeHolder .damageChanceAmountShow`).html(Number(stats.showObj.damage.chance.amount.total.toFixed(5)));
+          $(`.fightUpgradeHolder .defenseValueShow`).html(math.bignumber.format(stats.showObj.defense.value.total));
+          $(`.fightUpgradeHolder .defenseChancePercentShow`).html(Number(stats.showObj.defense.chance.percent.total.toFixed(5)));
+          $(`.fightUpgradeHolder .defenseChanceAmountShow`).html(Number(stats.showObj.defense.chance.amount.total.toFixed(5)));
+          $(`.fightUpgradeHolder .damageMultipleValueShow`).html(stats.showObj.damage.multiple.value.total);
+          $(`.fightUpgradeHolder .damageMultipleChancePercentShow`).html(Number(stats.showObj.damage.multiple.chance.percent.total.toFixed(5)));
+          $(`.fightUpgradeHolder .damageMultipleChanceAmountShow`).html(stats.showObj.damage.multiple.chance.amount.total);
+          $(`.fightUpgradeHolder .deathSpeedShow`).html(stats.showObj.death.speed.total);
+          $(`.fightUpgradeHolder .deathTotalShow`).html(stats.showObj.death.total);
+          $(`.fightUpgradeHolder .deathMaxShow`).html(stats.showObj.death.max.total);
+        }
+        break;
+        case "fightShowHolder": {
+          $(`.fightShowHolder .hashShow`).html(stats.showObj.hash);
+          $(`.fightShowHolder .hpValueShow`).html(math.bignumber.format(stats.showObj.hp.value));
+          $(`.fightShowHolder .hpMaxShow`).html(math.bignumber.format(stats.showObj.hp.max.total));
+          $(`.fightShowHolder .hpRegenRateShow`).html(math.bignumber.format(stats.showObj.hp.regen.rate.total));
+          $(`.fightShowHolder .hpRegenSpeedShow`).html(stats.showObj.hp.regen.speed.total);
+          $(`.fightShowHolder .manaValueShow`).html(math.bignumber.format(stats.showObj.magic.mana.value));
+          $(`.fightShowHolder .manaMaxShow`).html(math.bignumber.format(stats.showObj.magic.mana.max.total));
+          $(`.fightShowHolder .manaRegenRateShow`).html(math.bignumber.format(stats.showObj.magic.mana.regen.rate.total));
+          $(`.fightShowHolder .manaRegenSpeedShow`).html(stats.showObj.magic.mana.regen.speed.total);
+          $(`.fightShowHolder .levelShow`).html(stats.showObj.level);
+          $(`.fightShowHolder .moneyDropShow`).html(math.bignumber.format(stats.showObj.loot.money.total));
+          $(`.fightShowHolder .xpDropShow`).html(math.bignumber.format(stats.showObj.loot.xp.total));
+          $(`.fightShowHolder .damageValueShow`).html(math.bignumber.format(stats.showObj.damage.value.total));
+          $(`.fightShowHolder .damageSpeedShow`).html(stats.showObj.damage.speed.total);
+          $(`.fightShowHolder .damageChancePercentShow`).html(Number(stats.showObj.damage.chance.percent.total.toFixed(5)));
+          $(`.fightShowHolder .damageChanceAmountShow`).html(Number(stats.showObj.damage.chance.amount.total.toFixed(5)));
+          $(`.fightShowHolder .defenseValueShow`).html(math.bignumber.format(stats.showObj.defense.value.total));
+          $(`.fightShowHolder .defenseChancePercentShow`).html(Number(stats.showObj.defense.chance.percent.total.toFixed(5)));
+          $(`.fightShowHolder .defenseChanceAmountShow`).html(Number(stats.showObj.defense.chance.amount.total.toFixed(5)));
+          $(`.fightShowHolder .damageMultipleValueShow`).html(stats.showObj.damage.multiple.value.total);
+          $(`.fightShowHolder .damageMultipleChancePercentShow`).html(Number(stats.showObj.damage.multiple.chance.percent.total.toFixed(5)));
+          $(`.fightShowHolder .damageMultipleChanceAmountShow`).html(stats.showObj.damage.multiple.chance.amount.total);
+          $(`.fightShowHolder .deathSpeedShow`).html(stats.showObj.death.speed.total);
+          $(`.fightShowHolder .deathTotalShow`).html(stats.showObj.death.total);
+          $(`.fightShowHolder .deathMaxShow`).html(stats.showObj.death.max.total);
+        }
+        break;
+      }
+    };
+    
+    //Detail
+    render.detailShow = function(stringLocation) {
+      tempString = stringLocation;
+      $(`#detailShow`).css({
+        display: "inline",
+      });
+      isDetail = true;
+    };
+    render.detail = function() {
+      $(`#detailUpgradeCount`).html(_.get(stats.showObj, tempString + ".count"));
+      $(`#detailUpgradeIncrement`).html(Number(_.get(stats.showObj, tempString + ".increment").toFixed(5)));
+      $(`#detailUpgradeCost`).html(math.bignumber.format(stats.showObj.buy(tempString, stats.other.buyAmount, true).cost));
+      $(`#buyAmount`).html(stats.other.buyAmount);
+    };
+    
+    $(`#detailClose`).click(closeDetail);
+    $(`#buyUpgradeButton`).click(function() {
+      stats.showObj.buy(tempString, stats.other.buyAmount);
+    });
+    
+    //Adventure
+    $(`#mainWorld input.zoneInput`).change(function() {
+      killAllEnemy(true);
+      var currentZone = Number($(`#mainWorld input.zoneInput`).val());
+      if (currentZone > stats.zone.main.beat + 1) {
+        $(`#mainWorld input.zoneInput`).val(stats.zone.main.beat + 1);
+        currentZone = stats.zone.main.beat + 1;
+      }
+      $(`#mainWorld input.zoneInput`).attr({
+        max: stats.zone.main.beat + 1,
+      });
+      stats.zone.main.current = currentZone;
+      stats.zone.main.required.count = 0;
+    });
+    
+    //Options button
+    $(`#optionOption`).click(function() {
+      render.chooseShow("optionOption");
+    });
+    $(`#optionClick`).click(function() {
+      render.chooseShow("clickUpgradeData");
+    });
+    $(`#optionAdventure`).click(function() {
+      render.chooseShow("optionAdventure");
+    });
+    
+    //Options
+    $(`#optionSaveButton`).click(function() {
+      save();
+      alert("Saved !!");
+    });
+    $(`#buyAmountInput`).change(function() {
+      stats.other.buyAmount = Number($(`#buyAmountInput`).val());
+    });
+    
+    //Other
+    window.onbeforeunload = function() {
+      if (!noSave) {
+        save();
+      }
+    };
+    
+    render.render = function() {
+      render.ui();
+      render.show();
+      if (isDetail) {
+        render.detail();
+      }
+    };
+    
+    function closeDetail() {
+      $(`#detailShow`).css({
+        display: "none",
+      });
+      isDetail = false;
+    }
+  
+  })();
+  
   //Helper
   function randomString() {
-    return (Math.random() * 1e36).toString(36);
+    return (Math.random() * 1e20).toString(36); //36
   }
   function getObjData(obj, stringArray) {
     var tempObj;
@@ -3195,7 +4867,7 @@ var stats = {}, achievement = [], options = {}, task = [],
     return tempObj;
   }
   function isRandom(limit, returnData, notReturn) {
-    if (limit >= stats.zone.current) {
+    if (limit >= stats.zone.main.current) {
       return returnData;
     } else {
       return notReturn;
@@ -3254,10 +4926,10 @@ var stats = {}, achievement = [], options = {}, task = [],
     }
   }
   function totalCalculate(type, current, bonusMultiply, bonusAdd) {
-    var loopCount, multiplyData, addData;
+    var loopCount, multiplyData, divisionData, addData, resultData;
     switch (type) {
       case "bignumber": {
-        multiplyData = math.bignumber(1);
+        multiplyData = math.bignumber(0);
         for (loopCount = 0; loopCount < bonusMultiply.length; loopCount ++) {
           multiplyData = math.add(bonusMultiply[loopCount], multiplyData);
         }
@@ -3265,11 +4937,17 @@ var stats = {}, achievement = [], options = {}, task = [],
         for (loopCount = 0; loopCount < bonusAdd.length; loopCount ++) {
           addData = math.add(bonusAdd[loopCount], addData);
         }
-        return math.add(math.multiply(current, multiplyData), addData);
+        if (multiplyData < 0) {
+          return math.add(math.abs(math.divide(current, math.subtract(multiplyData, 1))), addData);
+        } else if (multiplyData === 0) {
+          return math.add(current, addData);
+        } else {
+          return math.add(math.multiply(current, math.add(multiplyData, 1)), addData);
+        }
       }
       break;
       case "add": {
-        multiplyData = 1;
+        multiplyData = 0;
         for (loopCount = 0; loopCount < bonusMultiply.length; loopCount ++) {
           multiplyData += bonusMultiply[loopCount];
         }
@@ -3277,7 +4955,13 @@ var stats = {}, achievement = [], options = {}, task = [],
         for (loopCount = 0; loopCount < bonusAdd.length; loopCount ++) {
           addData += bonusAdd[loopCount];
         }
-        return current * multiplyData + addData;
+        if (multiplyData < 0) {
+          return Math.abs(current / (multiplyData - 1)) + addData;
+        } else if (multiplyData === 0) {
+          return current + addData;
+        } else {
+          return current * (multiplyData + 1) + addData;
+        }
       }
       break;
       case "subtract": {
@@ -3310,10 +4994,10 @@ var stats = {}, achievement = [], options = {}, task = [],
   }
   
   function createHero(data) {
-    var tempData = mainCalculate(math.bignumber(1), math.bignumber(stats.multiply.base), math.bignumber(stats.zone.beat)),
-        tempData2 = mainCalculate(math.bignumber(1), math.bignumber(stats.multiply.lost), math.bignumber(stats.zone.beat)),
+    var tempData = mainCalculate(math.bignumber(1), math.bignumber(stats.multiply.base), math.bignumber(stats.zone.main.beat)),
+        tempData2 = mainCalculate(math.bignumber(1), math.bignumber(stats.multiply.lost), math.bignumber(stats.zone.main.beat)),
         multiplyData = math.pow(math.bignumber(stats.multiply.lost), 2),
-        tempData3 = mainCalculate(math.bignumber(1), multiplyData, math.bignumber(stats.zone.beat));
+        tempData3 = mainCalculate(math.bignumber(1), multiplyData, math.bignumber(stats.zone.main.beat));
     if (!data) {
       var tempDamageSpeed = Math.configRandom({
         min: 5 * 60, // Must x60, both
@@ -3332,21 +5016,21 @@ var stats = {}, achievement = [], options = {}, task = [],
       });
       var tempDeathSpeed = Math.configRandom({
         min: 30 * 60, // Must x60, both
-        max: 120 * 60,
+        max: 60 * 60, //TODO: reduce space between these
         round: true,
       });
       data = {
         damage: {
           value: {
             base: math.multiply(math.divide(math.multiply(tempData3, math.bignumber(Math.configRandom({
-              min: 0.5,
-              max: 1.5,
+              min: stats.other.randomRange.min,
+              max: stats.other.randomRange.max,
             }))), 60), tempDamageSpeed),
             increment: lostCalculate(multiplyData, 10, 7),
             cost: {
               base: math.multiply(math.bignumber(Math.configRandom({
-                min: 1,
-                max: 10,
+                min: 0.75,
+                max: 2.5,
               })), tempData),
               increment: math.bignumber(stats.multiply.base),
             },
@@ -3400,8 +5084,8 @@ var stats = {}, achievement = [], options = {}, task = [],
           speed: {
             base: tempDamageSpeed,
             increment: Math.configRandom({
-              min: 10,
-              max: 20,
+              min: 1,
+              max: 10,
               round: true,
             }),
             max: Math.configRandom({
@@ -3479,6 +5163,7 @@ var stats = {}, achievement = [], options = {}, task = [],
                 max: Math.configRandom({
                   min: 0,
                   max: Number(stats.enemy.count > 5) * 10,
+                  round: true,
                 }),
                 cost: {
                   base: math.multiply(math.bignumber(Math.configRandom({
@@ -3494,14 +5179,14 @@ var stats = {}, achievement = [], options = {}, task = [],
         defense: {
           value: {
             base: math.multiply(tempData2, math.bignumber(Math.configRandom({
-              min: 0.5,
-              max: 1.5,
+              min: stats.other.randomRange.min,
+              max: stats.other.randomRange.max,
             }))),
             increment: lostCalculate(stats.multiply.lost, 10, 7),
             cost: {
               base: math.multiply(math.bignumber(Math.configRandom({
-                min: 1,
-                max: 10,
+                min: 0.75,
+                max: 2.5,
               })), tempData),
               increment: math.bignumber(stats.multiply.base),
             },
@@ -3555,30 +5240,31 @@ var stats = {}, achievement = [], options = {}, task = [],
         },
         hp: {
           max: {
-            base: math.multiply(tempData2, 25, math.pow(lostCalculate(stats.multiply.lost, 10, 3.9), 50), math.bignumber(Math.configRandom({
-              min: 0.5,
-              max: 1.5,
+            base: math.multiply(tempData2, stats.other.hpMul, stats.other.hpBase, math.bignumber(Math.configRandom({
+              min: stats.other.randomRange.min,
+              max: stats.other.randomRange.max,
             }))),
             increment: lostCalculate(stats.multiply.lost, 10, 7),
             cost: {
               base: math.multiply(math.bignumber(Math.configRandom({
-                min: 1,
-                max: 10,
+                min: 0.75,
+                max: 2.5,
               })), tempData),
               increment: math.bignumber(stats.multiply.base),
             },
           },
+          //math.pow(lostCalculate(stats.multiply.lost, 10, 7), 50)
           regen: {
             rate: {
-              base: math.multiply(math.divide(math.multiply(tempData2, math.pow(lostCalculate(stats.multiply.lost, 10, 3.9), 50), math.bignumber(Math.configRandom({
-                min: 0.5,
-                max: 1.5,
-              }))), 60 * 5), tempHpRegenSpeed),
+              base: math.multiply(math.divide(math.multiply(tempData2, stats.other.hpMul, math.bignumber(Math.configRandom({
+                min: stats.other.randomRange.min,
+                max: stats.other.randomRange.max,
+              }))), 60 * stats.other.speedMul), tempHpRegenSpeed),
               increment: lostCalculate(stats.multiply.lost, 10, 7),
               cost: {
                 base: math.multiply(math.bignumber(Math.configRandom({
-                  min: 1,
-                  max: 10,
+                  min: 0.75,
+                  max: 2.5,
                 })), tempData),
                 increment: math.bignumber(stats.multiply.base),
               },
@@ -3630,15 +5316,15 @@ var stats = {}, achievement = [], options = {}, task = [],
           },
           mana: {
             max: {
-              base: math.multiply(tempData2, 10, math.bignumber(Math.configRandom({
-                min: 0.5,
-                max: 1.5,
+              base: math.multiply(tempData2, stats.other.manaBase, math.bignumber(Math.configRandom({
+                min: stats.other.randomRange.min,
+                max: stats.other.randomRange.max,
               }))),
               increment: lostCalculate(stats.multiply.lost, 10, 7),
               cost: {
                 base: math.multiply(math.bignumber(Math.configRandom({
-                  min: 10,
-                  max: 200,
+                  min: 7.5,
+                  max: 25,
                 })), tempData),
                 increment: math.bignumber(stats.multiply.base),
               },
@@ -3646,14 +5332,15 @@ var stats = {}, achievement = [], options = {}, task = [],
             regen: {
               rate: {
                 base: math.multiply(math.divide(math.multiply(tempData2, math.bignumber(Math.configRandom({
-                  min: 0.5,
-                  max: 1.5,
-                }))), 60 * 5), tempManaRegenSpeed),
+                  min: stats.other.randomRange.min,
+                  max: stats.other.randomRange.max,
+                }))), 60 * stats.other.speedMul), tempManaRegenSpeed), //TODO: explain why 60 * 5 instead just 60
+                //first: real rate divide 60 to per frame, then multiply by speed with frame
                 increment: lostCalculate(stats.multiply.lost, 10, 7),
                 cost: {
                   base: math.multiply(math.bignumber(Math.configRandom({
-                    min: 5,
-                    max: 15,
+                    min: 7.5,
+                    max: 25,
                   })), tempData),
                   increment: math.bignumber(stats.multiply.base),
                 },
@@ -3718,8 +5405,8 @@ var stats = {}, achievement = [], options = {}, task = [],
         xp: {
           max: {
             base: math.multiply(tempData, math.bignumber(12.5 * stats.other.xpMulRandom), math.bignumber(Math.configRandom({
-              min: 0.5,
-              max: 1.5,
+              min: stats.other.randomRange.min,
+              max: stats.other.randomRange.max,
             }))),
             increment: math.bignumber(stats.multiply.base),
           },
@@ -3869,6 +5556,10 @@ var stats = {}, achievement = [], options = {}, task = [],
                 multiply: 0,
                 plus: 0,
               },
+              delay: {
+                multiply: 0,
+                plus: 0,
+              },
               coolDown: {
                 multiply: 0,
                 plus: 0,
@@ -3934,15 +5625,16 @@ var stats = {}, achievement = [], options = {}, task = [],
       tempHero.hp.value = math.bignumber(tempHero.hp.max.total);
       tempHero.magic.mana.value = math.bignumber(tempHero.magic.mana.max.total);
       hero.active.push(tempHero);
+      render.addHero(tempHero);
       return tempHero;
     } else {
       return data;
     }
   }
   function createEnemy(data) {
-    var tempData = mainCalculate(math.bignumber(1), math.bignumber(stats.multiply.base), math.bignumber(stats.zone.current));
-        tempData2 = mainCalculate(math.bignumber(1), math.bignumber(stats.multiply.lost), math.bignumber(stats.zone.current)),
-        tempData3 = mainCalculate(math.bignumber(1), math.pow(math.bignumber(stats.multiply.base), 2), math.bignumber(stats.zone.current));
+    var tempData = mainCalculate(math.bignumber(1), math.bignumber(stats.multiply.base), math.bignumber(stats.zone.main.current));
+        tempData2 = mainCalculate(math.bignumber(1), math.bignumber(stats.multiply.lost), math.bignumber(stats.zone.main.current)),
+        tempData3 = mainCalculate(math.bignumber(1), math.pow(math.bignumber(stats.multiply.base), 2), math.bignumber(stats.zone.main.current));
     if (!data) {
       var tempDamageSpeed = Math.configRandom({
         min: 5 * 60, // Must x60, both
@@ -3961,25 +5653,24 @@ var stats = {}, achievement = [], options = {}, task = [],
       });
       var tempDeathSpeed = Math.configRandom({
         min: 30 * 60, // Must x60, both
-        max: 120 * 60,
+        max: 60 * 60,
         round: true,
       });
-      
       data = {
         damage: {
           value: math.multiply(math.divide(math.multiply(tempData3, math.bignumber(Math.configRandom({
-            min: 0.5,
-            max: 1.5,
+            min: stats.other.randomRange.min,
+            max: stats.other.randomRange.max,
           }))), 60), tempDamageSpeed),
           //(() * 60) / (tds * 60)
           chance: {
             percent: Math.configRandom({
               min: 0.01,
-              max: 5 * (stats.zone.current <= stats.other.maxZone ? stats.zone.current / 20 : 5),
+              max: 5 + (stats.zone.main.current <= stats.other.maxZone ? stats.zone.main.current / stats.other.maxZone * 50 : 50),
             }),
             amount: math.bignumber(Math.configRandom({
               min: 1.5,
-              max: 4.5 + (stats.zone.current <= stats.other.maxZone ? stats.zone.current / (stats.other.maxZone / 5.5) : 5.5),
+              max: 4.5 + (stats.zone.main.current <= stats.other.maxZone ? stats.zone.main.current / stats.other.maxZone * 5.5 : 5.5),
             })),
           },
           speed: tempDamageSpeed,
@@ -3992,7 +5683,7 @@ var stats = {}, achievement = [], options = {}, task = [],
             chance: {
               percent: Math.configRandom({
                 min: 0.01,
-                max: 5 * (stats.zone.current <= stats.other.maxZone ? stats.zone.current / 20 : 5),
+                max: 5 + (stats.zone.main.current <= stats.other.maxZone ? stats.zone.main.current / stats.other.maxZone * 50 : 50),
               }),
               amount: Math.configRandom({
                 min: 1,
@@ -4004,30 +5695,30 @@ var stats = {}, achievement = [], options = {}, task = [],
         },
         defense: {
           value: math.multiply(tempData, math.bignumber(Math.configRandom({
-            min: 0.5,
-            max: 1.5,
+            min: stats.other.randomRange.min,
+            max: stats.other.randomRange.max,
           }))),
           chance: {
             percent: Math.configRandom({
               min: 0.01,
-              max: 5 * (stats.zone.current <= stats.other.maxZone ? stats.zone.current / 20 : 5),
+              max: 5 + (stats.zone.main.current <= stats.other.maxZone ? stats.zone.main.current / stats.other.maxZone * 50 : 50),
             }),
             amount: math.bignumber(Math.configRandom({
               min: 1.5,
-              max: 4.5 + (stats.zone.current <= stats.other.maxZone ? stats.zone.current / (stats.other.maxZone / 5.5) : 5.5),
+              max: 4.5 + (stats.zone.main.current <= stats.other.maxZone ? stats.zone.main.current / stats.other.maxZone * 5.5 : 5.5),
             })),
           },
         },
         hp: {
-          max: math.multiply(tempData, 25, math.bignumber(Math.configRandom({
-            min: 0.5,
-            max: 1.5,
+          max: math.multiply(tempData, stats.other.hpBase, math.bignumber(Math.configRandom({
+            min: stats.other.randomRange.min,
+            max: stats.other.randomRange.max,
           }))),
           regen: {
             rate: math.multiply(math.divide(math.multiply(tempData, math.bignumber(Math.configRandom({
-              min: 0.5,
-              max: 1.5,
-            }))), 60 * 5), tempHpRegenSpeed),
+              min: stats.other.randomRange.min,
+              max: stats.other.randomRange.max,
+            }))), 60 * stats.other.speedMul), tempHpRegenSpeed),
             speed: tempHpRegenSpeed,
           },
         },
@@ -4040,15 +5731,15 @@ var stats = {}, achievement = [], options = {}, task = [],
             }),
           },
           mana: {
-            max: math.multiply(tempData, 10, math.bignumber(Math.configRandom({
-              min: 0.5,
-              max: 1.5,
+            max: math.multiply(tempData, stats.other.manaBase, math.bignumber(Math.configRandom({
+              min: stats.other.randomRange.min,
+              max: stats.other.randomRange.max,
             }))),
             regen: {
               rate: math.multiply(math.divide(math.multiply(tempData, math.bignumber(Math.configRandom({
-                min: 0.5,
-                max: 1.5,
-              }))), 60 * 5), tempManaRegenSpeed),
+                min: stats.other.randomRange.min,
+                max: stats.other.randomRange.max,
+              }))), 60 * stats.other.speedMul), tempManaRegenSpeed),
               speed: tempManaRegenSpeed,
             },
           },
@@ -4063,17 +5754,17 @@ var stats = {}, achievement = [], options = {}, task = [],
         },
         loot: {
           money: math.multiply(tempData2, 3, math.bignumber(Math.configRandom({
-            min: 0.5,
-            max: 1.5,
+            min: stats.other.randomRange.min,
+            max: stats.other.randomRange.max,
           }))),
           xp: math.multiply(tempData2, math.bignumber(stats.other.xpMulRandom), math.bignumber(Math.configRandom({
-            min: 0.5,
-            max: 1.5,
+            min: stats.other.randomRange.min,
+            max: stats.other.randomRange.max,
           }))),
         },
         level: Math.configRandom({
-          min: stats.zone.current <= 0 ? 0 : stats.zone.current - 5 >= 0 ? stats.zone.current - 5 : 0,
-          max: stats.zone.current + 5,
+          min: stats.zone.main.current <= 0 ? 0 : stats.zone.main.current - 5 >= 0 ? stats.zone.main.current - 5 : 0,
+          max: stats.zone.main.current + 5,
           round: true
         }),
       };
@@ -4087,6 +5778,7 @@ var stats = {}, achievement = [], options = {}, task = [],
       tempEnemy.hp.value = math.bignumber(tempEnemy.hp.max.total.toString());
       tempEnemy.magic.mana.value = math.bignumber(tempEnemy.magic.mana.max.total.toString());
       enemy.active.push(tempEnemy);
+      render.addEnemy(tempEnemy);
       return tempEnemy;
     } else {
       return data;
@@ -4115,10 +5807,7 @@ var stats = {}, achievement = [], options = {}, task = [],
     }) < enemyData.damage.chance.percent.total ? enemyData.damage.chance.amount.total : 1;
     returnData.damageAmount = math.multiply(amount || enemyData.damage.value.total, damageAmount);
     returnData.defenseAmount = math.multiply(heroData.defense.value.total, blockAmount);
-    if (math.compare(returnData.defenseAmount, 0).toNumber() <= 0) {
-      returnData.defenseAmount = 1;
-    }
-    returnData.realDamage = math.divide(returnData.damageAmount, returnData.defenseAmount);
+    returnData.realDamage = math.divide(returnData.damageAmount, math.compare(returnData.defenseAmount, 1).toNumber() <= 0 ? 1 : returnData.defenseAmount);
     heroData.hp.value = math.subtract(heroData.hp.value, (math.compare(returnData.realDamage, 0).toNumber() <= 0 ? 0 : returnData.realDamage));
     if (math.compare(heroData.hp.value, 0).toNumber() <= 0) {
       returnData.damageLeft = math.abs(heroData.hp.value);
@@ -4145,10 +5834,7 @@ var stats = {}, achievement = [], options = {}, task = [],
     }) < heroData.damage.chance.percent.total ? heroData.damage.chance.amount.total : 1;
     returnData.damageAmount = math.multiply(amount || heroData.damage.value.total, damageAmount);
     returnData.defenseAmount = math.multiply(enemyData.defense.value.total, blockAmount);
-    if (math.compare(returnData.defenseAmount, 0).toNumber() <= 0) {
-      returnData.defenseAmount = 1;
-    }
-    returnData.realDamage = math.divide(returnData.damageAmount, returnData.defenseAmount);
+    returnData.realDamage = math.divide(returnData.damageAmount, math.compare(returnData.defenseAmount, 1).toNumber() <= 0 ? 1 : returnData.defenseAmount);
     var tempPreviousHp = enemyData.hp.value.toString();
     enemyData.hp.value = math.subtract(enemyData.hp.value, (math.compare(returnData.realDamage, 0).toNumber() <= 0 ? 0 : returnData.realDamage));
     if (!enemyData._.dealtBy[heroData.hash]) {
@@ -4169,23 +5855,19 @@ var stats = {}, achievement = [], options = {}, task = [],
   function reviveAllHero(instant) {
     for (var loopCount = hero.dead.length - 1; loopCount >= 0; --loopCount) {
       if (hero.dead[loopCount].death.total >= hero.dead[loopCount].death.max.total) {
-        hero.dead[loopCount].death.bool = true;
-        hero.inactive.push(hero.dead[loopCount]);
-        hero.dead.splice(loopCount, 1);
-        continue;
+        hero.dead[loopCount].erase();
+      } else {
+        hero.dead[loopCount].revive(instant);
       }
-      hero.dead[loopCount].revive(instant);
     }
   }
   function reviveAllEnemy(instant) {
     for (var loopCount = enemy.dead.length - 1; loopCount >= 0; --loopCount) {
       if (enemy.dead[loopCount].death.total >= enemy.dead[loopCount].death.max.total) {
-        enemy.dead[loopCount].death.bool = true;
-        enemy.inactive.push(enemy.dead[loopCount]);
-        enemy.dead.splice(loopCount, 1);
-        continue;
+        enemy.dead[loopCount].erase();
+      } else {
+        enemy.dead[loopCount].revive(instant);
       }
-      enemy.dead[loopCount].revive(instant);
     }
   }
   function killAllHero() {
@@ -4199,25 +5881,35 @@ var stats = {}, achievement = [], options = {}, task = [],
     }
   }
   
+  function applyBonus(obj, bonus) {
+    var tempBonusList = [], tempBonus;
+    for (var loopCount = 0; loopCount < bonus.length; loopCount ++) {
+      tempBonus = new Bonus({
+        object: obj,
+        type: bonus[loopCount].type,
+        data: bonus[loopCount].data,
+      });
+      tempBonusList.push(tempBonus);
+    }
+    return tempBonusList;
+  }
+  function extractBonus(bonus) {
+    var returnData = [];
+    for (var loopCount = 0; loopCount < bonus.length; loopCount ++) {
+      returnData.push(bonus[loopCount].extract());
+    }
+    return returnData;
+  }
+  function updateBonus(bonusData) {
+    for (var bonusCount = 0; bonusCount < bonusData.length; bonusCount ++) {
+      bonusData[bonusCount].location = bonusCount;
+      bonusData[bonusCount].call();
+    }
+  }
+  
   function prestige() {
     
   }
-  
-  //Initialize
-  $(document).ready(function() {
-    setInterval(function() {
-      if (forceStop) {
-        return;
-      }
-      for (var i = 0; i < 30; i ++) {
-        main();
-      }
-      heroRender();
-      enemyRender();
-      shopRender();
-      uiRender();
-    }, 500);
-  });
   
   if (storeData) {
     var loopCount, tempHero;
@@ -4225,6 +5917,7 @@ var stats = {}, achievement = [], options = {}, task = [],
       tempHero = new Hero();
       tempHero.apply(storeData.hero.active[loopCount]);
       hero.active.push(tempHero);
+      render.addHero(tempHero);
     }
     for (loopCount = 0; loopCount < storeData.hero.dead.length; loopCount ++) {
       tempHero = new Hero();
@@ -4238,55 +5931,30 @@ var stats = {}, achievement = [], options = {}, task = [],
     }
   } else {
     createHero();
-    stats.zone.beat --;
+    stats.zone.main.beat --;
     alert(`Hello there !!!
 First time here, right? I will tell you some quick tips !
 
 This is prototype version, so you may expect some bugs and locked features
-
+  
 Click on enemy to deal damage.
 
-Click on "-------- Hero 0 --------" or "-------- Enemy 0 --------" to view full stats.
+Click on "+" (the big plus symbol button) to view full stats.
 
-Hover on stats to view many useful things (when pointer turn to hand).
+Click on up arrow to view many useful things
 
-Click on it to buy based on total buy amount you want to buy (did not support max buy yet)
+Click on "Buy" to buy based on total buy amount you want to buy (did not support max buy yet)
 
 Keep it like that with click damage and stuff.
-
-And right click on stats area that show up stats to go back.
 
 And HAVE FUN !!!
 
 P.S: Turn on console to view this message again (F12), and if you saw any error, please tell me.
 
-Warning: did not have save feature yet so if you reload the page it will wipe out your progress !!!
+Warning: did not have auto save yet so you have to save manually.
     `);
   }
   fillEnemy();
-  
-  //Input
-  window.onbeforeunload = function() {
-    if (!noSave) {
-      save();
-    }
-  };
-  $("div#shopData").contextmenu(function() {
-    shopType = "upgrade";
-    shopObj = 0;
-    return false;
-  });
-  var inputBuyAmount = $("input#buyAmount");
-  inputBuyAmount.change(function() {
-    stats.other.buyAmount = Number(inputBuyAmount.val());
-  });
-  var inputCurrentZone = $("input#currentZone");
-  inputCurrentZone.change(function() {
-    killAllEnemy(true);
-    stats.zone.current = Number(inputCurrentZone.val());
-    stats.enemy.death.required.count = 0;
-    enemyRender();
-  });
   
   //Main update
   function main() {
@@ -4305,11 +5973,9 @@ Warning: did not have save feature yet so if you reload the page it will wipe ou
     if (hero.active.length <= 0) {
       reviveAllHero(true);
       killAllEnemy(true);
-      stats.enemy.death.required.count = 0;
-      if (stats.zone.current > 0) {
-        stats.zone.current = stats.zone.beat;
-        inputCurrentZone.val(stats.zone.current);
-        //alert("All of you heroes were killed, pleae go back to previous zone :(");
+      stats.zone.main.required.count = 0;
+      if (stats.zone.main.current > 0) {
+        stats.zone.main.current = stats.zone.main.beat;
       }
     } else {
       reviveAllHero();
@@ -4322,338 +5988,69 @@ Warning: did not have save feature yet so if you reload the page it will wipe ou
     if (enemy.active.length + enemy.dead.length < stats.enemy.count) {
       fillEnemy();
     }
-    if (stats.zone.beat >= stats.other.nextHero && stats.hero.count <= 100) {
+    if (stats.zone.main.beat >= stats.other.nextHero && stats.hero.count <= 100) {
       stats.hero.count ++;
       createHero();
       stats.other.nextHero += 10;
     }
-    if (stats.zone.beat >= stats.other.nextEnemy && stats.enemy.count <= 100) {
+    if (stats.zone.main.beat >= stats.other.nextEnemy && stats.enemy.count <= 100) {
       stats.enemy.count ++;
-      stats.enemy.death.required.max += 5;
+      stats.zone.main.required.max += 5;
       stats.other.nextEnemy += 10;
     }
-    if (stats.enemy.death.required.count >= stats.enemy.death.required.max) {
-      stats.enemy.death.required.count = 0;
-      if (stats.zone.beat < stats.zone.current) {
-        stats.zone.beat = stats.zone.current;
-        stats.zone.current ++;
-        inputCurrentZone.attr({
-          max: stats.zone.current,
-        });
-        inputCurrentZone.val(stats.zone.current);
+    if (stats.zone.main.required.count >= stats.zone.main.required.max) {
+      stats.zone.main.required.count = 0;
+      if (stats.zone.main.beat < stats.zone.main.current) {
+        stats.zone.main.beat = stats.zone.main.current;
+        stats.zone.main.current ++;
       }
-    }
-  }
-  function updateBonus(bonusData) {
-    for (var bonusCount = 0; bonusCount < bonusData.length; bonusCount ++) {
-      bonusData[bonusCount].location = bonusCount;
-      bonusData[bonusCount].call();
     }
   }
   
-  //Renderer
-  function heroRender() {
-    var tempString = "", loopCount;
-    for (loopCount = 0; loopCount < hero.active.length; loopCount ++) {
-      tempString +=
-`<span onclick="stats.shopType = 'hero'; stats.shopObj = hero.active[${loopCount}];" class="pointerHover">---------Hero ${loopCount}--------</span> <br/>
-<span title="${math.bignumber.format(hero.active[loopCount].hp.value)} / ${math.bignumber.format(hero.active[loopCount].hp.max.total)}">Hp: ${Number(math.multiply(math.divide(hero.active[loopCount].hp.value, hero.active[loopCount].hp.max.total), 100).toFixed(5))}%</span> <br/>
-<span title="${math.bignumber.format(hero.active[loopCount].magic.mana.value)} / ${math.bignumber.format(hero.active[loopCount].magic.mana.max.total)}">Mana: ${Number(math.multiply(math.divide(hero.active[loopCount].magic.mana.value, hero.active[loopCount].magic.mana.max.total), 100).toFixed(5))}%</span> <br/>
-<span title="${math.bignumber.format(hero.active[loopCount].xp.value)} / ${math.bignumber.format(hero.active[loopCount].xp.max.total)}">Xp: ${Number(math.multiply(math.divide(hero.active[loopCount].xp.value, hero.active[loopCount].xp.max.total), 100).toFixed(5))}%</span> | Level: ${hero.active[loopCount].xp.max.count} <br/>
-Cool down: ${hero.active[loopCount]._.coolDown.damage} | ${hero.active[loopCount]._.coolDown.hp} | ${hero.active[loopCount]._.coolDown.mana} <br/>
-`;
-    }
-    for (loopCount = 0; loopCount < hero.dead.length; loopCount ++) {
-      tempString +=
-`<span onclick="stats.shopType = 'hero'; stats.shopObj = hero.dead[${loopCount}];" class="pointerHover">---------Dead hero ${loopCount}--------</span> <br/>
-Cool down: ${hero.dead[loopCount]._.coolDown.death} <br/>
-`;
-    }
-    $("div#heroData").html(tempString);
-  }
-  function enemyRender() {
-    var tempString = "", loopCount;
-    for (loopCount = 0; loopCount < enemy.active.length; loopCount ++) {
-      tempString +=
-`<span onclick="stats.shopType = 'enemy'; stats.shopObj = enemy.active[${loopCount}];" class="pointerHover">---------Enemy ${loopCount}--------</span>  <br/>
-<div onclick="playerAttack(enemy.active[${loopCount}])"><span title="${math.bignumber.format(enemy.active[loopCount].hp.value)} / ${math.bignumber.format(enemy.active[loopCount].hp.max.total)}">Hp: ${Number(math.multiply(math.divide(enemy.active[loopCount].hp.value, enemy.active[loopCount].hp.max.total), 100).toFixed(5))}%</span> <br/>
-<span title="${math.bignumber.format(enemy.active[loopCount].magic.mana.value)} / ${math.bignumber.format(enemy.active[loopCount].magic.mana.max.total)}">Mana: ${Number(math.multiply(math.divide(enemy.active[loopCount].magic.mana.value, enemy.active[loopCount].magic.mana.max.total), 100).toFixed(5))}%</span> <br/>
-Level: ${enemy.active[loopCount].level} <br/>
-Cool down: ${enemy.active[loopCount]._.coolDown.damage} | ${enemy.active[loopCount]._.coolDown.hp} | ${enemy.active[loopCount]._.coolDown.mana}</div>
-`;
-    }
-    for (loopCount = 0; loopCount < enemy.dead.length; loopCount ++) {
-      tempString +=
-`<span onclick="stats.shopType = 'enemy'; stats.shopObj = enemy.dead[${loopCount}];" class="pointerHover">---------Dead enemy ${loopCount}--------</span> <br/>
-Cool down: ${enemy.dead[loopCount]._.coolDown.death} <br/>
-`;
-    }
-    $("div#enemyData").html(tempString);
-  }
-  function shopRender() {
-    var tempRenderString = "", loopCount;
-    switch (stats.shopType) {
-      case "upgrade": {
-        for (loopCount = 0; loopCount < upgrade.wait.length; loopCount ++) {
-          tempRenderString +=
-`<span>--- ${upgrade.wait[loopCount].title} | Id: ${loopCount} ---</span> <br/>
-Detail: ${upgrade.wait[loopCount].detail} <br/>
-`;
-        }
-        $("div#shopData").html(tempRenderString);
+  //Initialize
+  $(document).ready(function() {
+    var loopCount = 0;
+    setInterval(function() {
+      if (forceStop) {
+        return;
       }
-      break;
-      case "hero": {
-        if (stats.shopObj.death.bool === true) {
-          stats.shopObj = hero.active[0];
-        }
-        tempRenderString +=
-`<span>--- ${stats.shopObj._.coolDown.death <= 0 ? "Hero" : "Dead hero"} ${stats.shopObj.hash} ---</span> <br/>
-
-Hp: ${math.bignumber.format(stats.shopObj.hp.value)} / <span onclick="stats.shopObj.upgrade(['hp', 'max'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.hp.max.count}
-Increment: x${Number(stats.shopObj.hp.max.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['hp', 'max'], stats.other.buyAmount, true).cost)}
-Bonus: x${math.bignumber.format(stats.shopObj.bonus.hp.max.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.hp.max.plus)}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.hp.max.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.hp.max.cost.plus)}
-">${math.bignumber.format(stats.shopObj.hp.max.total)}</span> <br/>
-
-Hp regen: <span onclick="stats.shopObj.upgrade(['hp', 'regen', 'rate'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.hp.regen.rate.count}
-Increment: x${Number(stats.shopObj.hp.regen.rate.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['hp', 'regen', 'rate'], stats.other.buyAmount, true).cost)}
-Bonus: x${math.bignumber.format(stats.shopObj.bonus.hp.regen.rate.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.hp.regen.rate.plus)}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.hp.regen.rate.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.hp.regen.rate.cost.plus)}
-">${math.bignumber.format(stats.shopObj.hp.regen.rate.total)}</span> / 
-
-<span onclick="stats.shopObj.upgrade(['hp', 'regen', 'speed'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.hp.regen.speed.count} / ${stats.shopObj.hp.regen.speed.max}
-Increment: -${Number(stats.shopObj.hp.regen.speed.increment.toFixed(5))} frame(s)
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['hp', 'regen', 'speed'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.hp.regen.speed.multiply.toFixed(5))} | ${Number(stats.shopObj.bonus.hp.regen.speed.plus.toFixed(5))}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.hp.regen.speed.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.hp.regen.speed.cost.plus)}
-">${Number(stats.shopObj.hp.regen.speed.total.toFixed(5))} frame(s)</span> <br/>
-
-Mana: ${math.bignumber.format(stats.shopObj.magic.mana.value)} / <span onclick="stats.shopObj.upgrade(['magic', 'mana', 'max'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.magic.mana.max.count}
-Increment: x${Number(stats.shopObj.magic.mana.max.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['magic', 'mana', 'max'], stats.other.buyAmount, true).cost)}
-Bonus: x${math.bignumber.format(stats.shopObj.bonus.magic.mana.max.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.magic.mana.max.plus)}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.magic.mana.max.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.magic.mana.max.cost.plus)}
-">${math.bignumber.format(stats.shopObj.magic.mana.max.total)}</span> <br/>
-
-Mana regen: <span onclick="stats.shopObj.upgrade(['magic', 'mana', 'regen', 'rate'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.magic.mana.regen.rate.count}
-Increment: x${Number(stats.shopObj.magic.mana.regen.rate.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['magic', 'mana', 'regen', 'rate'], stats.other.buyAmount, true).cost)}
-Bonus: x${math.bignumber.format(stats.shopObj.bonus.magic.mana.regen.rate.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.magic.mana.regen.rate.plus)}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.magic.mana.regen.rate.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.magic.mana.regen.rate.cost.plus)}
-">${math.bignumber.format(stats.shopObj.magic.mana.regen.rate.total)}</span> / 
-
-<span onclick="stats.shopObj.upgrade(['magic', 'mana', 'regen', 'speed'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.magic.mana.regen.speed.count} / ${stats.shopObj.magic.mana.regen.speed.max}
-Increment: -${Number(stats.shopObj.magic.mana.regen.speed.increment.toFixed(5))} frame(s)
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['magic', 'mana', 'regen', 'speed'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.magic.mana.regen.speed.multiply.toFixed(5))} | ${Number(stats.shopObj.bonus.magic.mana.regen.speed.plus.toFixed(5))}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.magic.mana.regen.speed.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.magic.mana.regen.speed.cost.plus)}
-">${Number(stats.shopObj.magic.mana.regen.speed.total.toFixed(5))} frame(s)</span> <br/>
-
-Xp: ${math.bignumber.format(stats.shopObj.xp.value)} / <span class="pointerHover" title="
-Increment: x${Number(stats.shopObj.xp.max.increment.toFixed(5))}
-Bonus: x${math.bignumber.format(stats.shopObj.bonus.xp.max.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.xp.max.plus)}
-">${math.bignumber.format(stats.shopObj.xp.max.total)}</span> | Level: ${stats.shopObj.xp.max.count} <br/>
-
-<span onclick="stats.shopObj.upgrade(['damage', 'value'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.damage.value.count}
-Increment: x${Number(stats.shopObj.damage.value.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['damage', 'value'], stats.other.buyAmount, true).cost)}
-Bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.value.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.damage.value.plus)}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.value.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.damage.value.cost.plus)}
-">Damage: ${math.bignumber.format(stats.shopObj.damage.value.total)}</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['damage', 'chance', 'percent'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.damage.chance.percent.count} / ${stats.shopObj.damage.chance.percent.max}
-Increment: +${Number(stats.shopObj.damage.chance.percent.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['damage', 'chance', 'percent'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.damage.chance.percent.multiply.toFixed(5))} | +${Number(stats.shopObj.bonus.damage.chance.percent.plus.toFixed(5))}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.chance.percent.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.damage.chance.percent.cost.plus)}
-">Critical chance: ${Number(stats.shopObj.damage.chance.percent.total.toFixed(5))}%</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['damage', 'chance', 'amount'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.damage.chance.amount.count} / ${stats.shopObj.damage.chance.amount.max}
-Increment: +${Number(stats.shopObj.damage.chance.amount.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['damage', 'chance', 'amount'], stats.other.buyAmount, true).cost)}
-Bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.chance.amount.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.damage.chance.amount.plus)}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.chance.amount.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.damage.chance.amount.cost.plus)}
-">Critical amount: x${stats.shopObj.damage.chance.amount.total.toFixed(5)}</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['damage', 'speed'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.damage.speed.count} / ${stats.shopObj.damage.speed.max}
-Increment: -${Number(stats.shopObj.damage.speed.increment.toFixed(5))} frame(s)
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['damage', 'speed'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.damage.speed.multiply.toFixed(5))} | ${Number(stats.shopObj.bonus.damage.speed.plus.toFixed(5))}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.speed.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.damage.speed.cost.plus)}
-">Attack speed: ${Number(stats.shopObj.damage.speed.total.toFixed(5))} frame(s)</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['defense', 'value'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.defense.value.count}
-Increment: x${Number(stats.shopObj.defense.value.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['defense', 'value'], stats.other.buyAmount, true).cost)}
-Bonus: x${math.bignumber.format(stats.shopObj.bonus.defense.value.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.defense.value.plus)}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.defense.value.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.defense.value.cost.plus)}
-">Defense: ${math.bignumber.format(stats.shopObj.defense.value.total)}</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['defense', 'chance', 'percent'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.defense.chance.percent.count} / ${stats.shopObj.defense.chance.percent.max}
-Increment: +${Number(stats.shopObj.defense.chance.percent.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['defense', 'chance', 'percent'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.defense.chance.percent.multiply.toFixed(5))} | +${Number(stats.shopObj.bonus.defense.chance.percent.plus.toFixed(5))}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.defense.chance.percent.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.defense.chance.percent.cost.plus)}
-">Block chance: ${Number(stats.shopObj.defense.chance.percent.total.toFixed(5))}%</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['defense', 'chance', 'amount'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.defense.chance.amount.count} / ${stats.shopObj.defense.chance.amount.max}
-Increment: +${Number(stats.shopObj.defense.chance.amount.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['defense', 'chance', 'amount'], stats.other.buyAmount, true).cost)}
-Bonus: x${math.bignumber.format(stats.shopObj.bonus.defense.chance.amount.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.defense.chance.amount.plus)}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.defense.chance.amount.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.defense.chance.amount.cost.plus)}
-">Block amount: x${stats.shopObj.defense.chance.amount.total.toFixed(5)}</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['damage', 'multiple', 'value'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.damage.multiple.value.count} / ${stats.shopObj.damage.multiple.value.max}
-Increment: +${stats.shopObj.damage.multiple.value.increment} hit(s)
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['damage', 'multiple', 'value'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.damage.multiple.value.multiply.toFixed(5))} | +${stats.shopObj.bonus.damage.multiple.value.plus}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.multiple.value.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.damage.multiple.value.cost.plus)}
-">Multiple: ${stats.shopObj.damage.multiple.value.total} hit(s)</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['damage', 'multiple', 'chance', 'percent'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.damage.multiple.chance.percent.count} / ${stats.shopObj.damage.multiple.chance.percent.max}
-Increment: +${Number(stats.shopObj.damage.multiple.chance.percent.increment.toFixed(5))}
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['damage', 'multiple', 'chance', 'percent'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.damage.multiple.chance.percent.multiply.toFixed(5))} | +${Number(stats.shopObj.bonus.damage.multiple.chance.percent.plus.toFixed(5))}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.multiple.chance.percent.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.damage.multiple.chance.percent.cost.plus)}
-">Splash chance: ${Number(stats.shopObj.damage.multiple.chance.percent.total.toFixed(5))}%</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['damage', 'multiple', 'chance', 'amoount'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.damage.multiple.chance.amount.count} / ${stats.shopObj.damage.multiple.chance.amount.max}
-Increment: +${stats.shopObj.damage.multiple.chance.amount.increment} hit(s)
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['damage', 'multiple', 'chance', 'amount'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.damage.multiple.chance.amount.multiply.toFixed(5))} | +${stats.shopObj.bonus.damage.multiple.chance.amount.plus}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.multiple.chance.amount.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.damage.multiple.chance.amount.cost.plus)}
-">Splash amount: ${stats.shopObj.damage.multiple.chance.amount.total} hit(s)</span> <br/>
-
-<span onclick="stats.shopObj.upgrade(['death', 'speed'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.death.speed.count} / ${stats.shopObj.death.speed.max}
-Increment: -${Number(stats.shopObj.death.speed.increment.toFixed(5))} frame(s)
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['death', 'speed'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.death.speed.multiply.toFixed(5))} | ${Number(stats.shopObj.bonus.death.speed.plus.toFixed(5))}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.death.speed.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.death.speed.cost.plus)}
-">Revive speed: ${Number(stats.shopObj.death.speed.total.toFixed(5))} frame(s)</span> <br/>
-
-Revive count: ${hero.active[0].death.total} / <span onclick="stats.shopObj.upgrade(['death', 'max'], stats.other.buyAmount)" class="pointerHover" title="Count: ${stats.shopObj.death.max.count} / ${stats.shopObj.death.max.max}
-Increment: +${stats.shopObj.death.max.increment} time(s)
-Cost: ${math.bignumber.format(stats.shopObj.upgrade(['death', 'max'], stats.other.buyAmount, true).cost)}
-Bonus: x${Number(stats.shopObj.bonus.death.max.multiply.toFixed(5))} | +${stats.shopObj.bonus.death.max.plus}
-Cost bonus: x${math.bignumber.format(stats.shopObj.bonus.death.max.cost.multiply)} | ${math.bignumber.format(stats.shopObj.bonus.death.max.cost.plus)}
-">${stats.shopObj.death.max.total}</span> <br/>
-`;
-        $("div#shopData").html(tempRenderString);
+      for (var i = 1; i <= gameSpeed; i ++) {
+        main();
       }
-      break;
-      case "enemy": {
-        if (stats.shopObj.death.bool === true) {
-          stats.shopObj = enemy.active[0];
-        }
-        tempRenderString +=
-`<span>--- ${stats.shopObj._.coolDown.death <= 0 ? "Enemy" : "Dead enemy"} ${stats.shopObj.hash} ---</span> <br/>
-
-Hp: ${math.bignumber.format(stats.shopObj.hp.value)} / <span class="pointerHover" title="Bonus: x${math.bignumber.format(stats.shopObj.bonus.hp.max.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.hp.max.plus)}
-">${math.bignumber.format(stats.shopObj.hp.max.total)}</span> <br/>
-
-Hp regen: <span class="pointerHover" title="Bonus: x${math.bignumber.format(stats.shopObj.bonus.hp.regen.rate.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.hp.regen.rate.plus)}
-">${math.bignumber.format(stats.shopObj.hp.regen.rate.total)}</span> / 
-
-<span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.hp.regen.speed.multiply.toFixed(5))} | ${Number(stats.shopObj.bonus.hp.regen.speed.plus.toFixed(5))}
-">${Number(stats.shopObj.hp.regen.speed.total.toFixed(5))} frame(s)</span> <br/>
-
-Mana: ${math.bignumber.format(stats.shopObj.magic.mana.value)} / <span class="pointerHover" title="Bonus: x${math.bignumber.format(stats.shopObj.bonus.magic.mana.max.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.magic.mana.max.plus)}
-">${math.bignumber.format(stats.shopObj.magic.mana.max.total)}</span> <br/>
-
-Mana regen: <span class="pointerHover" title="Bonus: x${math.bignumber.format(stats.shopObj.bonus.magic.mana.regen.rate.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.magic.mana.regen.rate.plus)}
-">${math.bignumber.format(stats.shopObj.magic.mana.regen.rate.total)}</span> / 
-
-<span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.magic.mana.regen.speed.multiply.toFixed(5))} | ${Number(stats.shopObj.bonus.magic.mana.regen.speed.plus.toFixed(5))}
-">${Number(stats.shopObj.magic.mana.regen.speed.total.toFixed(5))} frame(s)</span> <br/>
-
-Level: ${stats.shopObj.level} <br/>
-
-Money drop: ${math.bignumber.format(stats.shopObj.loot.money.total)} <br/>
-
-Xp drop: ${math.bignumber.format(stats.shopObj.loot.xp.total)} </br>
-
-<span class="pointerHover" title="Bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.value.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.damage.value.plus)}
-">Damage: ${math.bignumber.format(stats.shopObj.damage.value.total)}</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.damage.chance.percent.multiply.toFixed(5))} | +${Number(stats.shopObj.bonus.damage.chance.percent.plus.toFixed(5))}
-">Critical chance: ${Number(stats.shopObj.damage.chance.percent.total.toFixed(5))}%</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${math.bignumber.format(stats.shopObj.bonus.damage.chance.amount.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.damage.chance.amount.plus)}
-">Critical amount: x${stats.shopObj.damage.chance.amount.total.toFixed(5)}</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.damage.speed.multiply.toFixed(5))} | ${Number(stats.shopObj.bonus.damage.speed.plus.toFixed(5))}
-">Attack speed: ${Number(stats.shopObj.damage.speed.total.toFixed(5))} frame(s)</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${math.bignumber.format(stats.shopObj.bonus.defense.value.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.defense.value.plus)}
-">Defense: ${math.bignumber.format(stats.shopObj.defense.value.total)}</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.defense.chance.percent.multiply.toFixed(5))} | +${Number(stats.shopObj.bonus.defense.chance.percent.plus.toFixed(5))}
-">Block chance: ${Number(stats.shopObj.defense.chance.percent.total.toFixed(5))}%</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${math.bignumber.format(stats.shopObj.bonus.defense.chance.amount.multiply)} | +${math.bignumber.format(stats.shopObj.bonus.defense.chance.amount.plus)}
-">Block amount: x${stats.shopObj.defense.chance.amount.total.toFixed(5)}</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.damage.multiple.value.multiply.toFixed(5))} | +${stats.shopObj.bonus.damage.multiple.value.plus}
-">Multiple: ${stats.shopObj.damage.multiple.value.total} hit(s)</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.damage.multiple.chance.percent.multiply.toFixed(5))} | +${Number(stats.shopObj.bonus.damage.multiple.chance.percent.plus.toFixed(5))}
-">Splash chance: ${Number(stats.shopObj.damage.multiple.chance.percent.total.toFixed(5))}%</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.damage.multiple.chance.amount.multiply.toFixed(5))} | +${stats.shopObj.bonus.damage.multiple.chance.amount.plus}
-">Splash amount: ${stats.shopObj.damage.multiple.chance.amount.total} hit(s)</span> <br/>
-
-<span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.death.speed.multiply.toFixed(5))} | ${Number(stats.shopObj.bonus.death.speed.plus.toFixed(5))}
-">Revive speed: ${Number(stats.shopObj.death.speed.total.toFixed(5))} frame(s)</span> <br/>
-
-Revive count: ${stats.shopObj.death.total} / <span class="pointerHover" title="Bonus: x${Number(stats.shopObj.bonus.death.max.multiply.toFixed(5))} | +${stats.shopObj.bonus.death.max.plus}
-">${stats.shopObj.death.max.total}</span> <br/>
-`;
-        $("div#shopData").html(tempRenderString);
+    }, 0);
+    function run() {
+      for (loopCount = 0; loopCount < hero.active.length; loopCount ++) {
+        render.updateHero(hero.active[loopCount]);
       }
-      break;
+      for (loopCount = 0; loopCount < hero.dead.length; loopCount ++) {
+        render.updateHero(hero.dead[loopCount]);
+      }
+      for (loopCount = 0; loopCount < enemy.active.length; loopCount ++) {
+        render.updateEnemy(enemy.active[loopCount]);
+      }
+      for (loopCount = 0; loopCount < enemy.dead.length; loopCount ++) {
+        render.updateEnemy(enemy.dead[loopCount]);
+      }
+      requestAnimFrame(run);
     }
-  }
-  function uiRender() {
-    var tempRenderString = "", loopCount;
-    tempRenderString = `Money: ${math.bignumber.format(stats.money.current)}`;
-    $("div#uiData").html(tempRenderString);
-    tempRenderString = `Required kill: ${stats.zone.current <= stats.zone.beat ? "done" : stats.enemy.death.required.count} / ${stats.enemy.death.required.max}`;
-    $("span#requiredKill").html(tempRenderString);
-    tempRenderString = `Beated zone: ${stats.zone.beat}`;
-    $("span#beatedZone").html(tempRenderString);
-    tempRenderString = `Hero: ${hero.active.length + hero.dead.length} | Enemy: ${enemy.active.length + enemy.dead.length}`;
-    $("span#heroVsEnemy").html(tempRenderString);
-    tempRenderString =
-`<span onclick="upgradePlayer(['damage', 'value'], stats.other.buyAmount)" class="pointerHover" title="Count: ${player.damage.value.count}
-Cost: ${math.bignumber.format(upgradePlayer(['damage', 'value'], stats.other.buyAmount, true).cost)}
-Bonus: x${math.bignumber.format(bonus.player.damage.value.multiply)} | +${math.bignumber.format(bonus.player.damage.value.plus)}
-Cost bonus: x${math.bignumber.format(bonus.player.damage.value.cost.multiply)} | ${math.bignumber.format(bonus.player.damage.value.cost.plus)}
-">Click damange: ${math.bignumber.format(player.damage.value.total)}</span> <br/>
-<span title="Count: ${player.damage.chance.percent.count}
-">Critical click chance: ${Number(player.damage.chance.percent.total.toFixed(5))}%</span> <br/>
-<span title="Count: ${player.damage.chance.amount.count}
-">Critical click amount: x${Number(player.damage.chance.percent.total.toFixed(5))}</span> <br/>
-`;
-    $("div#clickData").html(tempRenderString);
-  }
+    run();
+    setInterval(function() {
+      render.render();
+    }, 500);
+  });
   
   console.log(`
   This is prototype version, so you may expect some bugs and locked features
   
   Click on enemy to deal damage.
   
-  Click on "-------- Hero 0 --------" or "-------- Enemy 0 --------" to view full stats.
+  Click on "+" (the big plus symbol button) to view full stats.
   
-  Hover on stats to view many useful things (when pointer turn to hand).
+  Click on up arrow to view many useful things
   
-  Click on it to buy based on total buy amount you want to buy (did not support max buy yet)
+  Click on "Buy" to buy based on total buy amount you want to buy (did not support max buy yet)
   
   Keep it like that with click damage and stuff.
-  
-  And right click on stats area that show up stats to go back.
   
   If you saw any error, please tell me.
   `);
