@@ -1,42 +1,298 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <link rel="stylesheet/less" type="text/css" href="lessStyle.less"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
     <!--Include .less css file before less.js script (Currently not work because of cross-origin issue not allow to load file over file://)-->
     <script src="https://cdn.rawgit.com/less/less.js/c60c3225624da08cfa6937651a3160ef0ced5ba1/dist/less.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.9.3/math.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.10.0/math.js"></script>
     <script src="https://cdn.jsdelivr.net/lodash/4.17.4/lodash.js"></script>
     <script src="https://cdn.rawgit.com/marcuswestin/store.js/8dd238053c65b1712f276e4d6a923a750a275908/dist/store.everything.min.js"></script>
     <script src="mainLibraries.js"></script>
   </head>
   <body>
-    <div id="uiData">
-      div#uiData
-    </div>
-    <div id="heroData" class="noselect">
-      div#heroData
-    </div>
-    <div id="enemyData" class="noselect">
-      div#enemyData
-    </div>
-    <div id="shopData" class="noselect">
-      div#shopData
-    </div>
-    <div id="optionData">
-      <div id="zoneData">
-        <span id="currentZoneTitle">Current zone:</span>
-        <input id="currentZone" type="number" value="0" max="0" min="0"/>
-        <span id="requiredKill">Required kill: 0</span>
-        <span id="beatedZone">Beated zone: 0</span>
+    <div id="all">
+      <div id="mainData">
+        <div id="statsData">
+          div#statsData
+        </div>
+        <div id="fightData" class="noselect">
+          <div id="heroData" class="dataHolder">
+            <!--<div class="fightHolder">
+              <div class="fightTitle">
+                <div class="fightTitleHolder">asd</div>
+              </div>
+              <div class="fightExpand">
+                +
+              </div>
+              <div class="fightMain">
+                <div class="fightXpHolder">
+                  <span class="fightXpShow"></span>
+                  <div class="fightXpData"></div>
+                </div>
+                <div class="fightHpHolder">
+                  <span class="fightHpShow"></span>
+                  <div class="fightHpData"></div>
+                  <div class="fightHpRegenHolder">
+                    <div class="fightHpRegenData"></div>
+                  </div>
+                </div>
+                <div class="fightManaHolder">
+                  <span class="fightManaShow"></span>
+                  <div class="fightManaData"></div>
+                  <div class="fightManaRegenHolder">
+                    <div class="fightManaRegenData"></div>
+                  </div>
+                </div>
+                <div class="fightAttackHolder">
+                  <div class="fightAttackData"></div>
+                </div>
+              </div>
+            </div>-->
+            <div id="heroNewData">
+              <!--<div class="heroNewSlotHolder">
+                <span class="heroNewSlotTitle">Expand Party Limit</span>
+                <div class="divideLine"></div>
+                Cost: <span class="heroNewSlotCost">0</span>
+              </div>-->
+            </div>
+          </div>
+          <div id="enemyData" class="dataHolder">
+          </div>
+        </div>
       </div>
-      <div id="clickData" class="noselect">
+      <div id="uiData">
+        <div id="showData" class="noselect">
+          <div id="showWrapper">
+            <div id="mainShow">
+              <div id="clickUpgradeData" class="showShow">
+                Click damage: <span id="clickDamageValueShow">0</span>
+                <span class="fa fa-arrow-up pointerHover"
+                      id="clickDamageValueUpgrade">
+                </span><br/>
+                Critical chance: <span id="clickDamageChancePercentShow">0</span>%
+                <span class="fa fa-arrow-up pointerHover"
+                      id="clickDamageChancePercentUpgrade">
+                </span><br/>
+                Critical amount: x<span id="clickDamageChanceAmountShow">0</span>
+                <span class="fa fa-arrow-up pointerHover"
+                      id="clickDamageChanceAmountUpgrade">
+                </span><br/><div class="divideLine"></div>
+                Multiple: <span id="clickDamageMultipleValueShow">0</span> hit(s)
+                <span class="fa fa-arrow-up pointerHover"
+                      id="clickDamageMultipleValueUpgrade">
+                </span><br/>
+                Splash chance: <span id="clickDamageMultipleChancePercentShow">0</span>%
+                <span class="fa fa-arrow-up pointerHover"
+                      id="clickDamageMultipleChancePercentUpgrade">
+                </span><br/>
+                Splash amount: <span id="clickDamageMultipleChanceAmountShow">0</span> hit(s)
+                <span class="fa fa-arrow-up pointerHover"
+                      id="clickDamageMultipleChanceAmountUpgrade">
+                </span>
+              </div>
+              <div id="fightUpgradeData">
+                <div class="fightUpgradeHolder showShow">
+                  -- Hero <span class="hashShow"></span> --
+                  <br/><div class="divideLine"></div>
+                  Hp: <span class="hpValueShow">0</span> /
+                  <span class="hpMaxShow">0</span>
+                  <span class="fa fa-arrow-up pointerHover hpMaxUpgrade"></span>
+                  <br/>
+                  Hp regen: <span class="hpRegenRateShow">0</span>
+                  <span class="fa fa-arrow-up pointerHover hpRegenRateUpgrade"></span> / 
+                  <span class="hpRegenSpeedShow">0</span> frame(s)
+                  <span class="fa fa-arrow-up pointerHover hpRegenSpeedUpgrade"></span>
+                  <br/><div class="divideLine"></div>
+                  Mana: <span class="manaValueShow">0</span> /
+                  <span class="manaMaxShow">0</span>
+                  <span class="fa fa-arrow-up pointerHover manaMaxUpgrade"></span>
+                  <br/>
+                  Mana regen: <span class="manaRegenRateShow">0</span>
+                  <span class="fa fa-arrow-up pointerHover manaRegenRateUpgrade"></span> /
+                  <span class="manaRegenSpeedShow">0</span> frame(s)
+                  <span class="fa fa-arrow-up pointerHover manaRegenSpeedUpgrade"></span>
+                  <br/><div class="divideLine"></div>
+                  Level: <span class="levelShow">0</span>
+                  <br/>
+                  Xp: <span class="xpValueShow">0</span> /
+                  <span class="xpMaxShow">0</span>
+                  <br/><div class="divideLine"></div>
+                  Damage: <span class="damageValueShow">0</span>
+                  <span class="fa fa-arrow-up pointerHover damageValueUpgrade"></span>
+                  <br/>
+                  Attack speed: <span class="damageSpeedShow">0</span> frame(s)
+                  <span class="fa fa-arrow-up pointerHover damageSpeedUpgrade"></span>
+                  <br/>
+                  Critical chance: <span class="damageChancePercentShow">0</span>%
+                  <span class="fa fa-arrow-up pointerHover damageChancePercentUpgrade"></span>
+                  <br/>
+                  Critical amount: x<span class="damageChanceAmountShow">0</span>
+                  <span class="fa fa-arrow-up pointerHover damageChanceAmountUpgrade"></span>
+                  <br/><div class="divideLine"></div>
+                  Defense: <span class="defenseValueShow">0</span>
+                  <span class="fa fa-arrow-up pointerHover defenseValueUpgrade"></span>
+                  <br/>
+                  Block chance: <span class="defenseChancePercentShow">0</span>%
+                  <span class="fa fa-arrow-up pointerHover defenseChancePercentUpgrade"></span>
+                  <br/>
+                  Block amount: x<span class="defenseChanceAmountShow">0</span>
+                  <span class="fa fa-arrow-up pointerHover defenseChanceAmountUpgrade"></span>
+                  <br/><div class="divideLine"></div>
+                  Multiple: <span class="damageMultipleValueShow">0</span> hit(s)
+                  <span class="fa fa-arrow-up pointerHover damageMultipleValueUpgrade"></span>
+                  <br/>
+                  Splash chance: <span class="damageMultipleChancePercentShow">0</span>%
+                  <span class="fa fa-arrow-up pointerHover damageMultipleChancePercentUpgrade"></span>
+                  <br/>
+                  Splash amount: <span class="damageMultipleChanceAmountShow">0</span> hit(s)
+                  <span class="fa fa-arrow-up pointerHover damageMultipleChanceAmountUpgrade"></span>
+                  <br/><div class="divideLine"></div>
+                  Revive speed: <span class="deathSpeedShow">0</span> frame(s)
+                  <span class="fa fa-arrow-up pointerHover deathSpeedUpgrade"></span>
+                  <br/>
+                  Revive count: <span class="deathTotalShow">0</span> /
+                  <span class="deathMaxShow">0</span>
+                  <span class="fa fa-arrow-up pointerHover deathMaxUpgrade"></span>
+                </div>
+                <div class="fightShowHolder showShow">
+                  -- Enemy <span class="hashShow"></span> --
+                  <br/><div class="divideLine"></div>
+                  Hp: <span class="hpValueShow">0</span> /
+                  <span class="hpMaxShow">0</span>
+                  <br/>
+                  Hp regen: <span class="hpRegenRateShow">0</span> / 
+                  <span class="hpRegenSpeedShow">0</span> frame(s)
+                  <br/><div class="divideLine"></div>
+                  Mana: <span class="manaValueShow">0</span> /
+                  <span class="manaMaxShow">0</span>
+                  <br/>
+                  Mana regen: <span class="manaRegenRateShow">0</span> /
+                  <span class="manaRegenSpeedShow">0</span> frame(s)
+                  <br/><div class="divideLine"></div>
+                  Money drop: <span class="moneyDropShow">0</span>
+                  <br/>
+                  Xp drop: <span class="xpDropShow">0</span>
+                  <br/>
+                  Level: <span class="levelShow">0</span>
+                  <br/><div class="divideLine"></div>
+                  Damage: <span class="damageValueShow">0</span>
+                  <br/>
+                  Attack speed: <span class="damageSpeedShow">0</span> frame(s)
+                  <br/>
+                  Critical chance: <span class="damageChancePercentShow">0</span>%
+                  <br/>
+                  Critical amount: x<span class="damageChanceAmountShow">0</span>
+                  <br/><div class="divideLine"></div>
+                  Defense: <span class="defenseValueShow">0</span>
+                  <br/>
+                  Block chance: <span class="defenseChancePercentShow">0</span>%
+                  <br/>
+                  Block amount: x<span class="defenseChanceAmountShow">0</span>
+                  <br/><div class="divideLine"></div>
+                  Multiple: <span class="damageMultipleValueShow">0</span> hit(s)
+                  <br/>
+                  Splash chance: <span class="damageMultipleChancePercentShow">0</span>%
+                  <br/>
+                  Splash amount: <span class="damageMultipleChanceAmountShow">0</span> hit(s)
+                  <br/><div class="divideLine"></div>
+                  Revive speed: <span class="deathSpeedShow">0</span> frame(s)
+                  <br/>
+                  Revive count: <span class="deathTotalShow">0</span> /
+                  <span class="deathMaxShow">0</span>
+                </div>
+              </div>
+            </div>
+            <div id="optionShow" class="showShow">
+              <div>
+                <div id="optionSaveButton" class="pointerHover">
+                  <span class="fa fa-floppy-o"></span> Save
+                </div>
+              </div>
+              <div>
+                Auto save per second(s): 
+                <input type="number" min="0" value="60" max="999" id="autoSaveInput"/>
+              </div>
+              <div class="divideLine"></div>
+              <div>
+                Buy amount:
+                <input type="number" min="0" value="1" id="buyAmountInput"/>
+              </div>
+              <div>
+                Number notation:
+                <select id="optionNumberNotation">
+                  <option value="alphabet">Alphabet</option>
+                  <option value="engineering">Engineering</option>
+                  <option value="scientific">Scientific</option>
+                  <option value="shortOld">Short old</option>
+                  <option value="longOld">Long old</option>
+                  <option value="shortNew">Short new</option>
+                  <option value="longNew">Long new</option>
+                </select>
+              </div>
+            </div>
+            <div id="statsShow" class="showShow"></div>
+            <div id="upgradeShow" class="showShow">
+              <div class="upgradeShowData pointerHover">Example upgrade</div>
+            </div>
+            <div id="adventureShow" class="showShow">
+              <div class="adventureHolder" id="mainWorld">
+                <span class="worldTitle">Main World</span>
+                <div class="divideLine"></div>
+                <div>
+                  Required kill:
+                  <span class="requiredKillCurrent">0</span> /
+                  <span class="requiredKillRequired">0</span>
+                </div>
+                <div>
+                  Beated zone:
+                  <span class="beatedZone">0</span>
+                </div>
+                <div>
+                  Zone:
+                  <input type="number" min="0" value="0" max="0" class="zoneInput"/>
+                </div>
+                
+              </div>
+            </div>
+            <div id="achievementShow" class="showShow">
+              <!--<div class="achievementHolder pointerHover">
+              Test
+              </div>-->
+            </div>
+          </div>
+          <div id="detailShow" class="showShow">
+            <span class="fa fa-times-circle-o pointerHover" id="detailClose"></span>
+            <div id="detailUpgrade">
+              <span id="detailUpgradeTitle">Test</span>
+              <div id="buyUpgradeButton" class="pointerHover">Buy <span id="buyAmount">0</span></div>
+              <div class="divideLine"></div>
+              Detail: <span id="detailUpgradeDetail">Test</span>
+              <br/>
+              Count: <span id="detailUpgradeCount">0</span>
+              <br/>
+              Increment: <span id="detailUpgradeIncrement">0</span>
+              <br/>
+              Cost: <span id="detailUpgradeCost">0</span>
+            </div>
+          </div>
+        </div>
+        <div id="optionData">
+          <div id="optionWrap">
+            <div class="optionDataButton pointerHover noselect" id="optionOption">Option</div>
+            <div class="optionDataButton pointerHover noselect" id="optionStats">Stats</div>
+            <div class="optionDataButton pointerHover noselect" id="optionClick">Click</div>
+            <div class="optionDataButton pointerHover noselect" id="optionUpgrade">Upgrade</div>
+            <div class="optionDataButton pointerHover noselect" id="optionAdventure">Adventure</div>
+            <div class="optionDataButton pointerHover noselect" id="optionAchievement">Achievement</div>
+          </div>
+        </div>
       </div>
-      <div id="buyData">
-        <span id="buyAmountTitle">Buy amount:</span>
-        <input id="buyAmount" type="number" value="1" min="1"/>
-        <span id="heroVsEnemy">Hero: 0 | Enemy: 0</span>
-      </div>
+    </div>
+    <div id="creditData">
+      Made by Trung0246 - alpha v.0.1.0 - Playable on phone? And some features are disabled
     </div>
   </body>
   <script src="idleProject.js"></script>
