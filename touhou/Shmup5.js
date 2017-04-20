@@ -1743,17 +1743,6 @@
   [],     // pool: entropy pool starts empty
   Math    // math: package containing random, pow, and seedrandom
 );
-
-//TODO list:
-/*
-fire > earth
-  ^  X   V      Elemental magic (no idea how to implement this, should test basic principal first...)
- air < water
- 
-wizard > warrior
-   ^   X    V
- rogue < priest
-*/
 //Unknown shit
 /*
 function AngularDistance(angle1, angle2){
@@ -2523,8 +2512,6 @@ bx += spd * cos( disp );
 by += spd * sin( disp );
 
 */
-//TODO: watch jewel pet? old anime :P
-//rider000, nanoha, illya (Done?), madoka (WIP), little buster
 //Tagential speed
 //Meridian arc
 //Steering Behaviors: https://gamedevelopment.tutsplus.com/series/understanding-steering-behaviors--gamedev-12732
