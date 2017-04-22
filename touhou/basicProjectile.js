@@ -73,7 +73,7 @@
       projectile.position.start.y = data.position.start.y || 0;
       projectile.instant = data.instant || false;
       data.position.end = data.position.end || {};
-      projectile.temp.distance = data.distance || Shmup.point.distance(true, projectile.position.start, projectile.position.end, true);
+      projectile.temp.distance = data.distance || Shmup.point.dist(true, projectile.position.start, projectile.position.end, true);
       if (projectile.instant) {
         projectile.position.end.x = data.position.end.x || projectile.position.start.x + projectile.temp.distance * Math.cos(projectile.angle - Math.PI);
         projectile.position.end.y = data.position.end.y || projectile.position.start.y + projectile.temp.distance * Math.sin(projectile.angle - Math.PI);
@@ -81,7 +81,7 @@
         projectile.position.end.x = data.position.end.x || projectile.position.start.x;
         projectile.position.end.y = data.position.end.y || projectile.position.start.y;
       }
-      projectile.distance = Shmup.point.distance(true, projectile.position.start, projectile.position.end, true);
+      projectile.distance = Shmup.point.dist(true, projectile.position.start, projectile.position.end, true);
       projectile.anchor.value = data.anchor || 0;
       var tempDis = Shmup.line.on(projectile.position.start, projectile.position.end, projectile.anchor.value);
       projectile.anchor.x = tempDis.x;
@@ -111,11 +111,11 @@
       var tempDis = Shmup.line.on(projectile.position.start, projectile.position.end, projectile.anchor.value);
       projectile.anchor.x = tempDis.x;
       projectile.anchor.y = tempDis.y;
-      tempDis = Shmup.point.distance(true, projectile.position.start, projectile.anchor, true);
+      tempDis = Shmup.point.dist(true, projectile.position.start, projectile.anchor, true);
       projectile.position.start.x = projectile.anchor.x + tempDis * Math.cos(projectile.angle);
       projectile.position.start.y = projectile.anchor.y + tempDis * Math.sin(projectile.angle);
       if (projectile.distance >= projectile.temp.distance) {
-        tempDis = Shmup.point.distance(true, projectile.position.end, projectile.anchor, true);
+        tempDis = Shmup.point.dist(true, projectile.position.end, projectile.anchor, true);
         projectile.position.end.x = projectile.anchor.x + tempDis * Math.cos(projectile.angle - Math.PI);
         projectile.position.end.y = projectile.anchor.y + tempDis * Math.sin(projectile.angle - Math.PI);
       }
@@ -125,7 +125,7 @@
         projectile.position.end.x = projectile.position.end.x + projectile.radial * Math.cos(projectile.angle);
         projectile.position.end.y = projectile.position.end.y + projectile.radial * Math.sin(projectile.angle);
       }
-      projectile.distance = Shmup.point.distance(true, projectile.position.start, projectile.position.end, true);
+      projectile.distance = Shmup.point.dist(true, projectile.position.start, projectile.position.end, true);
     },
   });
   
@@ -249,8 +249,8 @@
           radial: projectile.radial,
         });
         if (projectile.instant) {
-          tempNode.position.x = Math.cos(projectile.angle - Math.PI) * Shmup.interpolation.linear(0, projectile.temp.distance * projectile.radial, nodeCount / projectile.count) + projectile.position.x;
-          tempNode.position.y = Math.sin(projectile.angle - Math.PI) * Shmup.interpolation.linear(0, projectile.temp.distance * projectile.radial, nodeCount / projectile.count) + projectile.position.y;
+          tempNode.position.x = Math.cos(projectile.angle - Math.PI) * Shmup.tween.linear(0, projectile.temp.distance * projectile.radial, nodeCount / projectile.count) + projectile.position.x;
+          tempNode.position.y = Math.sin(projectile.angle - Math.PI) * Shmup.tween.linear(0, projectile.temp.distance * projectile.radial, nodeCount / projectile.count) + projectile.position.y;
         }
         projectile.temp.node.push(tempNode);
       }
@@ -311,7 +311,7 @@
           Shmup.projectile.curveNode.update(projectile.temp.node[tempCount]);
         }
         if (tempCount > 0) {
-          projectile.distance += Shmup.point.distance(true, projectile.temp.node[tempCount - 1].position, projectile.temp.node[tempCount].position, true);
+          projectile.distance += Shmup.point.dist(true, projectile.temp.node[tempCount - 1].position, projectile.temp.node[tempCount].position, true);
         }
       }
       if (projectile.temp.instantCount < projectile.count) {
@@ -368,8 +368,8 @@
           radial: projectile.radial,
         });
         if (projectile.instant) {
-          tempNode.position.x = Math.cos(projectile.angle - Math.PI) * Shmup.interpolation.linear(0, projectile.distance * projectile.radial, nodeCount / projectile.distance) + projectile.position.x;
-          tempNode.position.y = Math.sin(projectile.angle - Math.PI) * Shmup.interpolation.linear(0, projectile.distance * projectile.radial, nodeCount / projectile.distance) + projectile.position.y;
+          tempNode.position.x = Math.cos(projectile.angle - Math.PI) * Shmup.tween.linear(0, projectile.distance * projectile.radial, nodeCount / projectile.distance) + projectile.position.x;
+          tempNode.position.y = Math.sin(projectile.angle - Math.PI) * Shmup.tween.linear(0, projectile.distance * projectile.radial, nodeCount / projectile.distance) + projectile.position.y;
         }
         projectile.temp.node.push(tempNode);
       }
