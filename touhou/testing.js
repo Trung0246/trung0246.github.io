@@ -87,6 +87,8 @@ window.addEventListener('keydown', function(e) {
 
 var consAng = Math.sin(Math.PI / 4);
 
+var scene = {x: 384 * 1.5, y: 448* 1.5};
+
 function isSlow(speed) {
   /*if (keyboard.shift) {
     return player.slow;
@@ -95,7 +97,7 @@ function isSlow(speed) {
   }*/
   var slowSpeed;
   if (keyboard.shift) {
-    slowSpeed = player.slow * speed;
+    slowSpeed = player.slow;
   } else {
     slowSpeed = speed;
   }
@@ -108,7 +110,7 @@ function isSlow(speed) {
 
 //Pre-processing
 var renderer = new PIXI.autoDetectRenderer(
-  384 * 1.5, 448 * 1.5,
+  scene.x, scene.y,
   {antialias: false, transparent: false, resolution: 1}
 );
 renderer.autoResize = true;
@@ -144,10 +146,6 @@ Shmup.configs({
     curveB: 1,
     curveNode: 1,
   },
-  scene: {
-    x: 384 * 1.5,
-    y: 448 * 1.5,
-  },
 });
 
 Shmup.advanced.performance.configs({
@@ -157,10 +155,10 @@ Shmup.advanced.performance.configs({
 
 //Player
 var player = {
-  x: Shmup.advanced.data.scene.x / 2,
-  y: Shmup.advanced.data.scene.y - 50,
+  x: scene.x / 2,
+  y: scene.y - 50,
   speed: 5,
-  slow: 0.475,
+  slow: 1.2,
   graphic: undefined,
 };
 
@@ -210,8 +208,8 @@ function loop() {
   } else if (keyboard.down) {
     player.y += isSlow(player.speed);
   };
-  player.x = Math.max(0, Math.min(player.x, Shmup.advanced.data.scene.x));
-  player.y = Math.max(0, Math.min(player.y, Shmup.advanced.data.scene.y));
+  player.x = Math.max(0, Math.min(player.x, scene.x));
+  player.y = Math.max(0, Math.min(player.y, scene.y));
   player.graphic.position.set(player.x, player.y);
   player.graphic.rotation += 0.05;
   //Shmup.update();
@@ -248,8 +246,8 @@ editor.setShowInvisibles(true);
 editor.setFontSize(10.75);
 editor.session.setTabSize(2);
 editor.setValue(`function* main(
-  x = Shmup.advanced.data.scene.x / 2,
-  y = Shmup.advanced.data.scene.y / 3.75
+  x = scene.x / 2,
+  y = scene.y / 3.75
 ) {
   var angle = 0;
   while (true) {
@@ -267,7 +265,7 @@ function CreateShot01(x, y, radial, angle, texture = 0) {
       x: x,
       y: y,
     },
-    angle: Shmup.angle.degree.radian(angle),
+    angle: Shmup.angle.deg.rad(angle),
     radial: radial,
     data: {
       dR: Math.random() < 0.5 ? -1 : 1,
@@ -276,7 +274,7 @@ function CreateShot01(x, y, radial, angle, texture = 0) {
       projectile.data.graphic.position.set(projectile.position.x, projectile.position.y);
       projectile.data.graphic.rotation = projectile.angle + Math.PI / 2;
       //projectile.data.graphic.rotation += (Math.random() * 0.05 + 0.075) * projectile.data.dR;
-      if (Shmup.utils.out(0, projectile.position) || deleteProjectile === true) {
+      if (Shmup.utils.out(0, projectile.position, scene.x, scene.y) || deleteProjectile === true) {
         if (Shmup.advanced.process.active.length <= 1) {
           deleteProjectile = false;
         }
