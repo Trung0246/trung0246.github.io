@@ -141,10 +141,10 @@ debugText.y = 5;
 Shmup.configs({
   maxProjectile: {
     bullet: 10000,
-    laser: 1,
+    laser: 1000,
     curveA: 1,
-    curveB: 1,
-    curveNode: 1,
+    curveB: 1000,
+    curveNode: 100000,
   },
 });
 
@@ -158,14 +158,16 @@ var player = {
   x: scene.x / 2,
   y: scene.y - 50,
   speed: 5,
-  slow: 1.2,
+  slow: 2,
   graphic: undefined,
 };
 
 PIXI.loader
-  .add("player", "https://cdn.rawgit.com/Trung0246/Shmup/0ca7ea5477e406ae02a690e74bb37cab05578e44/img/thHitbox.png")//https://cdn.rawgit.com/Trung0246/Shmup/a1eaa269512b4c1b198dffb58b9fd3023171a701/img/11669-16x16x32.png")
-  .add("bullet", "https://cdn.rawgit.com/Trung0246/Shmup/d934859990aa886a021a40377891845dd4185d77/img/down_arrow_icon.png")
+  .add("player", "http://trung0246.com/touhou/hitbox.png")//https://cdn.rawgit.com/Trung0246/Shmup/0ca7ea5477e406ae02a690e74bb37cab05578e44/img/thHitbox.png")//https://cdn.rawgit.com/Trung0246/Shmup/a1eaa269512b4c1b198dffb58b9fd3023171a701/img/11669-16x16x32.png")
+  //.add("bullet", "https://cdn.rawgit.com/Trung0246/Shmup/d934859990aa886a021a40377891845dd4185d77/img/down_arrow_icon.png")
   .add("shotSheet", "https://cdn.rawgit.com/Trung0246/Shmup/f8054fbd2f2fb25482076149c9d81e2b8041e408/img/Shot.png")//"https://i.sli.mg/bPRrPW.png")
+  .add("shotSheet2", "https://raw.githubusercontent.com/Trung0246/trung0246.github.io/master/touhou/th128_BulletAll.png")
+  .add("laserSheet", "https://raw.githubusercontent.com/Trung0246/trung0246.github.io/master/touhou/th128_LaserRotated.png")
   .load(setup);
 
 //Main process
@@ -211,7 +213,7 @@ function loop() {
   player.x = Math.max(0, Math.min(player.x, scene.x));
   player.y = Math.max(0, Math.min(player.y, scene.y));
   player.graphic.position.set(player.x, player.y);
-  player.graphic.rotation += 0.05;
+  player.graphic.rotation += 0.075;
   //Shmup.update();
   Shmup.update();
   renderer.render(container);
@@ -310,7 +312,11 @@ function* changeGraphic(obj) {
 `);
 
 document.getElementById("evalScript").onclick = function() {
-  eval(editor.getValue());
+  try {
+    eval(editor.getValue());
+  } catch (error) {
+    alert(error);
+  }
 };
 
 document.getElementById("clearTask").onclick = function() {
@@ -336,6 +342,18 @@ function resetAll() {
   }
   eval(editor.getValue());
 }
+
+window.onbeforeunload = function (e) {
+  e = e || window.event;
+
+  // For IE and Firefox prior to version 4
+  if (e) {
+      e.returnValue = 'Sure?';
+  }
+
+  // For Safari
+  return 'Sure?';
+};
 
 /*
 /*function* example(x, y) {
@@ -797,5 +815,228 @@ function* turn(obj, angle) {
     obj.angle += Shmup.angle.degree.radian(angle / tC);
     yield;
   }
+}
+
+function* Test3D() {
+  var GetEnemyX = scene.x / 2;
+  var GetEnemyY = scene.y / 2;
+  var ang1 = 0;
+  var ang2 = 0;
+  var rad = 0;
+  var fcount = 0;
+  var density = 1;
+  Shmup.utils.loop.ascent(0, 24 / density, function(i) {
+    Shmup.utils.loop.ascent(0, 12 / density, function(j) {
+      Shmup.utils.task({
+        update: true
+      }, [i * 15 * density, j * 15 * density], Point);
+    });
+  });
+  while (true) {
+    if (rad < 192 + 75) {
+      rad += 5;
+    }
+    fcount += 1;//0.5;
+    ang1 = fcount / 2;
+    ang2 = fcount / 3;
+    yield;
+  }
+  function* Point(a, b) {
+    var obj = CreateShot01(GetEnemyX, GetEnemyY, 0, 0); //These will be real bullets on foreground of sphere
+    var backobj = CreateShot01(GetEnemyX, GetEnemyY, 0, 0); // These will be fake bullets on background
+    var x0, y0, z0, x, y, z, xtmp;
+    while (!Shmup.utils.removed(obj)) {
+      if (fcount % 3 === 0) {
+        /*let color = Math.round(Shmup.math.rand({min: 0, max:9}));
+        ObjShot_SetGraphic(obj,color);
+        ObjShot_SetGraphic(backobj,color);**
+      }
+      if (rad < 192 + 75) {
+        //Definition of sphere points. See http://en.wikipedia.org/wiki/Spherical_coordinate_system#Cartesian_coordinates
+        x0 = rad * sin(a) * cos(b);
+        y0 = rad * sin(a) * sin(b);
+        z0 = rad * cos(a);
+      }
+      //Rotation around X and Y axis. See http://en.wikipedia.org/wiki/Rotation_matrix#In_three_dimensions
+      x = x0;
+      y = y0 * cos(ang1) - z0 * sin(ang1);
+      z = y0 * sin(ang1) + z0 * cos(ang1);
+      xtmp = x; // Needed to save x value for z calculation
+      x = x * cos(ang2) + z * sin(ang2);
+      z = -xtmp * sin(ang2) + z * cos(ang2);
+      if (z >= 0) {
+        //Show bullet, hide effect
+        obj.position.x = GetEnemyX + x;
+        obj.position.y = GetEnemyY + y;
+        backobj.position.x = GetEnemyX - x;
+        backobj.position.y = GetEnemyY - y;
+      } else {
+        backobj.position.x = GetEnemyX + x;
+        backobj.position.y = GetEnemyY + y;
+        obj.position.x = GetEnemyX - x;
+        obj.position.y = GetEnemyY - y;
+      }
+      yield;
+    }
+  }
+}
+
+function sin(x) {
+  return -Math.sin(Shmup.angle.deg.rad(x));
+}
+
+function cos(x) {
+  return Math.cos(Shmup.angle.deg.rad(x));
+}
+Shmup.utils.task({
+  update: true
+}, [], Test3D);
+
+function* main(
+  x = scene.x / 2,
+  y = scene.y / 3.75
+) {
+  var angle = 0, count = 4;
+  while (true) {
+    //CreateShot01(x, y, 2, angle, Math.floor(angle / 2) % 4 + 1);
+    for (let i = 1; i <= count; i ++) {
+      CreateLaser01(x, y, 5, angle, 175);
+      angle += 360 / count + 1.56;
+    }
+    yield* Shmup.utils.wait(1);
+  }
+}
+Shmup.utils.task({update: true}, [], main);
+var fuckTest = 1;
+function CreateLaser01(x, y, speed, angle, distance) {
+  var obj = Shmup.projectile.laser.add({
+    angle: Shmup.angle.deg.rad(angle),
+    radial: speed,
+    data: {},
+    position: {
+      start: {
+        x: x,
+        y: y,
+      },
+    },
+    distance: distance,
+    update: function(projectile) {
+      projectile.data.graphic.position.set(projectile.position.end.x, projectile.position.end.y);
+      projectile.data.graphic.rotation = projectile.angle;
+      tempPos = Shmup.point.dist(true, projectile.position.start, projectile.position.end, true);
+      projectile.data.graphic.width = tempPos;
+      projectile.data.graphic.height = tempPos / distance * 13.5 + 2.5;
+      /*projectile.data.head.x = projectile.position.start.x;
+      projectile.data.head.y = projectile.position.start.y;**
+      if (Shmup.utils.out(0, projectile.position.end, scene.x, scene.y) || deleteProjectile === true) {
+        if (Shmup.advanced.process.active.length <= 1) {
+          deleteProjectile = false;
+        }
+        stage.removeChild(projectile.data.graphic);
+        stage.removeChild(projectile.data.head);
+        Shmup.projectile.laser.remove(projectile);
+      }
+    },
+  });
+  var fuckoff = new PIXI.Rectangle(16 * 16, 0, 16 * 16, 16 * 1);
+  var tempTexture = new PIXI.Texture(PIXI.utils.TextureCache["laserSheet"], fuckoff);
+  var bulletImg = new PIXI.Sprite(tempTexture);
+  bulletImg.anchor.set(0, 0.5);
+  obj.data.graphic = bulletImg;
+  stage.addChild(bulletImg);
+  /*var head = new PIXI.Graphics();
+  head.lineStyle(0);
+  head.beginFill(0xFFFF0B, 0.5);
+  head.drawCircle(0, 0, fuckTest);
+  fuckTest += 0.1;
+  if (fuckTest > 20) {
+    fuckTest = 1;
+  }
+  head.endFill();
+  obj.data.head = head;
+  stage.addChild(head);**
+}
+
+function* main(
+  x = scene.x / 2,
+  y = scene.y / 3.75
+) {
+  var angle = 0, count = 4, obj,
+  flip = false, flip2 = false, angle2 = 70;
+  while (true) {
+    //CreateShot01(x, y, 2, angle, Math.floor(angle / 2) % 4 + 1);
+    //for (let i = 1; i <= count; i ++) {
+      obj = CreateCurveB01(x, y, 4, angle, 170 / 4 + 0.5);
+      Shmup.utils.task({update: true}, [obj, angle2 * (flip === true ? -1 : 1)], turn1);
+      flip = !flip;
+      angle += 73;
+      if (flip2 === true) {
+        angle2 -= 1;
+        if (angle2 <= 0) {
+          flip2 = false;
+        }
+      } else {
+        angle2 += 1;
+        if (angle2 >= 70) {
+          flip2 = true;
+        }
+      }
+    //}
+    yield* Shmup.utils.wait(1);
+  }
+}
+Shmup.utils.task({update: true}, [], main);
+
+function* turn1(obj, changeAngle = 180, testCount = 50) {
+  while (!Shmup.utils.removed(obj)) {
+    for (let i = 1; i <= testCount && !Shmup.utils.removed(obj); i ++) {
+      obj.angle += Shmup.angle.deg.rad(changeAngle / testCount);
+      yield;
+    }
+    for (let i = 1; i <= testCount && !Shmup.utils.removed(obj); i ++) {
+      obj.angle -= Shmup.angle.deg.rad(changeAngle / testCount);
+      yield;
+    }
+  }
+}
+
+function CreateCurveB01(x, y, speed, angle, distance) {
+  var obj = Shmup.projectile.curveB.add({
+    angle: Shmup.angle.deg.rad(angle),
+    radial: speed,
+    data: {},
+    position: {
+      x: x,
+      y: y,
+    },
+    distance: distance,
+    update: function(projectile) {
+      var outCount = 0;
+      for (let i = 0; i < projectile.distance; i ++) {
+        if (Shmup.utils.out(0, projectile.temp.node[i].position, scene.x, scene.y)) {
+          outCount ++;
+        }
+        obj.data.points[i].x = projectile.temp.node[i].position.x;
+        obj.data.points[i].y = projectile.temp.node[i].position.y;
+      }
+      if (outCount === projectile.distance || deleteProjectile === true) {
+        if (Shmup.advanced.process.active.length <= 1) {
+          deleteProjectile = false;
+        }
+        stage.removeChild(projectile.data.graphic);
+        Shmup.projectile.curveB.remove(projectile);
+      }
+    },
+  });
+  var fuckoff = new PIXI.Rectangle(16 * 16, 0, 16 * 16, 16 * 1);
+  var tempTexture = new PIXI.Texture(PIXI.utils.TextureCache["laserSheet"], fuckoff);
+  obj.data.points = [];
+  for (let i = 1; i <= distance; i++) {
+    obj.data.points.push(new PIXI.Point(0, 0));
+  }
+  var bulletImg = new PIXI.mesh.Rope(tempTexture, obj.data.points);
+  obj.data.graphic = bulletImg;
+  stage.addChild(bulletImg);
+  return obj;
 }
 */
