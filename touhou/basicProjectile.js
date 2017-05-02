@@ -63,7 +63,7 @@
       },
     },
     add: function(data) {
-      var projectile = Shmup.advanced.process.laser.get();
+      var projectile = Shmup.advanced.process.wait.laser.get();
       if (data.data) {
         projectile.data = data.data;
       }
