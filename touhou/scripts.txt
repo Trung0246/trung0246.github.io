@@ -1,0 +1,373 @@
+function* phase1(
+  x = scene.x / 2,
+  y = scene.y / 3.75
+) {
+  var angle = 0, count = 5, range = 15;
+  while (true) {
+    var aimAngle = Shmup.angle.rad.deg(Shmup.angle.point({x: x, y: y}, player));
+    for (let i = 1; i <= count; i ++) {
+      CreateShot01(x, y, 4, angle + aimAngle + Math.random() * range - range / 2, 1);
+      angle += 360 / count;
+    }
+    yield* Shmup.utils.wait(4);
+  }
+}
+function* phase2(
+  x = scene.x / 2,
+  y = scene.y / 3.75,
+  direction = 1
+) {
+  var angle = 0, aimAngle = Shmup.angle.rad.deg(Shmup.angle.point({x: x, y: y}, player));
+  for (let i = 1; i <= 40; i ++) {
+    CreateLaser01(x, y, 7, angle + aimAngle - 20 * 6 * direction, 150, 6);
+    angle += 6 * direction;
+    yield;
+  }
+}
+
+function* main() {
+  var tempPhase = [], returnData;
+  /*tempPhase.push(Shmup.utils.task({update: true}, [110, scene.y / 2 - 50], phase1));
+  tempPhase.push(Shmup.utils.task({update: true}, [scene.x - 110, scene.y / 2 - 50], phase1));
+  tempPhase.push(Shmup.utils.task({update: true}, [50, scene.y / 2 + 50], phase1));
+  tempPhase.push(Shmup.utils.task({update: true}, [scene.x - 50, scene.y / 2 + 50], phase1));
+  yield* Shmup.utils.wait(60 * 10);
+  for (let i = tempPhase.length - 1; i >= 0; --i) {
+    tempPhase[i].configs.update = false;
+    tempPhase.splice(i, 1);
+  }
+  yield* Shmup.utils.wait(60 * 2.5);*/
+  for (let i = 0; i < 3; i ++) {
+    tempPhase.push(Shmup.utils.task({update: true, callback: function(t) {returnData = t.done;}}, [130, scene.y / 2 - 100], phase2));
+    tempPhase.push(Shmup.utils.task({update: true}, [scene.x - 130, scene.y / 2 - 100, -1], phase2));
+    yield* Shmup.utils.wait(true, function() {
+      if (returnData === true) {
+        return "break";
+      }
+    });
+    for (let i = tempPhase.length - 1; i >= 0; --i) {
+      tempPhase[i].configs.update = false;
+      tempPhase.splice(i, 1);
+    }
+    yield* Shmup.utils.wait(60);
+    returnData = false;
+  }
+}
+Shmup.utils.task({update: true}, [], main);
+
+var size = 1.5, bC = 4, tC = 13, sC = 10;
+function CreateShot01(x, y, radial, angle, texture = 0) {
+  var obj = Shmup.projectile.bullet.add({
+    position: {
+      x: x,
+      y: y,
+    },
+    angle: Shmup.angle.deg.rad(angle),
+    radial: radial,
+    data: {
+      dR: Math.random() < 0.5 ? -1 : 1,
+    },
+    update: function(projectile) {
+      projectile.data.graphic.position.set(projectile.position.x, projectile.position.y);
+      projectile.data.graphic.rotation = projectile.angle + Math.PI / 2;
+      //projectile.data.graphic.rotation += (Math.random() * 0.05 + 0.075) * projectile.data.dR;
+      if (Shmup.utils.out(0, projectile.position, scene.x, scene.y) || deleteProjectile === true) {
+        if (Shmup.advanced.process.active.length <= 1) {
+          deleteProjectile = false;
+        }
+        stage.removeChild(projectile.data.graphic);
+        stageBullet.removeChild(projectile.data.graphic);
+        Shmup.projectile.bullet.remove(projectile);
+      }
+    },
+  });
+  var bulletImg = new PIXI.Sprite(new PIXI.Texture(PIXI.utils.TextureCache["shotSheet2"], new PIXI.Rectangle(16 * texture, 16 * 4, 16, 16))); //10: star, 7: card
+  bulletImg.anchor.set(0.5, 0.5);
+  /*bulletImg.width *= size;
+  bulletImg.height *= size;
+  obj.data.blur = new PIXI.filters.BlurFilter();
+  obj.data.blur.blur = bC;
+  bulletImg.filters = [obj.data.blur];*/
+  stageBullet.addChild(bulletImg);
+  obj.data.graphic = bulletImg;
+  //Shmup.utils.task({update: true}, [obj], changeGraphic);
+  return obj;
+}
+function* changeGraphic(obj) {
+  for (let i = 0; i < tC; i ++) {
+    obj.data.blur.blur -= bC / tC;
+    obj.data.graphic.width -= (16 * (size - 1)) / tC;
+    obj.data.graphic.height -= (16 * (size - 1)) / tC;
+    yield;
+  }
+  obj.data.graphic.filters = undefined;
+  stage.removeChild(obj.data.graphic);
+  stageBullet.addChild(obj.data.graphic);
+}
+function CreateLaser01(x, y, speed, angle, distance, texture) {
+  var obj = Shmup.projectile.laser.add({
+    angle: Shmup.angle.deg.rad(angle),
+    radial: speed,
+    data: {},
+    position: {
+      start: {
+        x: x,
+        y: y,
+      },
+    },
+    distance: distance,
+    update: function(projectile) {
+      projectile.data.graphic.position.set(projectile.position.end.x, projectile.position.end.y);
+      projectile.data.graphic.rotation = projectile.angle;
+      tempPos = Shmup.point.dist(true, projectile.position.start, projectile.position.end, true);
+      projectile.data.graphic.width = tempPos;
+      projectile.data.graphic.height = tempPos / distance * 13.5 + 2.5;
+      if (Shmup.utils.out(0, projectile.position.end, scene.x, scene.y) || deleteProjectile === true) {
+        if (Shmup.advanced.process.active.length <= 1) {
+          deleteProjectile = false;
+        }
+        stage.removeChild(projectile.data.graphic);
+        stage.removeChild(projectile.data.head);
+        Shmup.projectile.laser.remove(projectile);
+      }
+    },
+  });
+  var fuckoff = new PIXI.Rectangle(16 * 16, 16 * texture, 16 * 16, 16 * 1);
+  var tempTexture = new PIXI.Texture(PIXI.utils.TextureCache["laserSheet"], fuckoff);
+  var bulletImg = new PIXI.Sprite(tempTexture);
+  bulletImg.anchor.set(0, 0.5);
+  obj.data.graphic = bulletImg;
+  stage.addChild(bulletImg);
+}
+
+08:52
+var laserTexture = 13;
+
+function* phase1(x = scene.x / 2, y = scene.y / 3.75) {
+  var obj;
+  for (let i = 1; i <= 10; i ++) {
+    obj = CreateCurveB01(x, y, 6, 8 * i - 180, 60, laserTexture);
+    Shmup.utils.task({update: true}, [obj], phase1_1);
+  }
+}
+function* phase2(x = scene.x / 2, y = scene.y / 3.75) {
+  var obj;
+  for (let i = 1; i <= 10; i ++) {
+    obj = CreateCurveB01(x, y, 6, -(8 * i), 60, laserTexture);
+    Shmup.utils.task({update: true}, [obj], phase2_1);
+  }
+}
+function* phase3(x = scene.x / 2, y = scene.y / 3.75) {
+  var obj;
+  for (let i = 1; i <= 6; i ++) {
+    obj = CreateCurveB01(x, y, 6, 20 * i + 90 - 60 - 20 * 3.5, 60, laserTexture);
+    Shmup.utils.task({update: true}, [obj], phase3_1);
+  }
+  for (let i = 1; i <= 6; i ++) {
+    obj = CreateCurveB01(x, y, 6, 20 * i + 90 + 60 - 20 * 3.5, 60, laserTexture);
+    Shmup.utils.task({update: true}, [obj], phase3_2);
+  }
+}
+
+var spdChg = 5;
+function* phase1_1(obj) {
+  for (let i = 0; i < 50; i ++) {
+    obj.angle -= Shmup.angle.deg.rad(160 / 50);
+    yield;
+  }
+  for (let i = 1; i <= 10; i ++) {
+    obj.radial -= spdChg / 10;
+    yield;
+  }
+  yield* Shmup.utils.wait(45);
+  for (let i = 1; i <= 50; i ++) {
+    obj.radial += spdChg / 50;
+    yield;
+  }
+}
+function* phase2_1(obj) {
+  for (let i = 0; i < 50; i ++) {
+    obj.angle += Shmup.angle.deg.rad(160 / 50);
+    yield;
+  }
+  for (let i = 1; i <= 10; i ++) {
+    obj.radial -= spdChg / 10;
+    yield;
+  }
+  yield* Shmup.utils.wait(45);
+  for (let i = 1; i <= 50; i ++) {
+    obj.radial += spdChg / 50;
+    yield;
+  }
+}
+function* phase3_1(obj) {
+  for (let i = 0; i < 75; i ++) {
+    obj.angle += Shmup.angle.deg.rad(239 / 50);
+    yield;
+  }
+  for (let i = 1; i <= 10; i ++) {
+    obj.radial -= spdChg / 10;
+    yield;
+  }
+  yield* Shmup.utils.wait(45);
+  for (let i = 1; i <= 50; i ++) {
+    obj.radial += spdChg / 50;
+    yield;
+  }
+}
+function* phase3_2(obj) {
+  for (let i = 0; i < 75; i ++) {
+    obj.angle -= Shmup.angle.deg.rad(239 / 50);
+    yield;
+  }
+  for (let i = 1; i <= 10; i ++) {
+    obj.radial -= spdChg / 10;
+    yield;
+  }
+  yield* Shmup.utils.wait(45);
+  for (let i = 1; i <= 50; i ++) {
+    obj.radial += spdChg / 50;
+    yield;
+  }
+}
+
+var shotX = scene.x / 2, shotY = scene.y / 3.75;
+function* main() {
+  Shmup.utils.task({update: true}, [shotX, shotY], phase1);
+  yield* Shmup.utils.wait(75);
+  Shmup.utils.task({update: true}, [shotX, shotY], phase2);
+  yield* Shmup.utils.wait(65);
+  Shmup.utils.task({update: true}, [shotX, shotY], phase3);
+  yield* Shmup.utils.wait(120);
+  
+  shotX = player.x;
+  shotY += Shmup.math.rand({
+    min: -30,
+    max: 30,
+  });
+}
+Shmup.utils.task({update: true, reset: true}, [], main);
+
+var size = 1.5, bC = 4, tC = 13, sC = 10;
+function CreateShot01(x, y, radial, angle, texture = 0) {
+  var obj = Shmup.projectile.bullet.add({
+    position: {
+      x: x,
+      y: y,
+    },
+    angle: Shmup.angle.deg.rad(angle),
+    radial: radial,
+    data: {
+      dR: Math.random() < 0.5 ? -1 : 1,
+    },
+    update: function(projectile) {
+      projectile.data.graphic.position.set(projectile.position.x, projectile.position.y);
+      projectile.data.graphic.rotation = projectile.angle + Math.PI / 2;
+      //projectile.data.graphic.rotation += (Math.random() * 0.05 + 0.075) * projectile.data.dR;
+      if (Shmup.utils.out(0, projectile.position, scene.x, scene.y) || deleteProjectile === true) {
+        if (Shmup.advanced.process.active.length <= 1) {
+          deleteProjectile = false;
+        }
+        stage.removeChild(projectile.data.graphic);
+        stageBullet.removeChild(projectile.data.graphic);
+        Shmup.projectile.bullet.remove(projectile);
+      }
+    },
+  });
+  var bulletImg = new PIXI.Sprite(new PIXI.Texture(PIXI.utils.TextureCache["shotSheet2"], new PIXI.Rectangle(16 * texture, 16 * 4, 16, 16))); //10: star, 7: card
+  bulletImg.anchor.set(0.5, 0.5);
+  /*bulletImg.width *= size;
+  bulletImg.height *= size;
+  obj.data.blur = new PIXI.filters.BlurFilter();
+  obj.data.blur.blur = bC;
+  bulletImg.filters = [obj.data.blur];*/
+  stageBullet.addChild(bulletImg);
+  obj.data.graphic = bulletImg;
+  //Shmup.utils.task({update: true}, [obj], changeGraphic);
+  return obj;
+}
+function* changeGraphic(obj) {
+  for (let i = 0; i < tC; i ++) {
+    obj.data.blur.blur -= bC / tC;
+    obj.data.graphic.width -= (16 * (size - 1)) / tC;
+    obj.data.graphic.height -= (16 * (size - 1)) / tC;
+    yield;
+  }
+  obj.data.graphic.filters = undefined;
+  stage.removeChild(obj.data.graphic);
+  stageBullet.addChild(obj.data.graphic);
+}
+function CreateLaser01(x, y, speed, angle, distance, texture) {
+  var obj = Shmup.projectile.laser.add({
+    angle: Shmup.angle.deg.rad(angle),
+    radial: speed,
+    data: {},
+    position: {
+      start: {
+        x: x,
+        y: y,
+      },
+    },
+    distance: distance,
+    update: function(projectile) {
+      projectile.data.graphic.position.set(projectile.position.end.x, projectile.position.end.y);
+      projectile.data.graphic.rotation = projectile.angle;
+      tempPos = Shmup.point.dist(true, projectile.position.start, projectile.position.end, true);
+      projectile.data.graphic.width = tempPos;
+      projectile.data.graphic.height = tempPos / distance * 13.5 + 2.5;
+      if (Shmup.utils.out(0, projectile.position.end, scene.x, scene.y) || deleteProjectile === true) {
+        if (Shmup.advanced.process.active.length <= 1) {
+          deleteProjectile = false;
+        }
+        stage.removeChild(projectile.data.graphic);
+        stage.removeChild(projectile.data.head);
+        Shmup.projectile.laser.remove(projectile);
+      }
+    },
+  });
+  var fuckoff = new PIXI.Rectangle(16 * 16, 16 * texture, 16 * 16, 16 * 1);
+  var tempTexture = new PIXI.Texture(PIXI.utils.TextureCache["laserSheet"], fuckoff);
+  var bulletImg = new PIXI.Sprite(tempTexture);
+  bulletImg.anchor.set(0, 0.5);
+  obj.data.graphic = bulletImg;
+  stage.addChild(bulletImg);
+}
+function CreateCurveB01(x, y, speed, angle, distance, texture) {
+  var obj = Shmup.projectile.curveB.add({
+    angle: Shmup.angle.deg.rad(angle),
+    radial: speed,
+    data: {},
+    position: {
+      x: x,
+      y: y,
+    },
+    distance: distance,
+    update: function(projectile) {
+      var outCount = 0;
+      for (let i = 0; i < projectile.distance; i ++) {
+        if (Shmup.utils.out(0, projectile.temp.node[i].position, scene.x, scene.y)) {
+          outCount ++;
+        }
+        obj.data.points[i].x = projectile.temp.node[i].position.x;
+        obj.data.points[i].y = projectile.temp.node[i].position.y;
+      }
+      if (outCount === projectile.distance || deleteProjectile === true) {
+        if (Shmup.advanced.process.active.length <= 1) {
+          deleteProjectile = false;
+        }
+        stage.removeChild(projectile.data.graphic);
+        Shmup.projectile.curveB.remove(projectile);
+      }
+    },
+  });
+  var fuckoff = new PIXI.Rectangle(16 * 16, 16 * texture, 16 * 16, 16 * 1);
+  var tempTexture = new PIXI.Texture(PIXI.utils.TextureCache["laserSheet"], fuckoff);
+  obj.data.points = [];
+  for (let i = 1; i <= distance; i++) {
+    obj.data.points.push(new PIXI.Point(0, 0));
+  }
+  var bulletImg = new PIXI.mesh.Rope(tempTexture, obj.data.points);
+  obj.data.graphic = bulletImg;
+  stage.addChild(bulletImg);
+  return obj;
+}
