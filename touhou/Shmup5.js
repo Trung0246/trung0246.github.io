@@ -240,7 +240,7 @@
     this.configs = configs || {};
     this.configs.update = configs.update || false;
     this.configs.reset = configs.reset || false;
-    this.configs.call = configs.call || function () {};
+    this.configs.callback = configs.callback || function () {};
     if (!param) {
       this.tempTask = this.task();
     } else {
@@ -253,7 +253,7 @@
       this.returnData = this.tempTask.next();
       this.returnData.task = this.task;
       this.returnData.iterate = this.tempTask;
-      this.configs.call(this.returnData);
+      this.configs.callback(this.returnData);
       return this.returnData;
     },
     reset: function () {
@@ -263,7 +263,7 @@
       this.returnData.iterate = this.tempTask;
       this.returnData.value = undefined;
       this.returnData.done = false;
-      this.configs.call(this.returnData);
+      this.configs.callback(this.returnData);
       return this.returnData;
     },
   };
@@ -273,9 +273,6 @@
   main.projectile = {};
 
   main.configs = function (configsData) {
-    data.scene = configsData.scene || (function () {
-      throw new Error("Unknown scene");
-    })();
     data.maxProjectile = configsData.maxProjectile || (function () {
       throw new Error("Unknown maxProjectile");
     })();
@@ -517,19 +514,19 @@
         }
       }
     },
-    teleport: function (type, position, margin) {
+    teleport: function (type, position, x, y, margin) {
       var tempPos = {
         x: position.x,
         y: position.y,
       };
       if (tempPos.x < -margin) {
-        tempPos.x += data.scene.x;
-      } else if (data.scene.x + margin < tempPos.x) {
-        tempPos.x -= data.scene.x;
+        tempPos.x += x;
+      } else if (x + margin < tempPos.x) {
+        tempPos.x -= x;
       } else if (tempPos.y < -margin) {
-        tempPos.y += data.scene.y;
-      } else if (data.scene.y + margin < tempPos.y) {
-        tempPos.y -= data.scene.y;
+        tempPos.y += y;
+      } else if (y + margin < tempPos.y) {
+        tempPos.y -= y;
       }
       return tempPos;
     },
@@ -619,7 +616,7 @@
   };
   main.math = {
     gcd: function(a, b) {
-      return !b ? a : main.math.gcd(b, a % b);
+      return !b ? a : main.math.gcd(b , a % b);
     },
     lcm: function(a, b) {
       return (a * b) / main.math.gcd(a, b);
@@ -820,8 +817,8 @@
       return function (options) {
         options = options || {};
         options.generate = options.generate || function (seed) {
-          Math.seedrand(seed);
-          return Math.rand();
+          Math.seedrandom(seed);
+          return Math.random();
         };
         options.min = options.min || 0;
         if (options.max == undefined) {
@@ -1740,3 +1737,789 @@
   [],     // pool: entropy pool starts empty
   Math    // math: package containing random, pow, and seedrandom
 );
+
+//TODO list:
+/*
+fire > earth
+  ^  X   V      Elemental magic (no idea how to implement this, should test basic principal first...)
+ air < water
+ 
+wizard > warrior
+   ^   X    V
+ rogue < priest
+*/
+//Unknown shit
+/*
+function AngularDistance(angle1, angle2){
+  let distance = NormalizeAngle(angle2 - angle1);
+  if(distance>180){ distance -=360; }
+  return distance;
+}
+*/
+//Do with wall
+/*
+// 任意の点(x,y),(angle)から壁までの距離を返す
+function getKyoriToKabe(x, y, angle)
+{
+  let chk_angle = getAngle360(angle);
+  if (chk_angle < 90)
+  {
+    if (x > GetClipMaxX || y > GetClipMaxY) { return (-1); }
+
+    let chk_y = y+tan(chk_angle)*(GetClipMaxX-x);
+    if (chk_y >= GetClipMaxY)
+      { return ( ( ((GetClipMaxY-y)/tan(chk_angle))^2 + (GetClipMaxY-y)^2 )^0.5); }
+    else
+      { return ( ( (GetClipMaxX-x)^2 + (tan(chk_angle)*(GetClipMaxX-x))^2 )^0.5); }
+  }
+  else if (chk_angle < 180)
+  {
+    if (x < GetClipMinX || y > GetClipMaxY) { return (-1); }
+
+    let chk_y = y+tan(chk_angle)*(GetClipMinX-x);
+    if (chk_y >= GetClipMaxY)
+      { return ( ( ((GetClipMaxY-y)/tan(chk_angle))^2 + (GetClipMaxY-y)^2 )^0.5); }
+    else
+      { return ( ( (x-GetClipMinX)^2 + (tan(chk_angle)*(x-GetClipMinX))^2 )^0.5); }
+  }
+  else if (chk_angle < 270)
+  {
+    if (x < GetClipMinX || y < GetClipMinY) { return (-1); }
+
+    let chk_y = y+tan(chk_angle)*(GetClipMinX-x);
+    if (chk_y <= GetClipMinY)
+      { return ( ( ((y-GetClipMinY)/tan(chk_angle))^2 + (y-GetClipMinY)^2 )^0.5); }
+    else
+      { return ( ( (x-GetClipMinX)^2 + (tan(chk_angle)*(x-GetClipMinX))^2 )^0.5); }
+  }
+  else
+  {
+    if (x > GetClipMaxX || y < GetClipMinY) { return (-1); }
+
+    let chk_y = y+tan(chk_angle)*(GetClipMaxX-x);
+    if (chk_y <= GetClipMinY)
+      { return ( ( ((y-GetClipMinY)/tan(chk_angle))^2 + (y-GetClipMinY)^2 )^0.5); }
+    else
+      { return ( ( (GetClipMaxX-x)^2 + (tan(chk_angle)*(GetClipMaxX-x))^2 )^0.5); }
+  }
+  
+  return (-1);  //謎のエラー
+}
+
+// 任意の点(x,y),(angle)から弾を発射し、当たる壁の位置を返す
+// 0 = 左, 1 = 右, 2 = 上, 3 = 下
+// -1 = エラー
+function getItiToKabe(x, y, angle)
+{
+  let chk_angle = getAngle360(angle);
+  if (chk_angle < 90)
+  {
+    if (x > GetClipMaxX || y > GetClipMaxY) { return (-1); }
+
+    let chk_y = y+tan(chk_angle)*(GetClipMaxX-x);
+    if (chk_y >= GetClipMaxY)
+      { return ( 3 ); }
+    else
+      { return ( 1 ); }
+  }
+  else if (chk_angle < 180)
+  {
+    if (x < GetClipMinX || y > GetClipMaxY) { return (-1); }
+
+    let chk_y = y+tan(chk_angle)*(GetClipMinX-x);
+    if (chk_y >= GetClipMaxY)
+      { return ( 3 ); }
+    else
+      { return ( 0 ); }
+  }
+  else if (chk_angle < 270)
+  {
+    if (x < GetClipMinX || y < GetClipMinY) { return (-1); }
+
+    let chk_y = y+tan(chk_angle)*(GetClipMinX-x);
+    if (chk_y <= GetClipMinY)
+      { return ( 2 ); }
+    else
+      { return ( 0 ); }
+  }
+  else
+  {
+    if (x > GetClipMaxX || y < GetClipMinY) { return (-1); }
+
+    let chk_y = y+tan(chk_angle)*(GetClipMaxX-x);
+    if (chk_y <= GetClipMinY)
+      { return ( 2 ); }
+    else
+      { return ( 1 ); }
+  }
+  return (-1);  //謎のエラー
+}
+*/
+//3D XYZ to 2D XY
+/*
+//http://webglfactory.blogspot.com/2011/05/how-to-convert-world-to-screen.html
+
+point2D get2dPoint(Point3D point3D, Matrix viewMatrix, Matrix projectionMatrix, int width, int height) {
+      Matrix4 viewProjectionMatrix = projectionMatrix * viewMatrix;
+      point3D = viewProjectionMatrix.multiply(point3D);
+      int winX = (int) Math.round((( point3D.getX() + 1 ) / 2.0) * width );
+      int winY = (int) Math.round((( 1 - point3D.getY() ) / 2.0) * height );
+      return new Point2D(winX, winY);
+}
+
+Point3D get3dPoint(Point2D point2D, int width, int height, Matrix viewMatrix, Matrix projectionMatrix) {
+      double x = 2.0 * winX / clientWidth - 1;
+      double y = - 2.0 * winY / clientHeight + 1;
+      Matrix4 viewProjectionInverse = inverse(projectionMatrix * viewMatrix);
+
+      Point3D point3D = new Point3D(x, y, 0); 
+      return viewProjectionInverse.multiply(point3D);
+}
+*/
+//Interpolation
+/*
+# -*- coding: utf-8 -*-
+from __future__ import division
+"""
+Tween functions
+t = current time
+b = start value
+c = change in value
+d = total duration
+"""
+# see also: http://gizma.com/easing
+#orginal from https://birdfish.readthedocs.io/en/latest/envelopes.html
+
+import math
+
+
+def STATIC(t, b, c, d):
+    return b
+
+
+def OUT_EXPO(t, b, c, d):
+    return b + c if (t == d) else c * (-2**(-10 * t/d) + 1) + b
+
+
+def IN_EXPO(t, b, c, d):
+    return b if (t==0) else c * (2**(10 * (t/d -1))) + b
+    # class com.robertpenner.easing.Expo {
+    #   static function easeIn (t:Number, b:Number, c:Number, d:Number):Number {
+    #       return (t==0) ? b : c * Math.pow(2, 10 * (t/d - 1)) + b;
+    #   }
+    #   static function easeOut (t:Number, b:Number, c:Number, d:Number):Number {
+    #       return (t==d) ? b+c : c * (-Math.pow(2, -10 * t/d) + 1) + b;
+    #   }
+    #   static function easeInOut (t:Number, b:Number, c:Number, d:Number):Number {
+    #       if (t==0) return b;
+    #       if (t==d) return b+c;
+    #       if ((t/=d/2) < 1) return c/2 * Math.pow(2, 10 * (t - 1)) + b;
+    #       return c/2 * (-Math.pow(2, -10 * --t) + 2) + b;
+    #   }
+    #  }
+
+
+def IN_CIRC(t, b, c, d):
+    #   return -c * (Math.sqrt(1 - (t/=d)*t) - 1) + b;
+    t/=d
+    return -c * (math.sqrt(1 - (t)*t) - 1) + b
+
+
+def OUT_CIRC(t, b, c, d):
+    t/=d
+    t -= 1
+    return c * (math.sqrt(1 - (t)*t)) + b
+
+
+def LINEAR (t, b, c, d):
+    return c*t/d + b
+
+
+def IN_QUAD (t, b, c, d):
+    t/=d
+    return c*(t)*t + b
+
+
+def OUT_QUAD (t, b, c, d):
+    t/=d
+    return -c *(t)*(t-2) + b
+
+
+def IN_OUT_QUAD( t, b, c, d ):
+    t/=d/2
+    if ((t) < 1): return c/2*t*t + b
+    t-=1
+    return -c/2 * ((t)*(t-2) - 1) + b
+
+
+def OUT_IN_QUAD( t, b, c, d ):
+    if (t < d/2):
+        return OUT_QUAD (t*2, b, c/2, d)
+    return IN_QUAD((t*2)-d, b+c/2, c/2, d)
+
+
+def IN_CUBIC(t, b, c, d):
+    t/=d
+    return c*(t)*t*t + b
+
+
+def OUT_CUBIC(t, b, c, d):
+    t=t/d-1
+    return c*((t)*t*t + 1) + b
+
+
+def IN_OUT_CUBIC( t, b, c, d):
+    t/=d/2
+    if ((t) < 1):
+        return c/2*t*t*t + b
+    t-=2
+    return c/2*((t)*t*t + 2) + b
+
+
+def OUT_IN_CUBIC( t, b, c, d ):
+    if (t < d/2): return OUT_CUBIC (t*2, b, c/2, d)
+    return IN_CUBIC((t*2)-d, b+c/2, c/2, d)
+
+
+def IN_QUART( t, b, c, d):
+    t/=d
+    return c*(t)*t*t*t + b
+
+
+def OUT_QUART( t, b, c, d):
+    t=t/d-1
+    return -c * ((t)*t*t*t - 1) + b
+
+
+def IN_OUT_QUART( t, b, c, d):
+    t/=d/2
+    if (t < 1):
+        return c/2*t*t*t*t + b
+    t-=2
+    return -c/2 * ((t)*t*t*t - 2) + b
+
+
+def OUT_BOUNCE(t, b, c, d):
+    t/=d
+    if (t < (1.0/2.75)):
+        return c*(7.5625*t*t) + b
+    elif (t < (2.0/2.75)):
+        t-=(1.5/2.75)
+        return c*(7.5625*(t)*t + .75) + b
+    elif (t < (2.5/2.75)):
+        t-=(2.25/2.75)
+        return c*(7.5625*(t)*t + .9375) + b
+    else:
+        t-=(2.625/2.75)
+        return c*(7.5625*(t)*t + .984375) + b
+
+
+def OUT_ELASTIC(t, b, c, d):
+    if (t==0):
+        return b
+    t/=d
+    if t==1:
+        return b+c
+    p = d*.3  # period
+    a = 1.0  # amplitude
+    if a < abs(c):
+        a = c
+        s = p/4
+    else:
+        s = p/(2*math.pi) * math.asin (c/a)
+
+    return (a*math.pow(2,-10*t) * math.sin( (t*d-s)*(2*math.pi)/p ) + c + b)
+
+
+def IN_BACK(t, b, c, d):
+    #         static function easeIn (t:Number, b:Number, c:Number, d:Number, s:Number):Number {
+    #   if (s == undefined) s = 1.70158;
+    #   return c*(t/=d)*t*((s+1)*t - s) + b;
+    # }
+    s = 1.70158
+    t/=d
+    return c*(t)*t*((s+1)*t - s) + b
+
+
+def OUT_BACK(t, b, c, d):
+    #         static function easeOut (t:Number, b:Number, c:Number, d:Number, s:Number):Number {
+    #   if (s == undefined) s = 1.70158;
+    #   return c*((t=t/d-1)*t*((s+1)*t + s) + 1) + b;
+    # }
+    s = 1.70158
+    t=t/d-1
+    return c*((t)*t*((s+1)*t + s) + 1) + b
+
+
+def IN_OUT_BACK(t, b, c, d):
+    #         static function easeInOut (t:Number, b:Number, c:Number, d:Number, s:Number):Number {
+    #   if (s == undefined) s = 1.70158;
+    #   if ((t/=d/2) < 1) return c/2*(t*t*(((s*=(1.525))+1)*t - s)) + b;
+    #   return c/2*((t-=2)*t*(((s*=(1.525))+1)*t + s) + 2) + b;
+    # }
+    s = 1.70158
+    t/=d/2
+    if (t < 1):
+        s*=(1.525)
+        return c/2*(t*t*(((s+1))*t - s)) + b
+    else:
+        t-=2
+        s*=(1.525)
+        return c/2*((t)*t*(((s)+1)*t + s) + 2) + b
+
+"""
+Pseudocode from wikipedia
+INPUT: Function f, endpoint values a, b, tolerance TOL, maximum iterations NMAX
+CONDITIONS: a < b, either f(a) < 0 and f(b) > 0 or f(a) > 0 and f(b) < 0
+OUTPUT: value which differs from a root of f(x)=0 by less than TOL
+N ? 1
+While N = NMAX { limit iterations to prevent infinite loop
+  c ? (a + b)/2 new midpoint
+  If (f(c) = 0 or (b ֠a)/2 < TOL then { solution found
+    Output(c)
+    Stop
+  }
+  N ? N + 1 increment step counter
+  If sign(f(c)) = sign(f(a)) then a ? c else b ? c new interval
+}
+Output("Method failed.") max number of steps exceeded
+"""
+
+def bisect_jump_time(tween, value, b, c, d):
+    """
+    **** Not working yet
+    return t for given value using bisect
+    does not work for whacky curves
+    """
+    max_iter = 20
+    resolution = 0.01
+    iter = 1
+    lower = 0
+    upper = d
+    while iter < max_iter:
+        t = (upper - lower) / 2
+        if tween(t, b, c, d) - value < resolution:
+            return t
+        else:
+            upper = t
+
+def jump_time(tween, value, b, c, d):
+    if value == b:
+        return 0
+    if value == (b + c):
+        return d
+    resolution = .01
+    time_slice = d * resolution
+    current_time = 0
+    accuracy = abs(c/200.0)
+    val_min = max(0, value - accuracy)
+    val_max = value + accuracy
+    for i in range(100):
+        temp_value = tween(current_time, b, c, d)
+        if val_max >= temp_value >= val_min:
+            # print "test value: %s, new time: %s" % (temp_value, current_time)
+            return current_time
+        current_time += time_slice
+    print current_time
+    print tween, value, b, c, d, time_slice, temp_value
+    print "min, max"
+    print val_min, val_max
+    raise ValueError('Unable to determine jump time')
+*/
+//3D rotation
+/*
+//??????3D??????? ver1.01
+
+  function MakeAxis(rot,x,y,z){
+    let norm=x^2+y^2+z^2;
+    if(norm<=0){return([0,0,0,0]);}
+    norm=1/(norm^0.5);
+    rot=rot/2;
+    return([cos(rot),sin(rot)*x*norm,sin(rot)*y*norm,sin(rot)*z*norm]);
+  }
+
+  function MakeRotate(rotx,roty,rotz){
+    rotx=rotx/2;
+    roty=roty/2;
+    rotz=rotz/2;
+    return([cos(rotx)*cos(roty)*cos(rotz)+sin(rotx)*sin(roty)*sin(rotz),
+      sin(rotx)*cos(roty)*cos(rotz)-cos(rotx)*sin(roty)*sin(rotz),
+      cos(rotx)*sin(roty)*cos(rotz)+sin(rotx)*cos(roty)*sin(rotz),
+      cos(rotx)*cos(roty)*sin(rotz)-sin(rotx)*sin(roty)*cos(rotz)
+    ]);
+  }
+
+  function QuaternionMultiply(left,right){
+    return([
+      left[0]*right[0]-left[1]*right[1]-left[2]*right[2]-left[3]*right[3],
+      left[0]*right[1]+left[1]*right[0]+left[2]*right[3]-left[3]*right[2],
+      left[0]*right[2]+left[2]*right[0]+left[3]*right[1]-left[1]*right[3],
+      left[0]*right[3]+left[3]*right[0]+left[1]*right[2]-left[2]*right[1]
+    ]);
+  }
+
+  function Rotate3D_A(x,y,z,rotq){
+    return(Rotate3D_B([0,x,y,z],rotq));
+  }
+
+  function Rotate3D_B(posq,rotq){
+    let temp=[0-rotq[1]*posq[1]-rotq[2]*posq[2]-rotq[3]*posq[3],
+      rotq[0]*posq[1]+rotq[2]*posq[3]-rotq[3]*posq[2],
+      rotq[0]*posq[2]+rotq[3]*posq[1]-rotq[1]*posq[3],
+      rotq[0]*posq[3]+rotq[1]*posq[2]-rotq[2]*posq[1]
+      ];
+    return([
+      0,
+      temp[1]*rotq[0]-temp[0]*rotq[1]-temp[2]*rotq[3]+temp[3]*rotq[2],
+      temp[2]*rotq[0]-temp[0]*rotq[2]-temp[3]*rotq[1]+temp[1]*rotq[3],
+      temp[3]*rotq[0]-temp[0]*rotq[3]-temp[1]*rotq[2]+temp[2]*rotq[1]
+    ]);
+  }
+
+  function Rotate3D_C(x,y,z,rotx,roty,rotz){
+    return(Rotate3D_B([0,x,y,z],MakeRotate(rotx,roty,rotz)));
+  }
+
+  function Perspective(v,z,dis){
+    return(v/((z-dis)/-dis));
+  }
+*/
+//Offset and round?, wait...
+/*
+// 円の中心からのズレを取得（offsetX : x 座標, offsetY : y 座標）
+// (半径,角度)
+function offsetX(rad, angle) {
+        return rad * cos(angle);
+}
+function offsetY(rad, angle) {
+        return rad * sin(angle);
+}
+function RoundX(radius, angle) {   // radius=半径　angle=角度　angle方向
+    return radius * cos(angle);// 半径×cos(Ｘ座標/半径）
+}
+
+function RoundY(radius, angle) {   // radius=半径　angle=角度　angle方向
+    return radius * sin(angle);// 半径×cos(Ｘ座標/半径）
+}
+function xyangleXY(xzahyou,yzahyou,Xzahyou,Yzahyou) {
+  return -1*atan2(xzahyou-Xzahyou,yzahyou-Yzahyou)-90;
+}
+
+function rwait(w) {
+  loop(trunc(w*(60/60)+1)) { yield; }
+}
+*/
+//Gap and stuff
+/*
+//==============================================================================
+//  ★ 東方弾幕風 特定の値を取得する関数
+//  このファイルをinclude_functionで取り込むか、必要な部分をコピペして使用する
+//==============================================================================
+//  異なる位置にある2つの点AB間の距離を取得する
+//------------------------------------------------------------------------------
+function GetGapLength(
+  let xA,   // 点Aのx座標
+  let yA,   // 点Aのy座標
+  let xB,   // 点Bのx座標
+  let yB    // 点Bのy座標
+){
+  return ( ( xB - xA ) ^ 2 + ( yB - yA ) ^ 2 ) ^ 0.5;
+}
+//------------------------------------------------------------------------------
+//  点Aから異なる位置にある点Bへの絶対角度を取得する
+//------------------------------------------------------------------------------
+function GetGapAngle(
+  let xA,   // 点Aのx座標
+  let yA,   // 点Aのy座標
+  let xB,   // 点Bのx座標
+  let yB    // 点Bのy座標
+){
+  return atan2( yB - yA, xB - xA );
+}
+
+//------------------------------------------------------------------------------
+//  点Aからある距離、絶対角度にある点Bのx座標を取得する
+//------------------------------------------------------------------------------
+function GetGapX(
+  let xA,     // 点Aのx座標
+  let gapLength,  // 点Bまでの距離
+  let gapAngle  // 点Bへの絶対角度
+){
+  return round(xA + gapLength * cos( gapAngle ));
+}
+
+//------------------------------------------------------------------------------
+//  点Aからある距離、絶対角度にある点Bのy座標を取得する
+//------------------------------------------------------------------------------
+function GetGapY(
+  let yA,     // 点Aのy座標
+  let gapLength,  // 点Bまでの距離
+  let gapAngle  // 点Bへの絶対角度
+){
+  return round(yA + gapLength * sin( gapAngle ));
+}
+
+//------------------------------------------------------------------------------
+//  楕円形に発射する時のxy座標を取得する(二次元配列)
+//------------------------------------------------------------------------------
+function GetEllipticXY(
+let Angle,//発射角度
+let a,//横半径
+let b,//縦半径
+){
+  let R = ((cos(Angle)/a)^2 + (sin(Angle)/b)^2)^0.5;
+  let x = R*cos(Angle);
+  let y = R*sin(Angle);
+  return [x,y];
+}
+
+//三角関数によるなめらかな数値変化関数
+function SmoothAltAdd(rate){
+  return (sin(rate*2-90)+1)/2;
+}
+function SmoothAltDec(rate){
+  return (cos(rate*2)+1)/2;
+}
+*/
+//Polar
+/*
+r(?) = -c/(a cos(?) + b sin(?)) //line
+(inapplicable for c = 0 or a^2 + b^2 = 0)
+function CreateShotShapeOA1(obj, sides, gap, speed, angle_off, graphic, delay){
+  let x = ObjMove_GetX(obj);
+  let y = ObjMove_GetY(obj);
+  let t = 0;
+  while(t < 360){
+    let r = cos(180/sides) / cos(((t - angle_off) % (360/sides)) - (180/sides));
+    CreateShotA1(x, y, r * speed, t, graphic, delay);
+    //CreateShotA1(x + size*r*cos(t), y + size*r*sin(t), s, a, g, d);
+    t += gap;
+  }
+}
+r = cos(180/n) / cos((angle % (360/n)) - (180/n)) //convex
+
+//星型互角形 三角関数
+function star_r(angle){
+return sin(pi * 5 * angle);
+}
+//カービィのようなまるっこい星の座標関数
+
+function sqrt(v){
+return v^0.5;
+}
+
+function exp(x){
+return 2.718 ^ x;
+}
+function rag(ang){
+return ang*pi/180;
+}
+function rang(r){
+return r*180/pi;
+}
+function StarDr(a,b,c,xmax,n,p){
+return (1/c)*sqrt(-log(2*exp(-a*a)-exp(-b*b*xmax*xmax*sin((p-pi/2)*(n/2))*sin((p-pi/2)*(n/2)))));
+}
+function StarRadian(p){
+let n = 5;//5角形
+let xmax = 0;
+let pmin = 0;
+let pmax = 2*pi;
+
+let a = 0.81;
+let b = 0.022;
+let c = 1.0;
+p = min(p,pmax);
+
+let r0 = 0.008*xmax;//半径最低値のかさ上げ用
+let r1 = StarDr(a,b,c,xmax,n,p);//半径
+let r2 = StarDr(a,b,c,xmax,n,0)*0+0.81;//最大半径
+
+let r =r0 + r1;//半径
+return r/r2;
+}
+*/
+//Follow something
+/*
+// For use by player scripts
+// Focus movement locks options in position relative to the player
+task gradius_options(head, num_options, wait){
+
+  let options = [ head ];
+
+  loop(num_options){
+    options = options ~ [ follow_option(options[length(options)-1], wait) ];
+  }
+
+  function follow_option(parent, wait){
+    let option = ObjEnemy_Create(OBJ_ENEMY);
+    ObjEnemy_Regist(option);
+    ObjPrim_SetTexture(option, dir~"bullet1.png");
+    ObjSprite2D_SetSourceRect(option, 32, 32, 48, 48);
+    ObjSprite2D_SetDestCenter(option);
+    ObjMove_SetPosition(option, ObjMove_GetX(parent), ObjMove_GetY(parent));
+
+    let hist = array(wait, [0, 0]);
+    let index = 0;
+
+    task follow(option, parent, wait){
+      let is_moving;
+      let last_pos = [ObjMove_GetX(parent), ObjMove_GetY(parent)];
+      while(!Obj_IsDeleted(parent)){
+        is_moving = (ObjMove_GetX(parent) != last_pos[0]) || (ObjMove_GetY(parent) != last_pos[1]);
+        if(is_moving){
+          if(GetVirtualKeyState(VK_SLOWMOVE) % 2 == 0){
+            // unfocused movement
+            ObjMove_SetPosition(option,
+                      ObjMove_GetX(option) + hist[index][0],
+                      ObjMove_GetY(option) + hist[index][1]);
+            hist[index] = [ObjMove_GetX(parent) - last_pos[0],
+                  ObjMove_GetY(parent) - last_pos[1]];
+            index = (index + 1) % wait;
+          }else{
+            // focused movement
+            ObjMove_SetPosition(option,
+                      ObjMove_GetX(option) + (ObjMove_GetX(parent) - last_pos[0]),
+                      ObjMove_GetY(option) + (ObjMove_GetY(parent) - last_pos[1]));
+          }
+        }
+        last_pos = [ObjMove_GetX(parent), ObjMove_GetY(parent)];
+        yield;
+      }
+    }
+
+    follow(option, parent, wait);
+    return option;
+  }
+
+}
+
+// More general version
+// Attach to any Move object as head
+task gradius_options(head, num_options, wait){
+
+  let options = [ head ];
+
+  loop(num_options){
+    options = options ~ [ follow_option(options[length(options)-1], wait) ];
+  }
+
+  function follow_option(parent, wait){
+    let option = ObjEnemy_Create(OBJ_ENEMY);
+    ObjEnemy_Regist(option);
+    ObjPrim_SetTexture(option, dir~"bullet1.png");
+    ObjSprite2D_SetSourceRect(option, 32, 32, 48, 48);
+    ObjSprite2D_SetDestCenter(option);
+    ObjMove_SetPosition(option, ObjMove_GetX(parent), ObjMove_GetY(parent));
+
+    let hist = array(wait, [0, 0]);
+    let index = 0;
+
+    task follow(option, parent, wait){
+      let is_moving;
+      let last_pos = [ObjMove_GetX(parent), ObjMove_GetY(parent)];
+      while(!Obj_IsDeleted(parent)){
+        is_moving = (ObjMove_GetX(parent) != last_pos[0]) || (ObjMove_GetY(parent) != last_pos[1]);
+        if(is_moving){
+          ObjMove_SetPosition(option,
+                    ObjMove_GetX(option) + hist[index][0],
+                    ObjMove_GetY(option) + hist[index][1]);
+          hist[index] = [ObjMove_GetX(parent) - last_pos[0],
+                ObjMove_GetY(parent) - last_pos[1]];
+          index = (index + 1) % wait;
+        }
+        last_pos = [ObjMove_GetX(parent), ObjMove_GetY(parent)];
+        yield;
+      }
+      Obj_Delete(option);
+    }
+
+    follow(option, parent, wait);
+    return option;
+  }
+
+}
+
+// Array init utility
+function array(size, value){
+  let fill = [value];
+
+  while(length(fill) < size * 2){
+    fill = fill ~ fill;
+  }
+
+  return fill[0..size];
+}
+
+      let x = cos(angleY)*cos(angleZ) -cos(angleX)*sin(angleY)*sin(angleZ);
+      let y = sin(angleY)*cos(angleZ) +cos(angleX)*cos(angleY)*sin(angleZ);
+      let r = rMax*sin(180*i/time); // let r = 300*cos(90*i/time);
+//      ObjRender_SetScaleXYZ(obj, scale, scale, 1.0);
+      ObjMove_SetPosition(obj, X+r*x, Y+r*y);
+      
+      j\left(x,\ y,\ z\right)=\cos (y)\cdot \cos (z)\cdot g\cdot \cos \left(o\right)-\sin \left(o\right)\cdot \cos \left(x\right)\cdot \sin (z)\cdot g
+      k\left(x,\ y,\ z\right)=\cos (y)\cdot \cos (z)\cdot g\cdot \sin \left(o\right)+\cos \left(o\right)\cdot \sin \left(x+90\right)\cdot \sin (z)\cdot g
+      
+      Math.cos(y) * Math.cos(z) * Math.cos(o) * d - Math.cos(x) * Math.sin(z) * Math.sin(o) * d
+      Math.cos(y) * Math.sin(z) * Math.cos(o) * d + Math.sin(x + 90) * Math.cos(z) * Math.sin(o) * d
+      o: point rotate
+      
+      d * (cos(o) cos(y) cos(z) - sin(o) cos(x) sin(z))
+      d * (cos(o) cos(y) sin(z) + sin(o) sin(x + 90) cos(z))
+      
+      https://www.youtube.com/watch?v=TpiNKbeAz1s
+      
+      j\left(x,\ y,\ z\right)=\cos (y)\cdot \cos (z)\cdot g\cdot \cos \left(o\right)-\cos \left(o-90\right)\cdot \cos \left(x\right)\cdot \sin (z)\cdot g
+      k\left(x,\ y,\ z\right)=\cos (y)\cdot \cos (z)\cdot g\cdot \cos \left(o-90\right)+\cos \left(o\right)\cdot \sin \left(x+90\right)\cdot \sin (z)\cdot g
+      
+      l\left(x,\ y,\ z\right)=\cos (y)\cdot \cos (z)\cdot g-\cos (x)\cdot \sin (y)\cdot \sin (z)\cdot g
+      m\left(x,\ y,\ z\right)=\sin (y)\cdot \cos (z)\cdot g+\cos (x)\cdot \cos (y)\cdot \sin (z)\cdot g
+      
+      m\left(x,\ y,\ z\right)=\cos (y)\cdot \cos (z)\cdot \cos \left(o\right)\cdot g-\sin \left(o\right)\cdot \cos \left(x\right)\cdot \sin (z)\cdot g
+      n\left(x,\ y,\ z\right)=\cos (y)\cdot \cos (z)\cdot \sin \left(o\right)\cdot g+\cos \left(o\right)\cdot \cos \left(x\right)\cdot \sin (z)\cdot g
+      
+(StartingVelocity, CurrentVelocity, Acceleration, and FinalVelocity are all vectors.)
+CurrentVelocity = StartingVelocity + Acceleration * t
+Angle = StartingAngle + AngularVelocity * t
+FinalVelocity = [ cos(Angle) * CurrentVelocity[1] - sin(Angle) * CurrentVelocity[2], sin(Angle) * CurrentVelocity[1] + cos(Angle) * CurrentVelocity[2] ];
+
+/* I couldn’t find a vector magnitude thingy in Maxima, so I just made my own. *
+vecMag(x) := sqrt(x[1]*x[1]+x[2]*x[2]);
+
+/* I couldn’t find a vector magnitude thingy in Maxima, so I just made my own. *
+vecMag(x) := sqrt(x[1]*x[1]+x[2]*x[2]);
+/* We just have to explicitly declare vectors to use them like vectors. *
+StartingVelocity:[‘StartingVelocityX, 'StartingVelocityY];
+Acceleration:['AccelerationX, 'AccelerationY];
+Velocity:’('StartingVelocity + ’t * 'Acceleration);
+/* This is what we’re trying to achieve. We need to split it into two separate equations, though. I can’t integrate “clamp”. *
+/*Speed:clamp(vecMag('Velocity), 0, 'MaxSpeed);*
+/* Non-maxspeed version. *
+Speed:’(vecMag('Velocity));
+/* Maxspeed version. *
+/*Speed:'MaxSpeed;*
+NormalizedVelocity:’(Velocity / vecMag(Velocity));
+VelocityAfterSpeed:’('NormalizedVelocity * 'Speed);
+/* Angular velocity != 0 version. *
+Angle:’('StartingAngle + 'AngularVelocity * ’t);
+/* No angular velocity version. *
+/*Angle:'StartingAngle;*
+/* Rotate the velocity vector by a rotation matrix. *
+VelocityAtAngle:’(
+[ cos('Angle) * VelocityAfterSpeed[1] - sin('Angle) * VelocityAfterSpeed[2],
+sin('Angle) * VelocityAfterSpeed[1] + cos('Angle) * VelocityAfterSpeed[2] ]);
+Result:integrate(ev(VelocityAtAngle, infeval), t);
+ev(Result);
+
+sx = bx + u * cos( ag ) * cos( disp ) - v * sin( ag ) * sin( disp );
+sy = by + u * cos( ag ) * sin( disp ) + v * sin( ag ) * cos( disp );
+bx += spd * cos( disp );
+by += spd * sin( disp );
+
+*/
+//TODO: watch jewel pet? old anime :P
+//rider000, nanoha, illya (Done?), madoka (WIP), little buster
+//Tagential speed
+//Meridian arc
+//Steering Behaviors: https://gamedevelopment.tutsplus.com/series/understanding-steering-behaviors--gamedev-12732
+//Finite state machine
