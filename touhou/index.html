@@ -89,7 +89,7 @@ input {
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.11.4/jquery-ui.min.js"></script>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.2.1/math.js"></script>
-    <!--<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.2.1/math.map"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.2.1/math.map"></script>
     <script type="text/javascript" src="https://cdn.rawgit.com/scottcorgan/tiny-emitter/master/dist/tinyemitter.js"></script>
     <script type="text/javascript" src="https://cdn.rawgit.com/josdejong/typed-function/master/typed-function.min.js"></script>
     <script type="text/javascript" src="https://cdn.rawgit.com/infusion/Fraction.js/master/fraction.js"></script>
@@ -136,8 +136,8 @@ input {
       <button id="evalScript">Run script</button>
       <button id="clearTask">Clear task</button>
       <button id="clearProjectile">Clear projectile</button><br/>
-      <input onchange="resetAll()" id="d1" type="number" value="0" min="-180" max="180" change="0.1"/><br/>
-      <input onchange="resetAll()" id="d2" type="number" value="0" min="-180" max="180" change="0.1"/>
+      <input onchange="resetAll()" id="d1" type="number" value="0" min="-180" max="180" step="0.1"/><br/>
+      <input onchange="resetAll()" id="d2" type="number" value="0" min="-180" max="180" step="0.1"/>
     </div>
     <div id="data">
       <!--FPS: <span id="fpsCount">0</span><br/>
