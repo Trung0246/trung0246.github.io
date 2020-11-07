@@ -1833,7 +1833,6 @@ console.clear();
 				"https://img.icons8.com/ios/50/000000/bread.png",
 				"What will you do with a thousand food? Eat it of course!",
 				function (self, gen) {
-					debugger;
 					if (gen.group === data.currency.Food)
 						return data.currency.Food.currency.num.comparedTo(THOUSAND) > -1;
 					return false;
