@@ -1,9 +1,296 @@
+/* jshint esversion: 9 */
+
+console.clear();
 (() => {
 	// Library code
 
 	// Why? Because we may change the actual library later
 	window.DecNum = Decimal;
 	window.noop = function() {};
+	
+	(function (Decimal) {
+		let ONE = new Decimal(1), THREE = new Decimal(3), TEN = new Decimal(10), THOUSAND = new Decimal(1000),
+			notations = {
+				shortOld: 1,
+				longOld: 2,
+				shortNew: 3,
+				longNew: 4,
+				exponential: 5,
+				scientific: 6,
+				engineering: 7,
+				alphabet: 8,
+			},
+			notationType = notations.longOld,
+			suffixes = {},
+			replaceChars = [
+				{
+					2: "u",
+					3: "r",
+					8: "c",
+					9: "o"
+				}, {
+					1: "e",
+					2: "i",
+					3: "r",
+					8: "c",
+					9: "o"
+				}
+			],
+			charList = [
+				["C", "O"],
+				["Q", "T", "V"],
+				["c", "o", "q", "t", "v"],
+				["c", "o"],
+				["q", "t", "v"],
+				["c", "d", "q", "s", "t"],
+				["o", "v"],
+				// [3, 4, 5, 6, 7, 8, 9]
+			];
+
+		suffixes[notations.shortNew] = [
+			["M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", ],
+			["U", "D", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", ],
+			["Dc", "Vg", "Tg", "Qag", "Qig", "Sxg", "Spg", "Ocg", "Nog", ],
+			["Cn", "DCn", "TCn", "QaCn", "QiCn", "SxCn", "SpCn", "OcCn", "NoCn", ],
+			["Mil", ],
+		];
+		suffixes[notations.longNew] = [
+			["M", "B", "Tr", "Quadr", "Quint", "Sext", "Sept", "Oct", "Non", ],
+			["Un", "Duo", "Tre", "Quattuor", "Quin", "Sex", "Septen", "Octo", "Novem", ],
+			["Dec", "Vigin", "Trigin", "Quadragin", "Quinquagin", "Sexagin", "Septuagin", "Octogin", "Nonagin", ],
+			["Cen", "DuoCen", "TreCen", "Quadringen", "Quingen", "Sescen", "Septingen", "Octingen", "Nongen", ],
+			["Millia", ],
+		];
+		suffixes[notations.shortOld] = [
+			["k", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "De"],
+			["Un", "Du", "Tr", "Qa", "Qi", "Se", "Sp", "Oc", "No"],
+			["De", "Vi"],
+			["Ce"],
+		];
+		suffixes[notations.longOld] = [
+			["Thousand", "Million", "Billion", "Trillion", "Quadrillion", "Quintillion", "Sextillion", "Septillion", "Octillion", "Nonillion", "Decillion"],
+			["un", "duo", "tre", "quattuor", "quinqua", "se", "septe", "octo", "nove"],
+			["deci", "viginti", "triginta", "quadraginta", "quinquaginta", "sexaginta", "septuaginta", "octoginta", "nonaginta"],
+			["centi", "ducenti", "trecenti", "quadringenti", "quingenti", "sescenti", "septingenti", "octingenti", "nongenti"],
+			["millini", "billini", "trillini", "quadrillini", "quintillini", "sextillini", "septillini", "octillini", "nonillini", "decillini"],
+		];
+		Decimal.format = function(bigNum, rounding = 0, fixed = 0) {
+			let tempDigits = bigNum.comparedTo(ONE) > 0 ? Decimal.log10(bigNum).floor().toNumber() : 0;
+
+			if (!(tempDigits >= 7 ||
+				notationType === notations.shortOld ||
+				notationType === notations.longOld ||
+				notationType === notations.scientific ||
+				notationType === notations.engineering
+			))
+				return bigNum.toDP(checkZero(fixed + 6 - tempDigits)).toString();
+			else if (tempDigits < 3)
+				return bigNum.toDP(checkZero(fixed + 2 - tempDigits)).toString();
+
+			let tempDecimal = bigNum.div(TEN.pow(tempDigits)).toString();
+			if (notationType === notations.scientific || notationType === notations.exponential)
+				return `${tempDecimal === 0 ? tempDecimal[0] : tempDecimal.slice(0, rounding + 2)}e+${tempDigits}`;
+
+			let position = rounding + 2 - tempDigits % 3;
+
+			tempDecimal = bigNum.comparedTo(THOUSAND) === -1 ? bigNum.floor().toString() : bigNum.div(
+					TEN.pow((Decimal(tempDigits).div(THREE)).floor().mul(THREE).sub(position))
+				).div(TEN.pow(position).floor()).toDP(position + 1).toString();
+
+			if (notationType === notations.engineering)
+				return tempDecimal + (tempDigits > 2 ? `e+${tempDigits - tempDigits % 3}` : "");
+
+			return (notationType === notations.shortOld ||
+				notationType === notations.longOld ?
+					tempDecimal + Decimal.suffix(Math.floor(tempDigits / 3) - 1) :
+						tempDigits < 6 ?
+							bigNum.toDP(rounding).toString() :
+							tempDecimal + Decimal.suffix(tempDigits)
+			);
+		};
+		Decimal.change = function(type) {
+			if (type in notations) notationType = notations[type];
+		};
+		Decimal.suffix = function(Digits) {
+			let suffixList = suffixes[notationType];
+			switch (notationType) {
+				case notations.longNew:
+				case notations.shortNew:
+					if (Digits > 5) {
+						// Attempt to get the suffixes for the given notationType
+						// if (!(notationType in suffixes))
+						// 	notationType = notations.longNew;
+
+						// Convert from digit count to latin power number
+						let latinPower = Math.floor(Digits / 3) - 1,
+							// Compile the suffix in groups of 1000
+							suffix = "",
+							thousandPart = "";
+
+						for (let powersLeft = latinPower; powersLeft > 0;) {
+							// Take the lowest thousand-part (ie last three Digits) from the latin power count
+							let newPowersLeft = Math.floor(powersLeft / 1000),
+								current = powersLeft - newPowersLeft * 1000,
+
+								// Split off the hundreds, tens, and units
+								units    = Math.floor(current)       % 10,
+								tens     = Math.floor(current /= 10) % 10,
+								hundreds = Math.floor(current /= 10) % 10,
+
+								part = "";
+
+							if (hundreds + tens + units > 0) {
+								if (hundreds > 0)
+									part += suffixList[3][hundreds - 1];
+								if (units > 0)
+									part += suffixList[latinPower > 9 ? 1 : 0][units - 1];
+								if (tens > 0)
+									part += suffixList[2][tens - 1];
+								part += thousandPart;
+							}
+
+							suffix = part + suffix;
+
+							// Update the remaining latin powers, and add to the thousand suffix part
+							powersLeft = newPowersLeft;
+							thousandPart += suffixList[4][0];
+						}
+						// Compute the ending part, and return the final result
+						let ending = "";
+						if (notationType === notations.longNew)
+							ending = (latinPower > 19) ? "tillion" :
+								(latinPower > 0) ? "illion" : "";
+						return " " + suffix + ending;
+					}
+					return "";
+
+				case notations.alphabet:
+					let suffix = "";
+					for (let powersLeft = Math.floor(Digits / 3) - 1; powersLeft > 0;) {
+						let currentPower = powersLeft % 26 + 1; // Consume some of the remaining latin powers
+						powersLeft = (powersLeft - currentPower) / 26; // Update the remaining latin powers for the next iterations
+
+						let part = String.fromCharCode(64 + currentPower); // Transform the latin powers we just took into a letter
+						suffix = part + suffix; // Add the letter to our combined suffix
+					}
+					return " " + suffix;
+
+				case notations.longOld:
+				case notations.shortOld:
+					if (Digits === -1)
+						return "";
+
+					else if (Digits <= 10)
+						return " " + suffixList[0][Digits];
+
+					else if (Digits < 10000) {
+						let charAt = null,
+
+						a1 = suffixList[1],
+						a2 = suffixList[2],
+
+						Number_1000 = Math.floor(Digits / 1000) % 10,
+						Number_100  = Math.floor(Digits / 100)  % 10,
+						Number_10   = Math.floor(Digits / 10)   % 10,
+						Number_1    = Math.floor(Digits / 1)    % 10,
+
+						Number_1000_String = "",
+						Number_100_String = "",
+						Number_10_String = "",
+						Number_1_String = "",
+
+						Number_Lillion_String = "illion";
+
+						if (notationType === notations.shortOld) {
+							Number_1000_String = suffixList[0][Number_1000];
+							if (Number_1000 === 0)
+								Number_1000_String = "";
+							else if (Number_1000 < 4)// (Number_1000 === 1 || Number_1000 === 2 || Number_1000 === 3) {
+								Number_1000_String += "i";
+
+							if (Number_100 === 0)
+								Number_100_String = "";
+							else if (Number_100 === 1) {
+								Number_100_String = suffixList[3][0];
+								if (Number_10 + Number_1 > 0 && Number_1000 === 0)
+									Number_100_String = Number_100_String.replace("e", "");
+							} else {
+								Number_100_String = a1[Number_100 - 1];
+								if (replaceChars[0][Number_100] && Number_1000 === 0)
+									Number_100_String = Number_100_String.replace(replaceChars[0][Number_100], "");
+							}
+
+							if (Number_100 === 0) {
+								Number_10_String = Number_10 === 1 || Number_10 === 2 ? a2[Number_10 - 1] : a1[Number_10 - 1];
+								if (Number_1 !== 0 && replaceChars[1][Number_10])
+									Number_10_String = Number_10_String.replace(replaceChars[1][Number_10], "");
+							} else
+								Number_10_String = Number_10 === 0 ? "" :
+									a2[Number_10 - 1] ?
+										a2[Number_10 - 1] :
+										a1[Number_10 - 1];
+
+							if (Number_1 === 6) {
+								Number_1_String = a1[Number_1 - 1];
+								charAt = Number_10 === 0 ? Number_100_String.charAt(0) : Number_10_String.charAt(0);
+								if (charList[0].indexOf(charAt) !== -1)
+									Number_1_String = Number_1_String.replace("e", "x");
+								else if (charList[1].indexOf(charAt) !== -1)
+									Number_1_String = Number_1_String.replace("e", "s");
+							} else if (Number_1 > 0)
+								Number_1_String = a1[Number_1 - 1];
+
+							Number_Lillion_String = "";
+						} else {
+							if (Number_1000 !== 0)
+								Number_1000_String = suffixList[4][Number_1000 - 1];
+
+							if (Number_100 !== 0)
+								Number_100_String = suffixList[3][Number_100 - 1];
+
+							if (Number_10 > 2) { //charList[7].indexOf(Number_10) !== -1) {
+								Number_10_String = a2[Number_10 - 1];
+								if (Number_1000 + Number_100 === 0) // (Number_1000 === 0 && Number_100 === 0) AND or OR ?
+									Number_10_String = Number_10_String.slice(0, Number_10_String.length - 1);
+								else
+									Number_Lillion_String = "llion";
+							} else if (Number_10 > 0) {
+								Number_10_String = a2[Number_10 - 1];
+								if (Number_1000 * Number_100 === 0)
+									Number_Lillion_String = "llion";
+							}
+
+							if (Number_1 !== 0) {
+								Number_1_String = a1[Number_1 - 1];
+
+								charAt = Number_10 === 0 ? Number_100_String.charAt(0) : Number_10_String.charAt(0);
+								if (Number_1 === 3 && charList[2].indexOf(charAt) > -1)
+									Number_1_String += "s";
+								else if (Number_1 === 6) {
+									if (charList[3].indexOf(charAt) > -1)
+										Number_1_String += "x";
+									else if (charList[4].indexOf(charAt) > -1)
+										Number_1_String += "s";
+								} else if (Number_1 === 7 || Number_1 === 9) {
+									if (charList[5].indexOf(charAt) > -1)
+										Number_1_String += "n";
+									else if (charList[6].indexOf(charAt) > -1)
+										Number_1_String += "m";
+								}
+							}
+						}
+						return " " + capitalizeFirstLetter(String(Number_1_String + Number_10_String + Number_100_String + Number_1000_String + Number_Lillion_String).replace("iillion", "illion"));
+					} else
+						return "e+" + String((Digits + 1) * 3);
+			}
+		};
+		function capitalizeFirstLetter(string) {
+			return string.charAt(0).toUpperCase() + string.slice(1);
+		}
+		function checkZero(num) {
+			return num < 0 ? 0 : num;
+		}
+	})(window.DecNum);
 
 	// window.DecNum.set({ rounding: 4 });
 
@@ -22,6 +309,109 @@
 			return perfNow.call(window.performance);
 		};
 	})();
+	
+	let char_limit = 0b100000000, //16384,
+			char_offset = 17,
+			char_key = "AdsJnjiq893f49";
+	
+	function keyCharAt(key, i) {
+    return key.charCodeAt(Math.floor((i + char_offset) % key.length));
+	}
+
+	function encrypt(key, count, char) {
+		return ((((char ^ keyCharAt(key, count * 59) ^ 243) << 2 ^ keyCharAt(key, count + 409) ^ 623) << 5 ^ 24185 ^ keyCharAt(key, count * 739 + 15)) >> 4 ^ ((1024 + count * 1847) & 2047) ^ 1460) >> (1 + count) % 4;
+	}
+
+	function decrypt(key, count, char) {
+		// return char ^ keyCharAt(key, count); // Same for encrypt
+		return (((char << (1 + count) % 4 ^ 1460 ^ ((1024 + count * 1847) & 2047)) << 4 ^ keyCharAt(key, count * 739 + 15) ^ 24185) >> 5 ^ 623 ^ keyCharAt(key, count + 409)) >> 2 ^ 243 ^ keyCharAt(key, count * 59);
+	}
+	
+	window.decompress = function (str) {
+		let _loc5_ = [],
+			_loc7_ = 0;
+
+		while (_loc7_ < char_limit) {
+				let _loc10_ = String.fromCharCode(_loc7_);
+				_loc5_[_loc7_] = _loc10_;
+				++ _loc7_;
+		}
+
+		let _loc8_ = char_limit,
+			_loc2_ = "",
+			_loc3_ = "",
+			_loc9_ = "",
+			_loc10_ = 0,
+			_loc11_ = Math.floor((str.length - 1) / 2);
+
+		_loc7_ = 0;
+
+		while (_loc7_ < str.length) {
+			//*
+			let _loc6_ = decrypt(char_key, _loc7_, str.charCodeAt((_loc10_ += (_loc7_ & 1 ? 1 : -1) * _loc7_) + _loc11_)),
+				_loc4_ = _loc5_[_loc6_];
+			/*/
+			let _loc6_ = decrypt(char_key, _loc7_, str.charCodeAt(_loc7_)),
+				_loc4_ = _loc5_[_loc6_];
+			//*/
+			if (_loc2_ === "") {
+				_loc2_ = _loc4_;
+				_loc9_ += _loc4_;
+			} else if (_loc6_ < char_limit) { // <= 255
+				_loc9_ += _loc4_;
+				_loc3_ = _loc2_ + _loc4_;
+				_loc5_[_loc8_] = _loc3_;
+				++ _loc8_;
+				_loc2_ = _loc4_;
+			} else {
+				_loc3_ = _loc5_[_loc6_];
+				if(!_loc3_)
+					_loc3_ = _loc2_ + _loc2_[0];
+				_loc9_ += _loc3_;
+				_loc5_[_loc8_] = _loc2_ + _loc3_[0];
+				++ _loc8_;
+				_loc2_ = _loc3_;
+			}
+			++ _loc7_;
+		}
+		return _loc9_;
+	};
+
+	window.compress = function (str) {
+		let _loc4_ = {},
+			_loc5_ = 0,
+			_loc8_ = 0,
+			_loc6_ = char_limit,
+			_loc3_ = "",
+			_loc7_ = "";
+
+		while (_loc5_ < char_limit) {
+			_loc4_[String.fromCharCode(_loc5_)] = _loc5_;
+			++ _loc5_;
+		}
+		_loc5_ = 0;
+
+		while (_loc5_ <= str.length) {
+			let _loc2_ = str[_loc5_];
+			if(!_loc4_[_loc3_ + _loc2_]) {
+				//*
+				if (_loc8_ & 1)
+					_loc7_ += String.fromCharCode(encrypt(char_key, _loc8_, _loc4_[_loc3_]))
+				else
+					_loc7_ = String.fromCharCode(encrypt(char_key, _loc8_, _loc4_[_loc3_])) + _loc7_;;
+				/*/
+				_loc7_ += String.fromCharCode(encrypt(char_key, _loc8_, _loc4_[_loc3_]));
+				//*/
+				++ _loc8_;
+				_loc4_[_loc3_ + _loc2_] = _loc6_;
+				++ _loc6_;
+				_loc3_ = _loc2_;
+			} else 
+				_loc3_ += _loc2_;
+			++ _loc5_;
+		}
+		return _loc7_;
+	};
 
 	window.rAF = (function() {
 		let rAF_i = window.requestAnimationFrame ||
@@ -108,127 +498,72 @@
 /*
 	TODO:
 		- GUI (80%)
-		- Drag to scroll since horizontal scrolling for currencies is not a good idea (by using js: https://htmldom.dev/drag-to-scroll/)
-		- Add a way to dynamically add elements
 
-		- Add a way to rate limiting HTML rendering framerate
-
-		- Maybe using Font Awesome for symbol? (https://fontawesome.com/how-to-use/on-the-web/setup/hosting-font-awesome-yourself)
-
-		- Click on currency will jump scroll to that equivalent generator
+		- Use Font Awesome for symbol? (https://fontawesome.com/how-to-use/on-the-web/setup/hosting-font-awesome-yourself)
 
 		- Allocate people for each currencies (NOT for each generators)
 
+		- Add a way to rate limiting HTML rendering framerate
+
 		- x1, x10, x100
+
+		- Achievements
+
+		- Game save
+		
+		- Dark mode
 
 	DONE:
 
 		- Scroll into generator view when currency is being clicked (https://stackoverflow.com/questions/5007530)
+		- Drag to scroll since horizontal scrolling for currencies is not a good idea (by using js: https://htmldom.dev/drag-to-scroll/)
+		- Add a way to dynamically add elements
 //*/
 
-(() => {
+(() =>  {
+	
 	// Constant
 	let ZERO = new DecNum(0),
-		ONE = new DecNum(1);
+		ONE = new DecNum(1),
+		TEN = new DecNum(10),
+		HUNDRED = new DecNum(100),
+		THOUSAND = new DecNum(1000),
+		INF = new DecNum(Infinity),
+		E_C = new DecNum(Math.E);
 
 	// Game data
 	let data = {
+		multiply: new DecNum(1.035),
+		currency: {},
 		// TODO: add stuff
+
+		settings: {
+			amount: ONE,
+			render: 1,
+			theme: null,
+			logic: 60,
+			difficulty: 0, // 0: easy, 1: hard
+		},
 	};
 
-	// ----------------
+	// ---- Important elements ----
 
-	// Generic manager
-	class Manager {
-		static obj = new Map();
-
-		constructor () {
-			this.prototype.constructor.obj = new Map();
-		}
-
-		static get (key) {
-			return this.prototype.constructor.obj.get(key);
-		}
-
-		static add (key, obj) {
-			this.prototype.constructor.obj.set(key, obj);
-		}
-
-		static update () {
-			this.prototype.constructor.obj.forEach(this.prototype.constructor.loop);
-		}
-
-		static loop (val, key, map) {
-			// Intentionally left blank
-		}
-	}
-
-	// // This should the class that contains everything UI element related
-	class GUIManager extends Manager {
-		static obj = new Map();
-
-		static loop (val, key, map) {
-			val.render(); // The actual rendering
-		}
-	}
-
-	class GUIMember {
-		parent_i = null;
-
-		constructor (parent, elem) {
-			this.parent_i = parent;
-			this.elem_i = elem;
-		}
-		
-		set parent (parent) {
-			return (this.parent_i = parent);
-		}
-
-		get parent () {
-			return this.parent_i;
-		}
-		
-		set elem (elem) {
-			return (this.elem_i = elem);
-		}
-
-		get elem () {
-			return this.elem_i;
-		}
-
-		render () {
-			// Intentionally left empty
-		}
-	}
-
-	// This class is for stuff like game logic (ex: generator, ...)
-	// Therefore this should loop over every element
-	class LogicManager extends Manager {
-		static obj = new Map();
-
-		static loop (val, key, map) {
-			val.exec();
-		}
-	}
-
-	// Empty
-	class LogicMember {
-		constructor () {}
-
-		exec () {
-			// return this.func_i(...arguments);
-		}
-	}
-
-	// Important elements
-
-	const scroll_generator_elem = window.document.getElementById("after-wrapper-interact");
+	const scroll_generator_elem = window.document.getElementById("after-wrapper-interact"),
 		scroll_currency_elem = window.document.getElementsByClassName("number")[0],
-		generator_group_elem = window.document.getElementById("interact");
+		generator_group_elem = window.document.getElementById("interact"),
+		global_upgrade_elem = window.document.getElementById("global-upgrade"),
+		achievement_popup_elem = window.document.getElementById("popup-achievement"),
+			
+		amount_elem = window.document.getElementById("bulk"),
+		save_elem = window.document.getElementById("save"),
+		achievement_elem = window.document.getElementById("achievement"),
+		settings_elem = window.document.getElementById("settings");
 
 	function number_format (num) {
 		// return num.toPrecision(6); // Temporary
-		return num.toFixed(2, DecNum.DOWN).toString();
+		// return num.toFixed(2, DecNum.DOWN).toString();
+		// return num.toDP(2, DecNum.ROUND_DOWN).toString();
+		return DecNum.format(num, 0, 1);
 	}
 
 	function cost_calc (base, multiply, count, amount) {
@@ -239,6 +574,25 @@
 
 	function rate_calc (base, multiply, count) {
 		return base.mul(multiply.pow(count));
+	}
+	
+	function amount_calc (currency, base, multiply, count) {
+		return currency.mul(multiply.sub(ONE))
+			.div(base)
+			.add(multiply.pow(count))
+			.log(multiply)
+			.floor()
+			.sub(count);
+  }
+	
+	function update_price () {
+		for (let name in data.currency)
+			if (data.currency.hasOwnProperty(name)) // Temporary
+				for (let i = 0; i < data.currency[name].upgrades.length; ++ i) {
+					let u = data.currency[name].upgrades[i];
+					if (u.owe_repeat === null) u.bulk();
+					else u.owe_repeat.bulk()
+				}
 	}
 
 	function drag_scroll (elem) {
@@ -279,91 +633,11 @@
 		};
 
 		elem.addEventListener("mousedown", mouseDownHandler);
-	};
+	}
 
 	drag_scroll(scroll_generator_elem);
 	drag_scroll(scroll_currency_elem);
-
-	// Generator
-
-	class BaseGenerator {
-		count_i = null;
-
-		base_cost_i = null; // base cost. TODO: support multiple currency?
-		multiply_cost_i = null;
-
-		base_rate_i = null;
-		multiply_rate_i = null;
-
-		func_cost_i = null;
-		func_rate_i = null;
-
-		cache_cost_i = null;
-		cache_rate_i = null;
-
-		currency_i = null; // currency. TODO: support multiple currency?
-
-		avail_i = false;
-
-		constructor (func_cost, func_rate, base_cost, base_rate, currency) {
-			this.base_cost_i = base_cost;
-			this.multiply_cost_i = new DecNum(1.075);
-			this.count_i = ZERO;
-			this.func_cost_i = func_cost;
-			this.func_rate_i = func_rate;
-
-			this.base_rate_i = base_rate;
-			this.multiply_rate_i = new DecNum(1.075);
-
-			this.cost(ONE);
-			this.rate;
-
-			this.currency_i = currency;
-		}
-
-		buy (amount = ONE) {	// Did not check for cost for performance reason
-			this.currency_i.num.num = this.currency_i.num.num.sub(this.cache_cost_i);
-			this.count_i = this.count_i.add(ONE);
-			this.cost(ONE);
-			this.rate; // call the get rate func
-		}
-
-		cost (amount = ONE) { // Update when
-			return (this.cache_cost_i = this.func_cost_i(this.base_cost_i, this.multiply_cost_i, this.count_i, amount));
-		}
-
-		update (num) {
-			return num.add(this.cache_rate_i);
-		}
-
-		get rate () { // Update when
-			return (this.cache_rate_i = this.func_rate_i(this.base_rate_i, this.multiply_cost_i, this.count_i));
-		}
-		
-		get check () {
-			return this.cache_cost_i.comparedTo(this.currency_i.num.num) === -1; // FOr performance reason
-		}
-
-		get cache_rate () {
-			return this.cache_rate_i;
-		}
-
-		get cache_cost () {
-			return this.cache_cost_i;
-		}
-
-		get count () {
-			return this.count_i;
-		}
-
-		get avail () {
-			return this.avail_i;
-		}
-
-		set avail (avail) {
-			return (this.avail_i = avail);
-		}
-	}
+	drag_scroll(global_upgrade_elem);
 
 	function blurryScrollGroup (wrapper, blurry, before, after, main, member, div) {
 		let wrapper_div = window.document.createElement("div"),
@@ -397,272 +671,6 @@
 		return main_div;
 	}
 
-	class LogicGeneratorGroup extends LogicMember { // Handle the people thingy
-		// elem_i = null;
-
-		// constructor () {
-		// 	super();
-		// }
-
-		// render () {
-
-		// }
-	}
-
-	class GUIGeneratorGroup extends GUIMember { // Manual rendering
-		group_i = null;
-		elem_i = null;
-
-		constructor (group, parent, elem) {
-			super(parent, elem);
-
-			this.group_i = group;
-			this.elem_i = elem;
-		}
-		render () {
-			this.elem_i.innerHTML = `+${number_format(this.group_i.generator[0].cache_rate)} ${this.group_i.name} (${number_format(this.group_i.people)})<br/>` +
-				number_format(data.currency[this.group_i.name].num.num) + (this.group_i.max ? ` / ${number_format(this.group_i.max)}` : ""); // Temporary
-		}
-	}
-
-	class GeneratorGroup {
-		name_i = null; // Name of this generator
-
-		gui_i = null; // 
-
-		currency_gui_i = null;
-
-		people_i = null; // People bonus to be assigned
-		generator_i = []; // 0 will be manual BaseGenerator, everything else will be BaseGenerator from GeneratorGroupMember
-		max_i = null; // Value cap for this generator
-		
-		// HTML stuff
-		manual_elem_i = null;
-		group_elem_i = null;
-		upgrade_elem_i = null;
-		root_elem_i = null;
-
-		constructor (name, max, base_cost, base_rate) {
-			this.name_i = name;
-			this.currency_gui_i = GUIManager.get(name + "-curency");
-
-			// --- GUI ---
-
-			let generator_div = window.document.createElement("div"),
-				generator_manual_div = window.document.createElement("div"),
-				wrapper_generator_group_div = blurryScrollGroup(
-					"wrapper-generator-group",
-					"blurry-generator-group",
-					"before-group-member",
-					"after-group-member",
-					"generator-group",
-					"generator-group-member",
-					generator_div,
-				),
-				wrapper_generator_upgrade_div = blurryScrollGroup(
-					"wrapper-generator-upgrade",
-					"blurry-generator-upgrade",
-					"before-upgrade-member",
-					"after-upgrade-member",
-					"generator-upgrade",
-					"generator-upgrade-member",
-					generator_div,
-				),
-				generator_manual_span = window.document.createElement("span");
-
-			this.manual_elem_i = generator_manual_div;
-			this.group_elem_i = wrapper_generator_group_div;
-			this.upgrade_elem_i = wrapper_generator_upgrade_div;
-			this.root_elem_i = generator_div;
-
-			generator_div.appendChild(generator_manual_div);
-
-			generator_manual_div.classList.add("generator-manual");
-
-			generator_manual_div.appendChild(generator_manual_span);
-
-			generator_div.classList.add("generator");
-			generator_group_elem.appendChild(generator_div);
-
-			this.gui_i = new GUIGeneratorGroup(this, generator_manual_div, generator_manual_span);
-
-			GUIManager.add(name + "-generator", this.gui_i);
-
-			// --- Logic ---
-
-			if (max)
-				this.max_i = max;
-
-			this.people_i = ZERO;
-
-			this.generator_i.push(new BaseGenerator(cost_calc, rate_calc, base_cost, base_rate, data.currency[this.name_i]));
-
-			// debugger;
-			// Trigger at least once
-			this.generator_i[0].rate;
-			this.generator_i[0].cost(ONE);
-			
-			let self = this;
-			generator_manual_div.addEventListener("click", function () { // Temporary, may add time limit
-				if (!self.generator_i[0].avail && self.generator_i[0].check) {// % 180 to prevent check frequently
-					new RepeatGeneratorUpgradeMember(self.generator_i[0], self, "Manual Click");
-					self.generator_i[0].avail = true;
-				}
-
-				if (self.max_i === null|| self.max_i.comparedTo(data.currency[self.name_i].num.num) === 1)
-					data.currency[self.name_i].num.num = self.generator_i[0].update(data.currency[self.name_i].num.num);
-			});
-		}
-
-		get name () {
-			return this.name_i;
-		}
-
-		get generator () {
-			return this.generator_i;
-		}
-
-		get people () {
-			return this.people_i;
-		}
-
-		get max () {
-			return this.max_i;
-		}
-
-		get group_elem () {
-			return this.group_elem_i;
-		}
-
-		get root_elem () {
-			return this.root_elem_i;
-		}
-
-		get upgrade_elem () {
-			return this.upgrade_elem_i;
-		}
-	}
-
-	class LogicGeneratorGroupMember extends LogicMember {
-		generator_i = null;
-		count_i = 0;
-
-		constructor (generator) {
-			super();
-
-			this.generator_i = generator;
-		}
-
-		exec () {
-			// This would be the one that put the upgrade
-			if (!this.generator_i.generator.avail && this.generator_i.generator.check) {
-				new RepeatGeneratorUpgradeMember(this.generator_i.generator, this.generator_i.parent, this.generator_i.name);
-				this.generator_i.generator.avail = true;
-			}
-
-			// Increase with cap
-			if ((++ this.count_i) % 60 === 0 && (this.generator_i.parent.max === null|| this.generator_i.parent.max.comparedTo(data.currency[this.generator_i.parent.name].num.num) === 1))
-				data.currency[this.generator_i.parent.name].num.num = data.currency[this.generator_i.parent.name].num.num.add(this.generator_i.generator.cache_rate);
-		}
-	}
-	
-	class GUIGeneratorGroupMember extends GUIMember {
-		generator_i = null;
-
-		constructor (generator, parent, elem) {
-			super(parent, elem);
-			this.generator_i = generator;
-		}
-
-		render () {
-			this.generator_i.elem.innerText = `${this.generator_i.generator.count.add(ONE).toFixed(0).toString()} ${this.generator_i.name}: ${number_format(this.generator_i.generator.cache_rate)}/s`;
-		}
-	}
-
-	class GeneratorGroupMember {
-		parent_i = null; // GeneratorGroup
-		name_i = null;
-
-		gui_i = null;
-		logic_i = null;
-
-		generator_i = null; // BaseGenerator
-
-		elem_i = null;
-
-		constructor (parent, name, base_cost, base_rate) {
-			this.parent_i = parent;
-			this.name_i = name;
-
-			// --- Logic ---
-
-			parent.generator.push(this);
-
-			this.generator_i = new BaseGenerator(cost_calc, rate_calc, base_cost, base_rate, data.currency[this.parent_i.name]);
-
-			this.logic_i = new LogicGeneratorGroupMember(this);
-
-			// --- GUI ---
-
-			let elem = window.document.createElement("div"),
-				span = window.document.createElement("span");
-
-			elem.appendChild(span);
-			span.innerText = `${number_format(this.generator_i.count)} ${name}: ${number_format(this.generator_i.cache_rate)}/s`;
-
-			this.elem_i = span;
-			
-			elem.classList.add("generator-group-member");
-
-			this.gui_i = new GUIGeneratorGroupMember(this, parent.group_elem, elem);
-
-			GUIManager.add(name + "-generator-group-member", this.gui_i);
-
-			LogicManager.add(name + "-generator-group-member", this.logic_i);
-
-			parent.group_elem.insertBefore(elem, parent.group_elem.children[parent.group_elem.children.length - 1]);
-		}
-
-		get parent () {
-			return this.parent_i;
-		}
-
-		get name () {
-			return this.name_i;
-		}
-
-		get logic () {
-			return this.logic_i;
-		}
-
-		get generator () {
-			return this.generator_i;
-		}
-
-		get elem () {
-			return this.elem_i;
-		}
-	}
-
-	// class LogicGeneratorUpgradeMember extends LogicMember { // Handle other misc upgrade (like global bonus ?)
-
-	// }
-
-	// class GUIGeneratorUpgradeMember extends GUIMember {
-		
-	// }
-
-	// class GeneratorUpgradeMember {
-	// 	Generator = null; // Can be BaseGenerator
-	// 	cost_i = null; // The cost calculator
-
-	// 	constructor (influence, base) {
-	// 		let 
-			
-	// 		scroll_currency_elem.insertBefore(elem, scroll_currency_elem.children[scroll_currency_elem.children.length - 1]);
-	// 	}
-	// }
-
 	function blurryUpgradeMember (wrapper, main, div) {
 		let wrapper_div = window.document.createElement("div"),
 			main_div = window.document.createElement("div");
@@ -672,446 +680,1760 @@
 
 		wrapper_div.appendChild(main_div);
 
-		div.insertBefore(wrapper_div, div.children[div.children.length - 1]);
+		div.insertBefore(wrapper_div, div.children[div.childElementCount - 1]);
 
 		return main_div;
 	}
-
 	
-
-	class GUIRepeatGeneratorUpgradeMember extends GUIMember {
-		influence_i = null;
-		name_i = null; // Temporary as it only cover amount=one upgrade
-
-		constructor (influence, parent, elem, name) {
-			super(parent, elem);
-			this.influence_i = influence;
-			this.name_i = name;
-		}
-
-		render () {
-			this.influence_i.elem.innerHTML = `Buy ${this.name_i}<br/>${number_format(this.influence_i.influence.cache_cost)}`;
-		}
+	function blurryUpgradeGlobalMember (div) {
+		let main_div = window.document.createElement("div");
+		
+		main_div.classList.add("global-upgrade-member");
+		
+		div.appendChild(main_div);
+		
+		return main_div;
 	}
 
-	class RepeatGeneratorUpgradeMember {
-		parent_i = null; // GeneratorGroup that have this upgrade
-		influence_i = null; // The BaseGenerator that control this upgrade
+	function make_once_costs (costs, currency) {
+		let res = [];
+		for (let name in costs)
+			if (costs.hasOwnProperty(name))
+				res.push(new OnceCostUpgrade(costs[name]).init(data.currency[name] ? data.currency[name].currency : currency[name], null));
+		return res;
+	}
 
-		gui_i = null;
+	function make_repeat_costs (costs, currency) {
+		let res = [], temp_currency;
+		for (let name in costs)
+			if (costs.hasOwnProperty(name)) {
+				let temp_once = new OnceCostUpgrade(ZERO);
+				res.push(new RepeatCostUpgrade(
+					costs[name].base, costs[name].multiply, costs[name].func
+				).init(
+					(temp_currency = data.currency[name] ? data.currency[name].currency : currency[name]),
+					null, temp_once,
+					null
+				));
+				temp_once.init(temp_currency, null);
+			}
+		return res;
+	}
 
-		elem_i = null;
+	// ---- Objects ----
 
-		constructor (influence, parent, name) {
-			this.influence_i = influence;
-			this.parent_i = parent;
+	function Logic (func = window.noop) {
+		this.func = func;
+	}
 
-			// --- GUI ---
+	Logic.list = [];
 
-			// <div class="wrapper-generator-upgrade-member">
-			// 	<div class="generator-upgrade-member">
-			// 		<span>Buy Farm<br/>Cost: 10 Wood</span>
-			// 	</div>
-			// </div>
+	function GUI (func = window.noop) {
+		this.func = func;
+	}
 
-			let elem = blurryUpgradeMember(
+	GUI.push = function (gui, parent, elem, list_mode, elem_mode) {
+		if (list_mode) GUI.list.push(gui);
+		if (elem_mode) parent.insertBefore(elem, parent.children[parent.childElementCount - 1]);
+		else parent.appendChild(elem);
+	};
+
+	GUI.list = [];
+
+	function OnceCostUpgrade (cost = ZERO) {
+		this.cost = cost; // DecNum cost
+
+		// ---- Internal members ----
+
+		this.own_currency = null; // Currency (NOT CurrencyGroup)
+
+		this.owe_upgrade = null; // OnceUpgrade
+
+		// ---- Function members ----
+
+		this.change_currency = function (currency) {
+			this.own_currency = currency;
+		};
+
+		this.change_upgrade = function (upgrade) {
+			this.owe_upgrade = upgrade;
+		};
+
+		this.price = function () {
+			return this.cost;
+		};
+
+		this.bulk = function () {
+			return this.cost.comparedTo(this.own_currency.num) < 1 ? ONE : ZERO;
+		};
+
+		this.buy = function () {
+			this.own_currency.num = this.own_currency.num.sub(this.cost);
+			Achievement.list["First x10 Buy"].check();
+		};
+
+		this.init = function (currency, upgrade) {
+			this.change_currency(currency);
+			this.change_upgrade(upgrade);
+			return this;
+		};
+	}
+
+	function RepeatCostUpgrade (cost_base, cost_multiply, cost_func = cost_calc, amount_func = amount_calc) {
+		this.cost_base     = cost_base; // Base cost
+		this.cost_multiply = cost_multiply;
+		this.cost_func     = cost_func;
+
+		this.amount_func = amount_func;
+
+		// ---- Internal members ----
+
+		this.owe_upgrade = null; // RepeatUpgrade
+
+		this.own_once = null; // new OnceCostUpgrade(currency, ZERO)
+
+		// ---- Function members ----
+
+		let self = this;
+
+		this.change_currency = function (currency) {
+			this.own_once.own_currency = currency;
+		};
+
+		this.change_upgrade = function (upgrade) {
+			this.owe_upgrade = upgrade;
+		};
+
+		this.change_once = function (once) {
+			this.own_once = once;
+			this.bulk();
+		};
+
+		this.price_raw = function (amount, count) {
+			return (this.own_once.cost = this.cost_func(this.cost_base, this.cost_multiply, count, amount));
+		};
+
+		this.price = function (amount = this.bulk(data.settings.amount)) {
+			return this.price_raw(amount, this.owe_upgrade.owe_generator.count.num);
+		};
+
+		this.bulk = function (amount = null, count = this.owe_upgrade ? this.owe_upgrade.owe_generator.count.num : ZERO) {
+			amount = amount === null ? data.settings.amount : amount;
+			if (amount.comparedTo(INF) === 0) {
+				amount = this.amount_func(this.own_once.own_currency.num, this.cost_base, this.cost_multiply, count);
+				this.price_raw(amount.comparedTo(ZERO) === 0 ? ONE : amount, count);
+				return amount;
+			}
+			if (this.price_raw(amount, count).comparedTo(this.own_once.own_currency.num) === 1) return ZERO;
+			return amount;
+		};
+
+		// Remember to add 1 to counter before buy
+		// Must be same amount for this to work
+		this.buy = function (amount = this.bulk(data.settings.amount)) {
+			this.own_once.buy();
+			this.price_raw(amount, this.owe_upgrade.owe_generator.count.num);
+		};
+
+		// ---- Init ----
+		
+		this.init = function (currency, repeat_upgrade, once, once_upgrade = null) {
+			this.change_upgrade(repeat_upgrade);
+			this.own_once = once;
+			this.change_currency(currency);
+			this.own_once.owe_upgrade = once_upgrade;
+			this.bulk(null, ZERO);
+			return this;
+		};
+	}
+
+	function OnceUpgrade (func) {
+		this.func = func;
+
+		// ---- Internal members ----
+		
+		this.name = null;
+
+		this.costs = null; // OnceCostUpgrade
+
+		this.owe_group = null; // CurrencyGroup that this upgrade in its CurrencyGroup.upgrades
+
+		this.owe_repeat = null; // RepeatUpgrade
+
+		this.amount = null;
+
+		// ---- Function members ----
+
+		this.change_group = function (group) {
+			this.owe_group = group;
+		};
+
+		this.change_name = function (name) {
+			this.name = name;
+		};
+
+		this.change_repeat = function (repeat) {
+			this.owe_repeat = repeat;
+			if (repeat) repeat.own_once = this;
+		};
+
+		this.change_costs = function (costs) {
+			this.costs = costs;
+			for (let i = 0; i < this.costs.length; ++ i)
+				this.costs[i].owe_upgrade = this;
+		};
+
+		this.bulk = function () {
+			for (let i = 0; i < this.costs.length; ++ i)
+				if(this.costs[i].bulk().comparedTo(ZERO) === 0) return (this.amount = ZERO);
+
+			return (this.amount = ONE);
+		};
+
+		this.buy = function () {
+			for (let i = 0; i < this.costs.length; ++ i)
+				this.costs[i].buy();
+
+			this.func(this); // The function to call when the upgrade being bought
+		};
+
+		// ---- Init ----
+		
+		this.init = function (group, name, repeat, costs) {
+			this.change_group(group);
+			this.change_name(name);
+			this.change_repeat(repeat);
+			this.change_costs(costs);
+
+			let self = this;
+
+			// ---- GUI ----
+
+			let root_elem = this.owe_group === GlobalGroup ? blurryUpgradeGlobalMember(this.owe_group.gui.upgrade) :
+				blurryUpgradeMember(
 					"wrapper-generator-upgrade-member",
 					"generator-upgrade-member",
-					this.parent_i.upgrade_elem
+					this.owe_group.gui.upgrade,
 				),
-				span = document.createElement("span");
+				span_elem = window.document.createElement("span");
 
-			this.elem_i = span;
+			root_elem.appendChild(span_elem);
 
-			span.innerHTML = `Buy ${name}<br/>${number_format(this.influence_i.cache_cost)}`; // parent_i.name is kinda stupid but meh
+			this.gui = new GUI(function () {
+				// Handle Upgrade rendering
+				let str = `Buy ${self.name}`, compare = self.amount.comparedTo(ONE);
+				
+				if (compare > -1) {
+					if (compare === 1) str += ` (${self.amount.toString()})`;
+					self.gui.span.style.textDecorationLine = `none`;
+				} else
+					self.gui.span.style.textDecorationLine = `line-through`;
 
-			elem.appendChild(span);
+				for (let i = 0; i < self.costs.length; ++ i)
+					str += `<br/>${number_format(self.costs[i].cost)} ${self.costs[i].own_currency.name}`;
 
-			this.gui_i = new GUIRepeatGeneratorUpgradeMember(this, this.parent_i.upgrade_elem, elem, name);
-
-			GUIManager.add(name + "-repeat-generator-upgrade-member", this.gui_i);
-
-			// Event logic
-			let self = this;
-			elem.addEventListener("click", function() {
-				if (self.influence_i.check) {
-					self.influence_i.buy(ONE);
-
-					// --- GUI ---
-
-					self.influence_i.avail = false;
-
-					// Do cleanup a.k.a self-delete :)
-					// debugger;
-					self.parent_i.upgrade_elem.removeChild(elem.parentNode);
-				}
+				self.gui.span.innerHTML = str;
 			});
-		}
+			this.gui.span = span_elem;
+			this.gui.root = root_elem;
 
-		get elem () {
-			return this.elem_i;
-		}
+			GUI.list.push(this.gui);
 
-		get influence () {
-			return this.influence_i;
-		}
-
-		get parent () {
-			return this.parent_i;
-		}
-	}
-
-	// class LogicUpgradeMember extends LogicMember {
-	// 	constructor () {}
-
-	// 	exec () {
-	// 		if (data.currency.Food.num.num.comparedTo(unlock_wood_i) === 1)
-	// 			new RepeatGeneratorUpgradeMember(this.generator_i, this.generator_i.parent, this.generator_i.name);
-
-	// 		++ this.count_i;
-	// 	}
-	// }
-
-	class GUIUpgradeMember extends GUIMember {
-		upgrade_i = null;
-
-		name_i = null;
-
-		constructor (upgrade, parent, elem, name) {
-			super(parent, elem);
-			this.upgrade_i = upgrade;
-			this.name_i = name;
-		}
-
-		render () {
-			this.upgrade_i.elem.innerHTML = `${this.name_i}<br/>${number_format(this.upgrade_i.cost)}`;
-		}
-	}
-
-	class UpgradeMember {
-		parent_i = null;
-
-		func_i = null;
-
-		cost_i = null;
-		currency_i = null;
-
-		// logic_i = null;
-		gui_i = null;
-
-		elem_i = null;
-
-		constructor (parent, func, cost, currency, name) {
-			this.parent_i = parent;
-			this.func_i = func;
-			this.cost_i = cost;
-			this.currency_i = currency;
-
-			// --- GUI ---
-
-			let elem = blurryUpgradeMember(
-				"wrapper-generator-upgrade-member",
-				"generator-upgrade-member",
-				this.parent_i.upgrade_elem
-			),
-			span = document.createElement("span");
-
-			this.elem_i = span;
-
-			span.innerHTML = `${name}<br/>${number_format(cost)}`; // parent_i.name is kinda stupid but meh
-
-			elem.appendChild(span);
-
-			this.gui_i = new GUIUpgradeMember(this, this.parent_i.upgrade_elem, elem, name);
-
-			GUIManager.add(name + "-upgrade-member", this.gui_i);
-
-			let self = this;
-			elem.addEventListener("click", function() {
-				if (self.cost_i.comparedTo(self.currency_i.num.num) === -1) {
-					self.func_i(self);
-					self.currency_i.num.num = self.currency_i.num.num.sub(self.cost_i);
-					self.parent_i.upgrade_elem.removeChild(elem.parentNode);
-				}
-			});
-		}
-
-		get elem () {
-			return this.elem_i;
-		}
-
-		get cost () {
-			return this.cost_i;
-		}
-	}
-
-	// class LogicFoodUpgrade extends LogicMember {
-	// 	count_i = 0;
-
-	// 	unlock_wood_i = new DecNum(75);
+			// ---- Logic ----
 		
-	// 	constructor () {}
+			if (func !== window.noop) {
+				this.logic = new Logic(function () {
+					self.amount = self.bulk();
+					if (self.amount.comparedTo(ZERO) === 1) {
+						self.buy();
+						data.upgrades[self.name].buy = true;
+						self.owe_group.pop_upgrade(self);
+					}
+				});
+		
+				root_elem.addEventListener("click", this.logic.func);
+			}
 
-	// 	exec () {
-	// 		if (data.currency.Food.num.num.comparedTo(unlock_wood_i) === 1)
-	// 			new RepeatGeneratorUpgradeMember(this.generator_i, this.generator_i.parent, this.generator_i.name);
+			// ---- Finalize ----
 
-	// 		++ this.count_i;
-	// 	}
-	// }
+			this.bulk();
+			return this;
+		};
+	}
 
-	// class LogicWoodUpgrade extends LogicMember {
-	// 	count_i = 0;
+	function RepeatUpgrade () {
+		// ---- Internal members ----
 
-	// 	constructor () {}
+		this.owe_group = null; // CurrencyGroup that this upgrade in its CurrencyGroup.upgrades
 
-	// 	exec () {
-	// 		// if (data.currency[])
+		this.own_once = null; // new OnceUpgrade(group, name, once_costs, window.noop);
 
-	// 		++ this.count_i;
-	// 	}
-	// }
+		this.costs = null; // RepeatCostUpgrade
 
-	// Currencies
+		this.owe_generator = null; // Also have count
 
-	// Do we needs this?
-	// class LogicCurrency extends LogicMember {
 
-	// }
+		// this.own_once.repeat = this;
 
-	class GUICurrency extends GUIMember {
-		currency_i = null;
-		len_i = 0; // string length for padding
+		// ---- Function members ----
 
-		constructor (currency, parent, elem) {
-			super(parent, elem);
-			this.currency_i = currency;
-		}
+		this.change_group = function (group) {
+			this.own_once.change_group(group);
+		};
 
-		render () {
-			let str = number_format(this.currency_i.num_i);
-			if (str.length > this.len_i) this.len_i = str.length;
+		this.change_name = function (name) {
+			this.own_once.change_name(name);
+		};
+
+		this.change_once = function (once) {
+			this.own_once = once;
+			once.change_repeat(this);
+		};
+
+		this.change_costs = function (costs) {
+			this.costs = costs;
+
+			let once_costs = [];
+			for (let i = 0; i < costs.length; ++ i) {
+				costs[i].owe_upgrade = this;
+				once_costs.push(costs[i].own_once); // Extract OnceCostUpgrade from RepeatCostUpgrade
+			}
+
+			this.own_once.change_costs(once_costs);
+		};
+
+		this.change_generator = function (generator) {
+			this.owe_generator = generator;
+		};
+
+		this.price = function (amount) {
+			for (let i = 0; i < this.costs.length; ++ i)
+				this.costs[i].price(amount);
+		};
+
+		this.bulk = function (amount = data.settings.amount, count = ZERO) {
+			let track = INF;
+			
+			if (amount.comparedTo(INF) === 0) {
+				let temp;
+				for (let i = 0; i < this.costs.length; ++ i) {
+					temp = this.costs[i].bulk();
+					if (temp.comparedTo(track) === -1) track = temp;
+				}
+			} else {
+				track = amount;
+				for (let i = 0; i < this.costs.length; ++ i)
+					if (this.costs[i].bulk().comparedTo(ZERO) === 0) {
+						track = ZERO;
+						break;
+					}
+			}
+			this.own_once.amount = track;
+			return track;
+		};
+
+		this.buy = function (amount) {
+			for (let i = 0; i < this.costs.length; ++ i)
+				this.costs[i].buy(amount);
+		};
+
+		this.init = function (group, name, once, costs, generator) {
+			this.change_once(once);
+			this.change_group(group);
+			this.change_name(name);
+			this.change_costs(costs);
+			this.change_generator(generator);
+
+			let self = this;
+
+			// ---- Logic ----
+
+			this.own_once.logic = new Logic(function () {
+				// Handle Upgrade button click
+				self.own_once.amount = self.amount = self.bulk();
+				if (self.amount.comparedTo(ZERO) === 1) {
+					self.buy(self.amount);
+					self.owe_generator.count.add(self.amount); // Handle amount add here
+					self.owe_generator.product();
+					// update_price();
+					// TODO: new GUI handle stuff
+				}
+			});
+
+			this.own_once.gui.root.addEventListener("click", this.own_once.logic.func);
+
+			// ---- Finalize ----
+
+			this.bulk();
+			return this;
+		};
+	}
+	
+	// Fake group for API compatibility
+	function GlobalGroup () {}
+	
+	GlobalGroup.upgrades = [];
+		
+	// ---- GUI ----
+	
+	GlobalGroup.gui = new GUI();
+	
+	GlobalGroup.gui.upgrade = global_upgrade_elem;
+	
+	GlobalGroup.push_upgrade = function (upgrade) {
+		upgrade.group = GlobalGroup;
+		GlobalGroup.upgrades.push(upgrade);
+	};
+
+	GlobalGroup.pop_upgrade = function (upgrade) {
+		GlobalGroup.upgrades.splice(GlobalGroup.upgrades.indexOf(upgrade), 1);
+		GlobalGroup.gui.upgrade.removeChild(upgrade.gui.root);
+	};
+	
+	GlobalGroup.prototype.upgrades = GlobalGroup.upgrades;
+	GlobalGroup.prototype.gui = GlobalGroup.gui;
+	GlobalGroup.prototype.push_upgrade = GlobalGroup.push_upgrade;
+	GlobalGroup.prototype.pop_upgrade = GlobalGroup.pop_upgrade;
+	
+	data.currency.Global = GlobalGroup;
+	
+
+	function CurrencyGroup (currency, count, costs, rate_base, rate_multiply, rate_func) { // Will not render anything
+		this.currency = currency; // the real Currency object
+
+		this.generators = [];
+		this.upgrades = [];
+
+		let self = this;
+
+		// ---- GUI ----
+
+		this.gui = new GUI();
+
+		let root_elem = window.document.createElement("div"),
+			generator_elem = blurryScrollGroup(
+				"wrapper-generator-group",
+				"blurry-generator-group",
+				"before-group-member",
+				"after-group-member",
+				"generator-group",
+				"generator-group-member",
+				root_elem,
+			),
+			upgrade_elem = blurryScrollGroup(
+				"wrapper-generator-upgrade",
+				"blurry-generator-upgrade",
+				"before-upgrade-member",
+				"after-upgrade-member",
+				"generator-upgrade",
+				"wrapper-generator-upgrade-member", // "generator-upgrade-member",
+				root_elem,
+			);
+
+		this.gui.generator = generator_elem;
+		this.gui.upgrade   = upgrade_elem;
+		this.gui.root      = root_elem;
+
+		root_elem.classList.add("generator");
+
+		GUI.push(this.gui, generator_group_elem, root_elem, false, false);
+
+		// ---- Members ----
+
+		this.push_generator = function (generator) { // Mostly AutoGenerator
+			generator.generator.group = this;
+			this.generators.push(generator);
+			this.gui.generator.insertBefore(generator.gui.root, this.gui.generator.children[this.gui.generator.childElementCount - 1]);
+			this.push_upgrade(generator.generator.own_repeat.own_once);
+		};
+
+		this.push_upgrade = function (upgrade) { // Mostly OnceUpgrade
+			upgrade.group = this;
+			this.upgrades.push(upgrade);
+			// Apparently becuase of blurryUpgrade function, we cannot do this
+			// But the problem is creating a new Generator will not do this at all
+			// this.gui.upgrade.insertBefore(upgrade.gui.root, this.gui.upgrade.children[this.gui.upgrade.childElementCount - 1]);
+		};
+
+		this.pop_upgrade = function (upgrade) {
+			this.upgrades.splice(this.upgrades.indexOf(upgrade), 1);
+			this.gui.upgrade.removeChild(upgrade.gui.root.parentElement);
+		};
+
+		// ---- Manual Generator ----
+
+		this.generators.push(new ManualGenerator(this, "Manual Click", count, costs, rate_base, rate_multiply, rate_func));
+		this.push_upgrade(this.generators[0].generator.own_repeat.own_once);
+		root_elem.appendChild(this.generators[0].gui.root);
+	}
+
+	function CurrencyItem (currency) { // Render the currency at the top bar
+		this.currency = currency;
+
+		let self = this;
+
+		this.str_len = 0;
+
+		// ---- GUI ----
+
+		// Create currency div
+		let root_elem = window.document.createElement("div"),
+			span_elem = window.document.createElement("span");
+
+		this.gui = new GUI(function () {
+			let str = number_format(self.currency.num);
+			if (str.length > self.str_len) self.str_len = str.length;
 			
 			// TODO: Also add a settings to prevent render too much (since HTML rendering is costly)
-			this.currency_i.elem_i.innerText = this.currency_i.name_i + ": " + str.padStart(this.len_i, " ");
-		}
+			self.gui.span.innerText = self.currency.name + ": " + str.padStart(self.str_len, " ");
+		});
+		this.gui.root = root_elem;
+		this.gui.span = span_elem;
+
+		root_elem.appendChild(span_elem);
+
+		// create span and put inside div
+		root_elem.classList.add("currency");
+
+		GUI.push(this.gui, scroll_currency_elem, root_elem, true, true); // push into currency bar
+
+		// ---- Logic ----
+
+		this.logic = new Logic(function () {
+			data.currency[self.currency.name].gui.root.scrollIntoView({behavior: "smooth", block: "start", inline: "start"});
+		});
+
+		root_elem.addEventListener("click", this.logic.func);
 	}
 
-	class Currency {
-		// logic_i = null;
-		name_i = null;
+	function Currency (name, num = ZERO, max = null) {
+		this.name = name;
+		this.num = num;
+		this.max = max;
+	}
 
-		gui_i = null;
+	function Generator (group, name, count, costs, rate_base, rate_multiply, rate_func = rate_calc) {
+		this.rate_base = rate_base;
+		this.rate_multiply = rate_multiply;
+		this.rate_func = rate_func;
+
+		this.rate = ZERO; // Calculated rate
+
+		// this.currency = currency; // Currency being managed
+
+		this.group = group; // Cannot move this.group from RepeatUpgrade to her ebecause of OnceUpgrade have it
+
+		this.count = count; // Total bought (since each costs share counter object anyways)
+
+		let temp_once = new OnceUpgrade(window.noop);
+
+		temp_once.init(this.group, name, null, []);
+		this.own_repeat = new RepeatUpgrade().init(group, name, temp_once, costs, this);
+
+		this.name = name;
+
+		let self = this;
+
+		this.product = function () {
+			return (this.rate = this.rate_func(this.rate_base, this.rate_multiply, this.count.num));
+		};
+
+		this.update = function () {
+			if (self.group.currency.max === null|| self.group.currency.max.comparedTo(self.group.currency.num) === 1) {
+				self.group.currency.num = self.group.currency.num.add(self.rate);
+				Achievement.list["Thousand Food"].check(self);
+				Achievement.list["Thousand Stone"].check(self);
+			}
+		};
+
+		this.product();
+	}
+
+	function AutoGenerator (group, name, count, costs, rate_base, rate_multiply, rate_func) {
+		this.generator = new Generator(group, name, count, costs, rate_base, rate_multiply, rate_func); // Generator
+
+		let self = this;
+
+		// ---- GUI ----
+
+		this.gui = new GUI(function() {
+			self.gui.span.innerText = `${self.generator.count.num.add(ONE).toFixed(0).toString()} ${self.generator.name}: ` +
+				`${number_format(self.generator.rate)}/s`;
+		});
+
+		let root_elem = window.document.createElement("div"),
+			span_elem = window.document.createElement("span");
+
+		this.gui.root = root_elem;
+		this.gui.span = span_elem;
+
+		root_elem.appendChild(span_elem);
+
+		root_elem.classList.add("generator-group-member");
+
+		GUI.list.push(this.gui);
+
+		// ---- Logic ----
+
+		this.tick = 0;
+
+		this.logic = new Logic(function () {
+			if ((++ self.tick) % data.settings.logic === 0)
+				self.generator.update();
+		}); // The logic will be called for each tick
+
+		Logic.list.push(this.logic);
+	}
+
+	function ManualGenerator (group, name, count, costs, rate_base, rate_multiply, rate_func) {
+		this.generator = new Generator(group, name, count, costs, rate_base, rate_multiply, rate_func); // Generator
+
+		let self = this;
+
+		// ---- GUI ----
+
+		this.gui = new GUI(function () {
+			// Manual click render goes here
+			// update_price();
+			self.gui.span.innerHTML = `+${number_format(self.generator.rate)} ${self.generator.group.currency.name} (${self.generator.count.num.add(ONE).toString()})<br/>` +
+				number_format(self.generator.group.currency.num) + (self.generator.group.currency.max === null ? "" : ` / ${number_format(self.generator.group.currency.max)}`);
+		});
+
+		let root_elem = window.document.createElement("div"),
+			span_elem = window.document.createElement("span");
+
+		this.gui.root = root_elem;
+		this.gui.span = span_elem;
+
+		root_elem.appendChild(span_elem);
+
+		root_elem.classList.add("generator-manual");
+
+		GUI.list.push(this.gui);
+
+		// ---- Logic ----
+
+		this.logic = new Logic(self.generator.update);
+
+		root_elem.addEventListener("click", this.logic.func);
+	}
+
+	function Counter (num = ZERO) {
+		this.num = num;
+
+		this.add = function (num = data.settings.amount) {
+			return (this.num = this.num.add(num));
+		};
+	}
+
+	function Achievement () {
+		this.gui = null;
+
+		this.logic = null;
 		
-		num_i = null;
+		this.done = false;
+		
+		this.tip = "";
+		
+		this.func = window.noop;
+		
+		this.change_func = function (func) {
+			this.func = func;
+		};
+		
+		this.change_done = function (done = false) {
+			this.done = done;
+		};
+		
+		this.change_tip = function (tip = "") {
+			this.tip = tip;
+			this.gui.root.setAttribute("data-tooltip", tip);
+		};
+		
+		this.unlock = function () {
+			if (!this.done) {
+				this.change_done(true);
+				this.gui.func(this);
+			}
+		};
+		
+		this.check = function () {
+			this.logic.func(this, ...arguments);
+		};
+		
+		this.init = function (url, tip, func, done) {
+			this.change_done(done);
+			this.change_func(func);
 
-		elem_i = null;
-
-		constructor (name, num) {
-			this.name_i = name;
-			this.num_i = num;
-
-			// --- GUI ---
-
-			// Create currency div
-			let elem = window.document.createElement("div"),
-				span = window.document.createElement("span");
-
-			// create span and put inside div
-			elem.appendChild(span);
-			span.innerText = name + ": " + number_format(num);
-
-			this.elem_i = span;
-
-			// change class to "currency"
-			elem.classList.add("currency");
+			// ---- GUI ----
 			
-			// create the currency
-			this.gui_i = new GUICurrency(this, scroll_currency_elem, elem);
-
-			// add the thing to GUIManager for rendering
-			GUIManager.add(name + "-curency", this.gui_i);
-
-			// append the div in the middle, not last
-			scroll_currency_elem.insertBefore(elem, scroll_currency_elem.children[scroll_currency_elem.children.length - 1]);
-
-			elem.addEventListener("click", function () {
-				data.currency[name].generator.root_elem.scrollIntoView({behavior: "smooth", block: "start", inline: "start"});
+			this.gui = new GUI(function(self) {
+				self.gui.root.style.setProperty("--mode-blur-amount", "0");
+				self.gui.lock.style.visibility = "hidden";
 			});
-		}
 
-		set num (num) {
-			return (this.num_i = num);
-		}
+			let root_elem = window.document.createElement("div"),
+				lock_elem = window.document.createElement("div");
 
-		get num () {
-			return this.num_i;
-		}
+			this.gui.root = root_elem;
+			this.gui.lock = lock_elem;
+			this.gui.url = url;
+
+			root_elem.style.setProperty("--image-url", `url(${this.gui.url})`);
+
+			root_elem.appendChild(lock_elem);
+
+			root_elem.classList.add("popup-achievement-member");
+			
+			achievement_popup_elem.appendChild(root_elem);
+
+			this.change_tip(tip);
+
+			// Only Logic can trigger GUI
+			// GUI.list.push(this.gui);
+
+			// ---- Logic ----
+			
+			// Only special functions can trigger achievement
+			
+			this.logic = new Logic(function (self, ...data) {
+				if (!self.done && self.func(...arguments)) {
+					self.change_done(true);
+					self.gui.func(self);
+				}
+			});
+			
+			if (this.done) this.logic.func(this);
+			
+			return this;
+		};
 	}
-
-	function make_currency (name, num, max, base_cost, base_rate) {
-		data.currency[name] = {};
-		data.currency[name].num = new Currency(name, num);
-		data.currency[name].generator = new GeneratorGroup(name, max, base_cost, base_rate);
-	}
-
-	data.currency = {};
 	
-	// data.currency.People = make_currency("People", ZERO, new DecNum(50));
-	make_currency("Food", ZERO, null, new DecNum(25), ONE);
+	// Extra buttons and rendering
+	
+	function update_amount (amount_mode) {
+		switch (amount_mode) {
+			case 0: 
+				data.settings.amount = ONE;
+				amount_elem.children[0].innerText = "x1";
+				break;
+			case 1:
+				data.settings.amount = TEN;
+				amount_elem.children[0].innerText = "x10";
+				break;
+			case 2:
+				data.settings.amount = HUNDRED;
+				amount_elem.children[0].innerText = "x100";
+				break;
+			case 3:
+				data.settings.amount = INF;
+				amount_elem.children[0].innerText = "Max";
+				break;
+		}
+	}
+	
+	let amount_mode = 0; // 0 1 2 3
+	amount_elem.addEventListener("click", function () {
+		update_amount(amount_mode = (amount_mode + 1) % 4);
+		update_price();
+	});
+	
+	GUI.list.push(new GUI(function () {
+		//if (data.settings.amount.comparedTo(INF) === 0)
+		update_price();
+	}));
+	
+	let save_flag = 0, save_achiement_flag = true, save_achievement_count = 0;
+	
+	save_elem.addEventListener("click", function () {
+		save();
+		++ save_achievement_count;
+		if (save_achiement_flag) {
+			save_achiement_flag = false;
+			window.setTimeout(function () {
+				Achievement.list["Never Be Sure"].check(save_achievement_count);
+				save_achievement_count = 0;
+				save_achiement_flag = true;
+			}, 275);
+		}
+		if (save_flag === 0) {
+			save_flag = 1;
+			save_elem.style.setProperty("--image-url", "url('https://img.icons8.com/ios-filled/100/000000/checkmark.png')");
+			window.setTimeout(save_anim_func, 1500);
+		} else
+			save_flag = 2;
+	});
+	
+	function save_anim_func () {
+		if (save_flag === 2) {
+			save_flag = 1;
+			window.setTimeout(save_anim_func, 500);
+		} else {
+			save_elem.style.setProperty("--image-url", "url('https://img.icons8.com/ios-filled/100/000000/save.png')");
+			save_flag = 0;
+		}
+	}
+	
+	let theme_elem = document.querySelector("#popup-menu-extra > div:nth-child(1) > div");
+	
+	// https://stackoverflow.com/questions/37801882/
+	
+	//determines if the user has a set theme
+	// data.settings.theme = window.localStorage.getItem("civil_theme");    //default to light
+	function setTheme (theme) {
+		data.settings.theme = theme;
+		window.document.documentElement.setAttribute("data-theme", theme);
+		switch (theme) {
+			case "light":
+				theme_elem.children[0].children[0].checked = true;
+				break;
+			case "dark":
+				theme_elem.children[1].children[0].checked = true;
+				break;
+		}
+	}
+	function detectTheme () {
+		if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches)
+			data.settings.theme = "dark";
+		else
+			data.settings.theme = "light";
+		setTheme(data.settings.theme);
+	}
+	// if (!window.localStorage.getItem("civil_theme")) {
+	// 	data.settings.theme = "light";
+	// 	detectTheme();
+	// } else
+	// 	window.document.documentElement.setAttribute("data-theme", data.settings.theme);
+	
+	for (let i = 0; i < theme_elem.childElementCount; ++ i) {
+		let elem = theme_elem.children[i].children[0];
+		if (elem.value === data.settings.theme)
+			elem.checked = true;
+    elem.addEventListener("click", function() {
+        //window.localStorage.setItem("civil_theme", this.value);
+			setTheme(this.value);
+		});
+	}
+	
+	let render_elem = document.querySelector("#popup-menu-extra > div:nth-child(2) > input");
+	render_elem.addEventListener("input", function () {
+		data.settings.render = 60 / parseInt(this.value);
+	});
+	
+	let hard_reset_elem = document.querySelector("#popup-menu-extra > div:nth-child(3) > div");
+	hard_reset_elem.addEventListener("click", reset);
+	
+	let current_close = 0,
+		wrapper_popup_elem = window.document.getElementById("wrapper-popup"),
+		popup_elem = wrapper_popup_elem.children[0],
+		close_elem = window.document.getElementById("popup-close"),
+		menu_extra_elem = window.document.getElementById("popup-menu-extra");
+	
+	function hideAll (c) {
+		for (let i = 1; i < popup_elem.childElementCount; ++ i) {
+			if (popup_elem.children[i] === c) continue;
+			popup_elem.children[i].style.display = "none";
+			popup_elem.children[i].style.visibility = "hidden";
+		}
+	}
+			
+	achievement_elem.addEventListener("click", function () {
+		wrapper_popup_elem.style.opacity = "1";
 
-	data.upgrade = {};
-	data.upgrade.Food = {
-		build_farm: {
-			cost: new DecNum(50),
-			name: "Build Farm",
-			func: function() {
-				new GeneratorGroupMember(data.currency.Food.generator, `Farm`, new DecNum(25), ONE);
+		hideAll(achievement_popup_elem);
+		achievement_popup_elem.style.display = "inline-flex";
+		wrapper_popup_elem.style.visibility = achievement_popup_elem.style.visibility = "visible";
+
+		current_close = 2;
+	});
+	
+	settings_elem.addEventListener("click", function () {
+		wrapper_popup_elem.style.opacity = "1";
+
+		hideAll(settings_elem);
+		menu_extra_elem.style.display = "flex";
+		wrapper_popup_elem.style.visibility = menu_extra_elem.style.visibility = "visible";
+
+		current_close = 1;
+	});
+
+	close_elem.addEventListener("click", function () {
+		wrapper_popup_elem.style.opacity = "0";
+
+		setTimeout(function () {
+			wrapper_popup_elem.style.visibility = "hidden";
+			hideAll();
+		}, 500);
+
+		current_close = 0;
+	});
+  
+	
+	function save () {
+		let stuff = {
+			currencies: {},
+			upgrades: {
+				now: [],
+				done: [],
 			},
-			parent: data.currency.Food.generator,
-			got: true,
-		},
-		build_barn: {
-			cost: new DecNum(100),
-			name: "Build Barn",
-			func: function() {
-				new GeneratorGroupMember(data.currency.Food.generator, `Barn`, new DecNum(50), new DecNum(2.5));
-			},
-			parent: data.currency.Food.generator,
-			got: true,
-		},
-		unlock_wood: {
-			cost: new DecNum(200),
-			name: "Unlock Wood",
-			func: function() {
-				make_currency("Wood", ZERO, null, new DecNum(25), ONE);
+			achievement: [],
+		};
+		
+		for (let name in data.currency)
+			if (data.currency.hasOwnProperty(name) && name !== "Global") {
+				let s = stuff.currencies[name] = {}, c = data.currency[name];
+				s.name = c.currency.name;
+				s.num = c.currency.num.toJSON();
+				s.max = c.currency.max ? c.currency.max.toJSON() : null;
+				s.generators = [];
+				for (let i = 0; i < c.generators.length; ++ i) {
+					let g = c.generators[i].generator, t = {
+						name: g.name,
+						costs: {},
+						rate_base: g.rate_base.toJSON(),
+						rate_multiply: g.rate_multiply.toJSON(),
+						count: g.count.num.toJSON(),
+					};
+					for (let j = 0; j < g.own_repeat.costs.length; ++ j) {
+						let o = g.own_repeat.costs[j];
+						t.costs[o.own_once.own_currency.name] = {
+							base: o.cost_base.toJSON(),
+							multiply: o.cost_multiply.toJSON(),
+						};
+					}
+					s.generators.push(t);
+				}
+				s.upgrades = [];
+				for (let i = 0; i < c.upgrades.length; ++ i) {
+					let u = c.upgrades[i];
+					if (u.owe_repeat === null)
+						s.upgrades.unshift(u.name);
+				}
+			}
+		for (let i = 0; i < data.currency.Global.upgrades.length; ++ i)
+			stuff.upgrades.now.unshift(data.currency.Global.upgrades[i].name);
+		for (let name in data.upgrades)
+			if (
+				data.upgrades.hasOwnProperty(name) &&
+				data.upgrades[name].buy &&
+				stuff.upgrades.now.indexOf(name) === -1
+			) stuff.upgrades.done.push(name);
+		
+		stuff.settings = {};
+		
+		for (let name in data.settings)
+			if (data.settings.hasOwnProperty(name))
+				stuff.settings[name] = data.settings[name];
+			
+		stuff.settings.amount = amount_mode;
+		
+		for (let name in Achievement.list)
+			if (Achievement.list.hasOwnProperty(name) && Achievement.list[name].done)
+				stuff.achievement.push(name);
+		
+		window.localStorage.setItem("civil_save", window.compress(window.btoa(window.JSON.stringify(stuff))));
+	}
+	
+	window.civil_save_raw = function (str) {
+		window.localStorage.setItem("civil_save", window.compress(window.btoa(str)));
+	};
+	
+	function reset () {
+		window.localStorage.removeItem("civil_save");
+		// window.localStorage.removeItem("civil_theme");
+		// detectTheme();
+		// window.localStorage.setItem("civil_theme", data.settings.theme);
+		if (window.CP)
+			window.location.href = window.location.href;
+		else
+			location.reload();
+	}
 
-				data.upgrade.Wood = { // bigg hacky oof
-					build_lumber: {
-						cost: new DecNum(50),
-						name: "Build Lumber",
-						func: function() {
-							new GeneratorGroupMember(data.currency.Wood.generator, `Lumber`, new DecNum(25), ONE);
-						},
-						parent: data.currency.Wood.generator,
-						got: true,
-					},
-					build_mill: {
-						cost: new DecNum(100),
-						name: "Build Mill",
-						func: function() {
-							new GeneratorGroupMember(data.currency.Wood.generator, `Mill`, new DecNum(50), new DecNum(2.5));
-						},
-						parent: data.currency.Wood.generator,
-						got: true,
-					},
-					unlock_stone: {
-						cost: new DecNum(200),
-						name: "Unlock Stone",
-						func: function() {
-							make_currency("Stone", ZERO, null, new DecNum(25), ONE);
-
-							data.upgrade.Stone = {
-								build_mine: {
-									cost: new DecNum(50),
-									name: "Build Mine",
-									func: function() {
-										new GeneratorGroupMember(data.currency.Stone.generator, `Mine`, new DecNum(25), ONE);
-									},
-									parent: data.currency.Wood.generator,
-									got: true,
-								},
-								build_extractor: {
-									cost: new DecNum(100),
-									name: "Build Extractor",
-									func: function() {
-										new GeneratorGroupMember(data.currency.Stone.generator, `Extractor`, new DecNum(50), new DecNum(2.5));
-									},
-									parent: data.currency.Wood.generator,
-									got: true,
-								},
-							};
-						},
-						parent: data.currency.Wood.generator,
-						got: true,
+	// Game stuff
+	(() => {
+		function make_currency (name, num, cost_base, cost_multiply, rate_base, rate_multiply, cost_more = {}, counter = ZERO) {
+			let temp_currency = new Currency(name, num),
+				temp_cost = {
+					[name]: {
+						base: cost_base,
+						multiply: cost_multiply,
 					},
 				};
-			},
-			parent: data.currency.Food.generator,
-			got: true,
-		},
-	};
+
+			temp_cost = {...cost_more, ...temp_cost};
+
+			data.currency[name] = new CurrencyGroup(
+				temp_currency, new Counter(counter),
+				make_repeat_costs(temp_cost, {
+					[name]: temp_currency
+				}),
+				rate_base, rate_multiply,
+			);
+			new CurrencyItem(data.currency[name].currency);
+		}
+
+		function make_upgrade_generator (name, group, cost_unlock, cost_repeat, rate, multiply = data.multiply, count_out = new Counter(ZERO)) {
+			return {
+				group: group,
+				cost: cost_unlock,
+				func: function (self) {
+					Achievement.list["First Gernerator"].unlock();
+					if (rate.comparedTo(TEN) === 0) Achievement.list["First 10/s Gernerator"].unlock();
+					self.group.push_generator(new AutoGenerator(
+						data.currency[group], name, count_out,
+						make_repeat_costs(cost_repeat),
+						rate, multiply,
+					));
+				},
+				type: 1,
+			};
+		}
+			
+		function unlock_upgrade (name) {
+			data.currency[data.upgrades[name].group].push_upgrade(new OnceUpgrade(
+				data.upgrades[name].func
+			).init(
+				data.currency[data.upgrades[name].group], name,
+				null, make_once_costs(data.upgrades[name].cost), 
+			));
+			data.upgrades[name].unlock = true;
+		}
 	
+		function load() {
+			let stuff = JSON.parse(window.atob(window.decompress(window.localStorage.getItem("civil_save")))),
+					find_manual = (v) => v.name === "Manual Click";
 
-	class LogicMain extends LogicMember { // very hacky
-		constructor() {
-			super();
-		}
+			for (let name in stuff.currencies)
+				if (stuff.currencies.hasOwnProperty(name)) {
+					let s = stuff.currencies[name],
+						g = s.generators.find(find_manual),
 
-		exec () {
-			for (let t in data.upgrade) if (data.upgrade.hasOwnProperty(t))
-				for (let u in data.upgrade[t]) if (data.upgrade[t].hasOwnProperty(u))
-					if (data.upgrade[t][u].got && data.upgrade[t][u].cost.comparedTo(data.currency[t].num.num) === -1) {
-						new UpgradeMember(data.currency[t].generator, data.upgrade[t][u].func, data.upgrade[t][u].cost, data.currency[t], data.upgrade[t][u].name);
-						data.upgrade[t][u].got = false;
+						m = {};
+
+					for (let cost in g.costs)
+						if (g.costs.hasOwnProperty(cost) && cost !== name)
+							m[cost] = {
+								base: new DecNum(g.costs[cost].base),
+								multiply: new DecNum(g.costs[cost].multiply),
+							};
+
+					make_currency(
+						s.name, new DecNum(s.num),
+						new DecNum(g.costs[name].base), new DecNum(g.costs[name].multiply),
+						new DecNum(g.rate_base), new DecNum(g.rate_multiply),
+						m, new DecNum(g.count)
+					);
+				}
+			
+			// Second loop, kinda nasty but necessary to make all currencies to be loaded
+			for (let name in stuff.currencies)
+				if (stuff.currencies.hasOwnProperty(name)) {
+					let s = stuff.currencies[name];
+					
+					// Load generators
+					for (let i = 1; i < s.generators.length; ++ i) {
+						let u = s.generators[i], t = {};
+						for (let cost in s.generators[i].costs)
+							if (s.generators[i].costs.hasOwnProperty(cost)) {
+								let c = s.generators[i].costs[cost];
+								t[cost] = {
+									base: new DecNum(c.base),
+									multiply: new DecNum(c.multiply),
+								};
+							}
+						data.currency[name].push_generator(new AutoGenerator(
+							data.currency[name], u.name, new Counter(new DecNum(u.count)),
+							make_repeat_costs(t),
+							new DecNum(u.rate_base), new DecNum(u.rate_multiply),
+						));
 					}
+					
+					// Load upgrades
+					for (let i = 1; i < s.upgrades.length; ++ i)
+						unlock_upgrade(s.upgrades[i]);
+				}
+			
+			// Load upgrades
+			for (let i = 0; i < stuff.upgrades.now.length; ++ i)
+				unlock_upgrade(stuff.upgrades.now[i]);
+
+			for (let i = 0; i < stuff.upgrades.done.length; ++ i) {
+				let u = stuff.upgrades.done[i];
+				if (data.upgrades[u].type === 0) data.upgrades[u].func();
+				data.upgrades[u].unlock = true;
+				data.upgrades[u].buy = true;
+			}
+			
+			// Load settings
+			for (let name in stuff.settings)
+				if (stuff.settings.hasOwnProperty(name))
+					data.settings[name] = stuff.settings[name];
+
+			update_amount(stuff.settings.amount);
+			render_elem.value = String(60 / data.settings.render);
+			setTheme(data.settings.theme);
+			
+			// Load achievement
+			for (let i = 0; i < stuff.achievement.length; ++ i)
+				Achievement.list[stuff.achievement[i]].unlock();
 		}
-	}
-
-	LogicManager.add("main", new LogicMain());
-
-	// data.currency.wood = new DecNum(0);
-	// data.currency.stone = new DecNum(0);
-	// data.currency.iron = new DecNum(0);
-	// data.currency.gold = new DecNum(0);
-	// data.currency.silicon = new DecNum(0);
-	// data.currency.paper = new DecNum(0);
-
-	// Main implementation
-
-	//let test = new GeneratorGroupMember(data.currency.Food.generator, "Farm");
-
-	// for (let i = 0; i < 20; ++ i)
-	// 	setTimeout(function () {
-	// 		new GeneratorGroupMember(data.currency.Food.generator, `Farm ${i}`);
-	// 	}, i * 233 * 3);
-
-	// for (let i = 0; i < 5; ++ i)
-	// 	setTimeout(function () {
-	// 		new GeneratorGroupMember(data.currency.People.generator, `People ${i}`);
-	// 	}, i * 1000 / 5);
-
-	let frame = {
-		fps: 60,
-		ms: 0,
-		smooth: 5,
-		maxFps: 60
-	};
-
-	// Put loop() at the bottom
-	function loop (data) {
-		// TODO: Game loop
-		// TODO: Render loop
-
-		//data.currency.food.num = data.currency.food.num.mul(new DecNum(1.000123)); // For demo only
-
 		
+		/*
+		let
+			cost_scale            = [   10,   27.5,   75.5,     205,      575,     1570],
+			cost_gt1_scale        = [13.75,  37.75,    105,     285,      785,     2160],
+			cost_gt2_scale        = [37.75,    105,  285.5,     785,     2160,     5950],
+			cost_gt3_scale        = [102.5, 280.75, 775.25, 2130.65,   5860.5, 16120.85],
+			cost_gt4_scale        = [287.5, 790.65,   2175,    5980, 16440.55,    45215],
+			cost_lt1_scale        = [],
+			cost_lt2_scale        = [],
+			cost_lt3_scale        = [],
+			cost_lt4_scale        = [],
+			rate_scale            = [    1,    2.5,   6.25,   15.75,       40,      100],
 
-		LogicManager.update();
-		GUIManager.update();
+		gen_table = [
+			["Manual", "Farm",     "Barn",      "Ranch", "Pasture" ],
+			["Manual", "Lumber",   "Saw",       "Mill",  "Forestry"],
+			["Manual", "Quarry",   "Cutter",    "Grinder"],
+			["Manual", "Colliery", "Extractor", "Washer" ],
+			["Manual", "Mine",     "Smelter"],
+		],
+		currency_table = [
+			["a",    "a",    "a",     "ab",    "a.."   ],
+			["b",    "b",    "ba",    "bc",    "b.."   ],
+			["c",    "cb",   "c.",    "cd.",   "c..."  ],
+			["da",   "da",   "d..",   "de.",   "d..."  ],
+			["eb",   "e..",  "e..",   "ef..",  "e...." ],
+			["fc",   "f..",  "f...",  "fg..",  "f...." ],
+			["gabd", "g...", "g...",  "gh...", "g....."],
+			["hace", "h...", "h....", "hi...", "h....."],
+			["ibcf", "", "", "", ""],
+		];
+		//*/
 
-		frame.fps = data.fps;
-		frame.ms = data.ms;
-		data.maxFps = frame.maxFps;
-		data.smooth = frame.smooth;
-	}
+		// ["a",    "a",    "a",     "ab",    "acd"   ],
+		// ["b",    "b",    "ba",    "bc",    "bde"   ],
+		// ["c",    "ca",   "cb",    "cbd",   "caef"  ],
+		// ["da",   "dc",   "dca",   "dbe",   "dbfg"  ],
 
-	window.document.addEventListener("DOMContentLoaded", function init () {
-		window.rAF(loop);
-	});
+		Achievement.list = {
+			["First Gernerator"]: new Achievement().init(
+				"https://img.icons8.com/ios/50/000000/delivery-time.png",
+				"Buy first generator",
+				function () {
+					return true;
+				}),
+			["First 10/s Gernerator"]: new Achievement().init(
+				"https://img.icons8.com/ios/50/000000/factory-1.png",
+				"Buy first 10/s generator. That was very productive!",
+				function () {
+					return true;
+				}),
+			["Thousand Food"]: new Achievement().init(
+				"https://img.icons8.com/ios/50/000000/bread.png",
+				"What will you do with a thousand food? Eat it of course!",
+				function (self, gen) {
+					debugger;
+					if (gen.group === data.currency.Food)
+						return data.currency.Food.currency.num.comparedTo(THOUSAND) > -1;
+					return false;
+				}),
+			["Thousand Stone"]: new Achievement().init(
+				"https://img.icons8.com/ios/50/000000/mountain.png",
+				"Legend said by having a thousand stones, one can build a house!",
+				function (self, gen) {
+					if (gen.group === data.currency.Stone)
+						return data.currency.Stone.currency.num.comparedTo(THOUSAND) > -1;
+				}),
+			["First x10 Buy"]: new Achievement().init(
+				"https://img.icons8.com/ios/50/000000/10.png",
+				"Buy upgrades using x10 amounts. Wow that's expensive!",
+				function () {
+					return data.settings.amount.comparedTo(TEN) === 0;
+				}),
+			["Never Be Sure"]: new Achievement().init(
+				"https://img.icons8.com/ios/50/000000/save-all.png",
+				"One is enough. Two is just enough. Three is more than enough.",
+				function (self, count) {
+					return count > 2;
+				}),
+		};
+
+		data.upgrades = {
+			["First Farm"]: make_upgrade_generator(
+				"Farm", "Food", {
+					Food: new DecNum(20),
+				}, {
+					Food: {
+						base: new DecNum(10),
+						multiply: data.multiply,
+					},
+				},
+				ONE,
+			),
+			["First Barn"]: make_upgrade_generator(
+				"Barn", "Food", {
+					Food: new DecNum(50),
+				}, {
+					Food: {
+						base: new DecNum(25),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(2.5),
+			),
+			["First Ranch"]: make_upgrade_generator(
+				"Ranch", "Food", {
+					Food: new DecNum(100),
+					Wood: new DecNum(25),
+				}, {
+					Food: {
+						base: new DecNum(50),
+						multiply: data.multiply,
+					},
+					Wood: {
+						base: new DecNum(12.5),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(5),
+			),
+			["First Pasture"]: make_upgrade_generator(
+				"Pasture", "Food", {
+					Food: new DecNum(1000),
+					Stone: new DecNum(200),
+					Coal: new DecNum(50),
+				}, {
+					Food: {
+						base: new DecNum(500),
+						multiply: data.multiply,
+					},
+					Stone: {
+						base: new DecNum(100),
+						multiply: data.multiply,
+					},
+					Coal: {
+						base: new DecNum(25),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(10),
+			),
+
+			// ---- Wood ----
+
+			["First Wood"]: {
+				group: "Global",
+				cost: {
+					Food: new DecNum(75),
+				},
+				func: function (self) {
+					make_currency("Wood", new DecNum(0), new DecNum(10), data.multiply, new DecNum(1), data.multiply);
+				},
+				type: 2,
+			},
+			["First Lumber"]: make_upgrade_generator(
+				"Lumber", "Wood", {
+					Wood: new DecNum(20),
+				}, {
+					Wood: {
+						base: new DecNum(10),
+						multiply: data.multiply,
+					},
+				},
+				ONE,
+			),
+			["First Saw"]: make_upgrade_generator(
+				"Saw", "Wood", {
+					Food: new DecNum(75),
+					Wood: new DecNum(50),
+				}, {
+					Food: {
+						base: new DecNum(37.5),
+						multiply: data.multiply,
+					},
+					Wood: {
+						base: new DecNum(25),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(2.5),
+			),
+			["First Mill"]: make_upgrade_generator(
+				"Mill", "Wood", {
+					Food: new DecNum(200),
+					Wood: new DecNum(100),
+					Stone: new DecNum(25),
+				}, {
+					Food: {
+						base: new DecNum(100),
+						multiply: data.multiply,
+					},
+					Wood: {
+						base: new DecNum(50),
+						multiply: data.multiply,
+					},
+					Stone: {
+						base: new DecNum(12.5),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(5),
+			),
+			["First Forestry"]: make_upgrade_generator(
+				"Forestry", "Wood", {
+					Wood: new DecNum(1000),
+					Stone: new DecNum(200),
+					Coal: new DecNum(50),
+				}, {
+					Wood: {
+						base: new DecNum(500),
+						multiply: data.multiply,
+					},
+					Stone: {
+						base: new DecNum(100),
+						multiply: data.multiply,
+					},
+					Coal: {
+						base: new DecNum(25),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(10),
+			),
+
+			// ---- Stone ----
+
+			["First Stone"]: {
+				group: "Global",
+				cost: {
+					Food: new DecNum(225),
+					Wood: new DecNum(75),
+				},
+				func: function (self) {
+					make_currency("Stone", new DecNum(0), new DecNum(10), data.multiply, new DecNum(1), data.multiply);
+				},
+				type: 2,
+			},
+			["First Quarry"]: make_upgrade_generator(
+				"Quarry", "Stone", {
+					Stone: new DecNum(20),
+				}, {
+					Stone: {
+						base: new DecNum(10),
+						multiply: data.multiply,
+					},
+				},
+				ONE,
+			),
+			["First Cutter"]: make_upgrade_generator(
+				"Cutter", "Stone", {
+					Wood: new DecNum(75),
+					Stone: new DecNum(50),
+				}, {
+					Wood: {
+						base: new DecNum(37.5),
+						multiply: data.multiply,
+					},
+					Stone: {
+						base: new DecNum(25),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(2.5),
+			),
+			["First Grinder"]: make_upgrade_generator(
+				"Grinder", "Stone", {
+					Wood: new DecNum(200),
+					Stone: new DecNum(100),
+					Coal: new DecNum(25),
+				}, {
+					Wood: {
+						base: new DecNum(100),
+						multiply: data.multiply,
+					},
+					Stone: {
+						base: new DecNum(50),
+						multiply: data.multiply,
+					},
+					Coal: {
+						base: new DecNum(12.5),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(5),
+			),
+
+			// ---- Coal ----
+
+			["First Coal"]: {
+				group: "Global",
+				cost: {
+					Food: new DecNum(675),
+					Wood: new DecNum(225),
+					Stone: new DecNum(75),
+				},
+				func: function (self) {
+					make_currency("Coal", new DecNum(0), new DecNum(10), data.multiply, new DecNum(1), data.multiply, {
+						Wood: {
+							base: new DecNum(112.5),
+							multiply: data.multiply,
+						},
+					});
+				},
+				type: 2,
+			},
+			["First Colliery"]: make_upgrade_generator(
+				"Colliery", "Coal", {
+					Stone: new DecNum(50),
+					Coal: new DecNum(20),
+				}, {
+					Stone: {
+						base: new DecNum(25),
+						multiply: data.multiply,
+					},
+					Coal: {
+						base: new DecNum(10),
+						multiply: data.multiply,
+					},
+				},
+				ONE,
+			),
+			["First Extractor"]: make_upgrade_generator(
+				"Extractor", "Coal", {
+					Wood: new DecNum(300),
+					Stone: new DecNum(150),
+					Coal: new DecNum(50),
+				}, {
+					Wood: {
+						base: new DecNum(150),
+						multiply: data.multiply,
+					},
+					Stone: {
+						base: new DecNum(75),
+						multiply: data.multiply,
+					},
+					Coal: {
+						base: new DecNum(20),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(2.5),
+			),
+			["First Washer"]: make_upgrade_generator(
+				"Washer", "Coal", {
+					Food: new DecNum(1500),
+					Wood: new DecNum(750),
+					Coal: new DecNum(100),
+					Iron: new DecNum(25),
+				}, {
+					Food: {
+						base: new DecNum(750),
+						multiply: data.multiply,
+					},
+					Wood: {
+						base: new DecNum(375),
+						multiply: data.multiply,
+					},
+					Coal: {
+						base: new DecNum(50),
+						multiply: data.multiply,
+					},
+					Iron: {
+						base: new DecNum(12.5),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(5),
+			),
+
+			// ---- Iron ----
+
+			["First Iron"]: {
+				group: "Global",
+				cost: {
+					Food: new DecNum(2025),
+					Wood: new DecNum(675),
+					Stone: new DecNum(225),
+					Coal: new DecNum(75),
+				},
+				func: function (self) {
+					make_currency("Iron", new DecNum(10000), new DecNum(10), data.multiply, new DecNum(1), data.multiply, {
+						Food: {
+							base: new DecNum(1012.5),
+							multiply: data.multiply,
+						},
+						Stone: {
+							base: new DecNum(112.5),
+							multiply: data.multiply,
+						},
+					});
+				},
+				type: 2,
+			},
+			["First Mine"]: make_upgrade_generator(
+				"Mine", "Iron", {
+					Food: new DecNum(1250),
+					Wood: new DecNum(750),
+					Iron: new DecNum(20),
+				}, {
+					Food: {
+						base: new DecNum(625),
+						multiply: data.multiply,
+					},
+					Wood: {
+						base: new DecNum(375),
+						multiply: data.multiply,
+					},
+					Iron: {
+						base: new DecNum(10),
+						multiply: data.multiply,
+					},
+				},
+				ONE,
+			),
+			["First Smelter"]: make_upgrade_generator(
+				"Smelter", "Iron", {
+					Wood: new DecNum(1000),
+					Stone: new DecNum(500),
+					Coal: new DecNum(75),
+					Iron: new DecNum(50),
+				}, {
+					Wood: {
+						base: new DecNum(500),
+						multiply: data.multiply,
+					},
+					Stone: {
+						base: new DecNum(250),
+						multiply: data.multiply,
+					},
+					Coal: {
+						base: new DecNum(37.5),
+						multiply: data.multiply,
+					},
+					Iron: {
+						base: new DecNum(25),
+						multiply: data.multiply,
+					},
+				},
+				new DecNum(2.5),
+			),
+		};
+
+		Logic.list.push(new Logic(function () {
+			for (let name in data.upgrades) {
+        if (data.upgrades.hasOwnProperty(name)) {
+          let flag = false;
+          for (let cost in data.upgrades[name].cost)
+            if (!data.currency[cost] || data.upgrades[name].cost[cost].comparedTo(data.currency[cost].currency.num) === 1) {
+              flag = true;
+              break;
+            }
+          if (flag) continue;
+          if (!data.upgrades[name].unlock)
+						unlock_upgrade(name);
+        }
+			}
+		}));
+		
+		if (window.localStorage.getItem("civil_save") === null) {
+			let difficulty_elem = window.document.getElementById("popup-difficulty");
+			hideAll(difficulty_elem);
+			wrapper_popup_elem.style.visibility = difficulty_elem.style.visibility = "visible";
+			wrapper_popup_elem.style.opacity = "1";
+			close_elem.style.visibility = "hidden";
+			// menu_extra_elem.style.display = "none";
+			detectTheme();
+			for (let i = 1; i < difficulty_elem.childElementCount; ++ i)
+				difficulty_elem.children[i].addEventListener("click", function () {
+					switch (data.settings.difficulty = i - 1) {
+						case 0:
+							data.settings.logic = 10;
+							break;
+						case 1:
+							data.settings.logic = 60;
+							break;
+					}
+					wrapper_popup_elem.style.opacity = "0";
+					setTimeout(() => {
+						close_elem.style.visibility = "inherit";
+						wrapper_popup_elem.style.visibility = difficulty_elem.style.visibility = "hidden";
+						hideAll();
+					}, 500);
+					make_currency("Food", new DecNum(0), new DecNum(10), data.multiply, new DecNum(1), data.multiply);
+				});
+		} else
+			load();
+
+		let frame = {
+			fps: 60,
+			ms: 0,
+			smooth: 5,
+			maxFps: 60,
+			count: 0,
+		};
+
+		function loop (frame_data) {
+			for (let i = 0; i < Logic.list.length; ++ i)
+				Logic.list[i].func();
+			if (++ frame.count >= data.settings.render) {
+				for (let i = 0; i < GUI.list.length; ++ i)
+					GUI.list[i].func();
+				frame.count -= data.settings.render;
+			}
+
+			frame.fps = frame_data.fps;
+			frame.ms = frame_data.ms;
+			frame_data.maxFps = frame.maxFps;
+			frame_data.smooth = frame.smooth;
+		}
+		window.civil_save = save;
+		window.civil_data = data;
+		window.civil_reset = reset;
+		window.document.addEventListener("DOMContentLoaded", function init () {
+			window.rAF(loop);
+		});
+	})();
 })();
 
+		//local storage is used to override OS theme settings
+		/*
+		if (!window.matchMedia)
+			//matchMedia method not supported
+			return false;
+		else if (
+			window.matchMedia("(prefers-color-scheme: dark)").matches ||
+			window.localStorage.getItem("civil_theme") === "dark"
+		) //OS theme setting detected as dark
+			data.settings.theme = "dark";
 
+		//dark theme preferred, set document with a `data-theme` attribute
+		if (data.settings.theme === "dark")
+			window.document.documentElement.setAttribute("data-theme", "dark");
+		//*/
+		
+            // data.currency[data.upgrades[name].group].push_upgrade(new OnceUpgrade(
+            //   data.upgrades[name].func
+            // ).init(
+            //   data.currency[data.upgrades[name].group], name,
+            //   null, make_once_costs(data.upgrades[name].cost), 
+            // ));
+            // data.upgrades[name].unlock = true;
+
+		/*
+			{
+				currencies: {
+					Food: {
+						num: "",
+						max: "",
+						generators: [
+							{
+								name: "Manual Click",
+								costs: {
+									Food: {
+										base: "",
+										multiply: "",
+									},
+									Wood: {
+										base: "",
+										multiply: "",
+									},
+								},
+								rate_base: "",
+								rate_multiply: "",
+								count: "",
+							}, {
+								name: "Farm",
+								costs: {
+									Food: {
+										base: "",
+										multiply: "",
+									},
+								},
+								rate_base: "",
+								rate_multiply: "",
+								count: "",
+							}
+						],
+						upgrades: [ // ONLY OnceUpgrade, ignore OnceUpgrade that have RepeatUpgrade
+							"First Farm"
+						],
+					}
+				},
+				upgrades: {
+					now: [
+						"First Wood"
+					],
+					done: [
+						"First Barn" // store all bought OnceUpgrade data here instead of split them apart
+					],
+				},
+			}
+		*/
+
+				//if (name === "Global") continue;
+				//for (let i = 0; i < data.currency[name].generators.length; ++ i) //{
+					//if (data.currency[name].gene[i] instanceof RepeatUpgrade)
+						// console.log(data.currency[name]);
+				//	debugger;
+						//data.currency[name].generators[i].generator.own_repeat.bulk();
+				//}
+
+		// for (let i = 0; i < data.currency.Global.upgrades.length; ++ i)
+		// 	//if (data.currency.Global.upgrades[i] instanceof RepeatUpgrade)
+		// 		data.currency.Global.upgrades[i].bulk();
+    // return math.eval("floor(log(money / cost / base + 1) / log(ratio))", {
+    //   money: stats.money.current,
+    //   cost: cost,
+    //   base: base,
+    //   ratio: ratio,
+		// });
+		
+		// upgrade.cost.currency.num;
+		// upgrade.count.num;
+		// upgrade.cost_base;
+		// upgrade.cost_multiply;
+		
+		// return currency.mul(base).div(cost).add(ONE).log().div(ratio.log()).floor();
+
+		// switch (data.settings.amount) {
+		// 	case ONE:
+		// 		return ONE;
+		// 	case TEN:
+		// 		return TEN;
+		// 	case HUNDRED:
+		// 		return HUNDRED;
+		// }
+
+		// Food: new OnceUpgrade(
+		// 	data.currency.Food, "Unlock Farm",
+		// 	new DecNum(20), function (self) {
+		// 		self.group.push_generator(new AutoGenerator(
+		// 			data.currency.Food, "Farm",
+		// 			new DecNum(10), data.multiply,
+		// 		));
+		// 	}
+		// ),
+
+		// ---- GUI ----
+
+		// let root_elem = blurryUpgradeMember(
+		// 	"wrapper-generator-upgrade-member",
+		// 	"generator-upgrade-member",
+		// 	group.gui.upgrade,
+		// ),
+		// span_elem = window.document.createElement("span");
+
+		// root_elem.appendChild(span_elem);
+
+		// this.gui = new GUI(function () {
+		// 	// Handle Upgrade rendering
+		// 	self.gui.span.innerHTML = `Buy ${self.name}<br/>cost`;
+		// });
+		// this.gui.span = span_elem;
+		// this.gui.root = root_elem;
+
+		// GUI.list.push(this.gui);
 
 // Trash:
 

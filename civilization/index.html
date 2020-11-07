@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html>
 	<head>
+		<title>Civilization Clicker</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"> 
 		<link rel="stylesheet/less" type="text/css" href="game.less"/>
 
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/less.js/3.12.2/less.min.js" integrity="sha512-rCgfeoOQxpi926f8I0zdBVUY9q/2SKXqrdIy23yEPuvWvJ8/jwDqhQ0eJJhS9L8ySZsmbEQp3LCgPTiaAk5WVw==" crossorigin="anonymous"></script>
@@ -36,12 +38,78 @@
 					</div>
 				</div>
 				<div id="context">
+					<div id="config">
+						<div id="bulk" class="config-member">
+							<span>x1</span>
+						</div>
+						<div id="achievement" class="config-member"></div>
+						<div id="save" class="config-member"></div>
+						<div id="settings"></div>
+					</div>
+					<div id="before-wrapper-global-upgrade">
+						<div id="blurry-global-upgrade">
+							<div id="after-wrapper-global-upgrade">
+								<div id="before-global-upgrade"></div>
+								<div id="global-upgrade"></div>
+								<div id="after-global-upgrade"></div>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 			<div id="credit">
-				Made by The Scrumlords Group - Trung Tran - Justin Recksiek - Scott Faludi - Thien Nguyen - v0.1
+				Made by The Scrumlords Group - Trung Tran - Justin Recksiek - Scott Faludi - Thien Nguyen - v0.2
 			</div>
 		</div>
+		
+		<!---->
+		<div id="wrapper-popup">
+			<div class="popup">
+				<div id="popup-close"></div>
+				<div id="popup-menu-extra">
+					<!-- Theme switch -->
+					<div>
+						<span>Current Theme:</span>
+						<div>
+							<label>
+								<input type="radio" name="theme" value="light" checked>
+								<span>Light</span>
+							</label>
+							<label>
+								<input type="radio" name="theme" value="dark">
+								<span>Dark</span>
+							</label>
+						</div>
+					</div>
+					<!-- Render rate -->
+					<div>
+						<span>Render Rate:</span>
+						
+						<datalist id="render-marks">
+							<option value="1"></option>
+							<option value="15"></option>
+							<option value="30"></option>
+							<option value="45"></option>
+							<option value="60"></option>
+						</datalist>
+						<input type="range" min="1" max="60" step="1" value="60" list="render-marks">
+					</div>
+					<!-- Hard reset -->
+					<div>
+						<div>
+							<span>HARD RESET</span>
+						</div>
+					</div>
+				</div>
+				<div id="popup-difficulty">
+					<span>Choose difficulty:</span>
+					<div><span>EASY</span></div>
+					<div><span>HARD</span></div>
+				</div>
+				<div id="popup-achievement"></div>
+			</div>
+		</div>
+		<!---->
 
 		<!-- This at the bottom to force the script to be loaded last -->
 		<script src="game.js"></script>
@@ -131,3 +199,20 @@
 									<div class="generator"></div>
 									<div class="generator"></div>
 									<div class="generator"></div> -->
+
+									<!-- https://pastebin.com/5cvWyymx -->
+<!--
+<div class="wrapper-generator-upgrade">
+	<div class="blurry-generator-upgrade">
+		<div class="generator-upgrade">
+			<div class="before-upgrade-member generator-upgrade-member"></div>
+			<div class="wrapper-generator-upgrade-member">
+				<div class="generator-upgrade-member">
+					<span>Buy First Farm<br>20 Food</span>
+				</div>
+			</div>
+			<div class="after-upgrade-member generator-upgrade-member"></div>
+		</div>
+	</div>
+</div>
+-->
