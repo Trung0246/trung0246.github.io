@@ -1,8 +1,4 @@
 /* Compiled I guess */
-body {
-  margin: 0px 0px 0px 0px;
-  padding: 0px 0px 0px 0px;
-}
 :root {
   --mode-background-color: white;
   --mode-background-color-tp: rgba(255, 255, 255, 0.9);
@@ -32,6 +28,10 @@ body {
   --mode-blur-color-end: #212121;
   --mode-border-color-begin: rgba(255, 255, 255, 0.2);
   --mode-border-color-end: #ffffff;
+}
+body {
+  margin: 0px 0px 0px 0px;
+  padding: 0px 0px 0px 0px;
 }
 div {
   position: relative;
