@@ -36,6 +36,17 @@
   --mode-shine-color-third: rgba(255, 255, 255, 0);
 }
 
+@keyframes pulseOut {
+  from {
+    transform: scale3d(1, 1, 1);
+  }
+  50% {
+    transform: scale3d(1.1, 1.1, 1.1);
+  }
+  to {
+    transform: scale3d(1, 1, 1);
+  }
+}
 @keyframes pulseInIn {
   from {
     transform: scale3d(1, 1, 1);
@@ -47,17 +58,6 @@
 @keyframes pulseInOut {
   from {
     transform: scale3d(0.95, 0.95, 0.95);
-  }
-  to {
-    transform: scale3d(1, 1, 1);
-  }
-}
-@keyframes pulseOut {
-  from {
-    transform: scale3d(1, 1, 1);
-  }
-  50% {
-    transform: scale3d(1.1, 1.1, 1.1);
   }
   to {
     transform: scale3d(1, 1, 1);
