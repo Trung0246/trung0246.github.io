@@ -60,17 +60,15 @@
 				</div>
 			</div>
 			<div id="credit">
-				Made by The Scrumlords Group - Trung Tran - Justin Recksiek - Scott Faludi - Thien Nguyen - v0.2
-			</div>
+				Made by The Scrumlords Group - Trung Tran - Justin Recksiek - Scott Faludi - Thien Nguyen - v0.3
 		</div>
-		
-		<!---->
+
 		<div id="wrapper-popup">
 			<div class="popup">
 				<div id="popup-close"></div>
 				<div id="popup-menu-extra">
 					<!-- Theme switch -->
-					<div>
+					<div id="theme-extra">
 						<span>Current Theme:</span>
 						<div>
 							<label>
@@ -83,10 +81,24 @@
 							</label>
 						</div>
 					</div>
+					<!-- Number notation switch -->
+					<div id="notation-extra">
+						<span>Notation:</span>
+						<select name="notation">
+							<option value="shortOld">Short US</option>
+							<option value="longOld">Long US</option>
+							<option value="shortNew">Short UK</option>
+							<option value="longNew">Long UK</option>
+							<option value="exponential">Exponential</option>
+							<option value="scientific">Scientific</option>
+							<option value="engineering">Engineering</option>
+							<option value="alphabet">Alphabet</option>
+						</select>
+					</div>
 					<!-- Render rate -->
-					<div>
+					<div id="render-extra">
 						<span>Render Rate:</span>
-						
+
 						<datalist id="render-marks">
 							<option value="0"></option>
 							<option value="15"></option>
@@ -96,8 +108,21 @@
 						</datalist>
 						<input type="range" min="0" max="60" step="5" value="60" list="render-marks"/>
 					</div>
+					<!-- Volume -->
+					<div id="volume-extra">
+						<span>Volume:</span>
+
+						<datalist id="volume-marks">
+							<option value="0"></option>
+							<option value="25"></option>
+							<option value="50"></option>
+							<option value="75"></option>
+							<option value="100"></option>
+						</datalist>
+						<input type="range" min="0" max="100" step="5" value="50" list="volume-marks"/>
+					</div>
 					<!-- Hard reset -->
-					<div>
+					<div id="reset-extra">
 						<div>
 							<span>HARD RESET</span>
 						</div>
@@ -109,9 +134,24 @@
 					<div><span>HARD</span></div>
 				</div>
 				<div id="popup-achievement"></div>
+				<div id="popup-credit">
+					<span>Civilization Clicker - Version 0.3</span><br/><br/>
+					<span>Made by The Srumlords Group</span><br/><br/><br/>
+					<span>Lead Programmer: Trung Tran</span><br/>
+					<span>Project Manager & Editor: Justin Recksiek</span><br/>
+					<span>Tester & Programmer: Scott Faludi</span><br/>
+					<span>Tester: Thien Nguyen</span><br/><br/><br/>
+					<span>Special thanks to these libraries and tools:</span><br/><br/>
+					<span><a href="https://sass-lang.com/">Scss</a></span>
+					<span class="separate-link">|</span>
+					<span><a href="http://mikemcl.github.io/decimal.js/">decimal.js</a></span>
+					<span class="separate-link">|</span>
+					<span><a href="https://tonejs.github.io">Tone.js</a></span>
+					<span class="separate-link">|</span>
+					<span><a href="https://icons8.com">ICONS8</a></span>
+				</div>
 			</div>
 		</div>
-		<!---->
 
 		<!-- This at the bottom to force the script to be loaded last -->
 		<script src="game.js"></script>
