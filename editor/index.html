@@ -33,8 +33,12 @@
 
 		// Call when site is loaded
 		window.onload = () => {
+			// Check if there is a saved editor state
+			// if (localStorage.getItem('editor'))
+			// 	document.querySelector('.fr-element').innerHTML = localStorage.getItem('editor');
+
 			// Periodically save to local storage
-			setInterval(async () => {
+			async function save () {
 				// Convert any <img> tag with "blob:" src to base64
 				const img_list = document.querySelectorAll('img');
 				for (let i = 0; i < img_list.length; ++ i) {
@@ -59,7 +63,12 @@
 				}
 
 				localStorage.setItem('editor', document.querySelector('.fr-element').innerHTML);
-			}, 1000);
+			}
+
+			if ('requestIdleCallback' in window)
+				requestIdleCallback(() => setInterval(save, 1000));
+			else
+				setInterval(save, 1000);  // Fallback if not supported
 		};
 	</script>
 </body>
