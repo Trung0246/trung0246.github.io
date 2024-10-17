@@ -33,15 +33,10 @@
 
 		// Call when site is loaded
 		window.onload = () => {
-			// Check if there is a saved editor state
-			if (localStorage.getItem('editor'))
-				document.querySelector('.fr-element').innerHTML = localStorage.getItem('editor');
-
 			// Periodically save to local storage
 			setInterval(async () => {
 				// Convert any <img> tag with "blob:" src to base64
 				const img_list = document.querySelectorAll('img');
-				console.log(img_list);
 				for (let i = 0; i < img_list.length; ++ i) {
 					if (img_list[i].src.startsWith('blob:')) {
 						const canvas = document.createElement('canvas'),
