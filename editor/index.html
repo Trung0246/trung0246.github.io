@@ -27,8 +27,7 @@
 			},
 			fontFamilySelection: true,
 			key: atob('MUMla1pWW0lYKV9TTH1VSkhBRUZaTVVKT1lHWVFFW1xaSl1SQWUoKyUkPT0='),
-			attribution: false,
-			spellcheck: false
+			attribution: false
 		});
 
 		// Check if there is a saved editor state
@@ -36,7 +35,30 @@
 			document.querySelector('.fr-element').innerHTML = localStorage.getItem('editor');
 
 		// Periodically save to local storage
-		setInterval(() => {
+		setInterval(async () => {
+			// Convert any <img> tag with "blob:" src to base64
+			const img_list = document.querySelectorAll('img');
+			for (let i = 0; i < img_list.length; i++) {
+				if (img_list[i].src.startsWith('blob:')) {
+					const canvas = document.createElement('canvas'),
+						ctx = canvas.getContext('2d'),
+						image = new Image();
+					image.crossOrigin = 'anonymous';  // Handle potential CORS issue
+					image.src = img_list[i].src;
+					
+					await new Promise((resolve, reject) => {
+						image.onload = () => {
+							canvas.width = image.width;
+							canvas.height = image.height;
+							ctx.drawImage(image, 0, 0);
+							img_list[i].src = canvas.toDataURL();
+							resolve();
+						};
+						image.onerror = reject;
+					}).catch((e) => console.error("Image load error:", e));
+				}
+			}
+
 			localStorage.setItem('editor', document.querySelector('.fr-element').innerHTML);
 		}, 1000);
 	</script>
