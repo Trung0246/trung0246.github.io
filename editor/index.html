@@ -19,7 +19,7 @@
 <body>
 	<textarea id="editor"></textarea>
 	<script>
-		new FroalaEditor('textarea',{
+		new FroalaEditor('textarea', {
 			theme: 'dark',
 			fontFamily: {
 				"Roboto,sans-serif": 'Roboto',
@@ -31,38 +31,41 @@
 			spellcheck: false
 		});
 
-		// Check if there is a saved editor state
-		if (localStorage.getItem('editor'))
-			document.querySelector('.fr-element').innerHTML = localStorage.getItem('editor');
+		// Call when site is loaded
+		window.onload = () => {
+			// Check if there is a saved editor state
+			if (localStorage.getItem('editor'))
+				document.querySelector('.fr-element').innerHTML = localStorage.getItem('editor');
 
-		// Periodically save to local storage
-		setInterval(async () => {
-			// Convert any <img> tag with "blob:" src to base64
-			const img_list = document.querySelectorAll('img');
-			console.log(img_list);
-			for (let i = 0; i < img_list.length; i++) {
-				if (img_list[i].src.startsWith('blob:')) {
-					const canvas = document.createElement('canvas'),
-						ctx = canvas.getContext('2d'),
-						image = new Image();
-					image.crossOrigin = 'anonymous';  // Handle potential CORS issue
-					image.src = img_list[i].src;
-					
-					await new Promise((resolve, reject) => {
-						image.onload = () => {
-							canvas.width = image.width;
-							canvas.height = image.height;
-							ctx.drawImage(image, 0, 0);
-							img_list[i].src = canvas.toDataURL();
-							resolve();
-						};
-						image.onerror = reject;
-					}).catch((e) => console.error("Image load error:", e));
+			// Periodically save to local storage
+			setInterval(async () => {
+				// Convert any <img> tag with "blob:" src to base64
+				const img_list = document.querySelectorAll('img');
+				console.log(img_list);
+				for (let i = 0; i < img_list.length; ++ i) {
+					if (img_list[i].src.startsWith('blob:')) {
+						const canvas = document.createElement('canvas'),
+							ctx = canvas.getContext('2d'),
+							image = new Image();
+						image.crossOrigin = 'anonymous'; // Handle potential CORS issue
+						image.src = img_list[i].src;
+						
+						await new Promise((resolve, reject) => {
+							image.onload = () => {
+								canvas.width = image.width;
+								canvas.height = image.height;
+								ctx.drawImage(image, 0, 0);
+								img_list[i].src = canvas.toDataURL();
+								resolve();
+							};
+							image.onerror = reject;
+						}).catch((e) => console.error("Image load error:", e));
+					}
 				}
-			}
 
-			localStorage.setItem('editor', document.querySelector('.fr-element').innerHTML);
-		}, 1000);
+				localStorage.setItem('editor', document.querySelector('.fr-element').innerHTML);
+			}, 1000);
+		};
 	</script>
 </body>
 </html>
