@@ -1,0 +1,1820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<title>Orbfall v7</title>
+<!-- Build: 33-roster v7 actions-sort -->
+<style>
+  /* ---------- Palette and global surface ---------- */
+  :root {
+    --bg: #060712;
+    --panel: rgba(17, 21, 45, .91);
+    --panel-2: rgba(25, 31, 63, .92);
+    --line: rgba(160, 178, 255, .17);
+    --text: #f7f8ff;
+    --muted: #aab3d7;
+    --blue: #6ba8ff;
+    --cyan: #64e6ff;
+    --violet: #b77cff;
+    --gold: #ffca62;
+    --green: #70efb0;
+    --red: #ff7288;
+    --shadow: 0 24px 64px rgba(0, 0, 0, .4);
+    --radius: 22px;
+  }
+
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: var(--text);
+    background:
+      radial-gradient(circle at 14% 7%, rgba(87, 99, 255, .19), transparent 34%),
+      radial-gradient(circle at 88% 14%, rgba(44, 214, 255, .12), transparent 28%),
+      radial-gradient(circle at 52% 100%, rgba(183, 84, 255, .11), transparent 38%),
+      var(--bg);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    overflow-x: hidden;
+  }
+
+  button, input, select { font: inherit; }
+  button { color: inherit; }
+  button:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 3px solid rgba(100, 230, 255, .55);
+    outline-offset: 2px;
+  }
+  button:disabled { cursor: not-allowed; opacity: .45; transform: none !important; }
+  h1, h2, h3, p { margin-top: 0; }
+
+  .ambient {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    opacity: .34;
+    background-image:
+      radial-gradient(circle at 20% 25%, rgba(255,255,255,.5) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 80% 65%, rgba(255,255,255,.35) 0 1px, transparent 1.5px),
+      radial-gradient(circle at 50% 45%, rgba(255,255,255,.25) 0 1px, transparent 1.5px);
+    background-size: 180px 180px, 250px 250px, 320px 320px;
+  }
+
+  /* ---------- Shared controls ---------- */
+  .icon-btn, .ghost-btn, .primary-btn, .gold-btn, .danger-btn, .pull-btn, .banner-tab, .bundle {
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
+  }
+  .icon-btn:hover, .ghost-btn:hover, .primary-btn:hover, .gold-btn:hover, .danger-btn:hover, .pull-btn:hover, .bundle:hover { transform: translateY(-2px); }
+  .icon-btn:active, .ghost-btn:active, .primary-btn:active, .gold-btn:active, .danger-btn:active, .pull-btn:active, .bundle:active { transform: translateY(0); }
+  .icon-btn { min-width: 44px; min-height: 44px; border-radius: 14px; background: rgba(24, 29, 62, .8); }
+  .ghost-btn { padding: 10px 14px; border-radius: 14px; background: rgba(24, 29, 62, .68); }
+  .primary-btn { padding: 12px 18px; border-radius: 14px; border-color: rgba(100,230,255,.45); background: linear-gradient(135deg, #4f9cff, #7a5eff); box-shadow: 0 12px 30px rgba(89,101,255,.2); font-weight: 850; }
+  .gold-btn { padding: 12px 18px; border-radius: 14px; border-color: rgba(255,202,98,.55); color: #281900; background: linear-gradient(135deg, #ffe69e, #ffb72f); box-shadow: 0 12px 30px rgba(255,183,47,.2); font-weight: 900; }
+  .danger-btn { padding: 10px 14px; border-radius: 14px; border-color: rgba(255,114,136,.38); color: #ffd5dc; background: rgba(255,80,108,.1); }
+  .hidden { display: none !important; }
+
+  /* ---------- Header ---------- */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 74px;
+    padding: 12px clamp(16px, 3vw, 38px);
+    border-bottom: 1px solid var(--line);
+    background: rgba(6, 7, 18, .8);
+    backdrop-filter: blur(20px);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; min-width: 200px; }
+  .brand-mark { position: relative; width: 42px; height: 42px; border-radius: 50%; background: conic-gradient(from 25deg, var(--cyan), var(--violet), var(--gold), var(--cyan)); box-shadow: 0 0 28px rgba(100,230,255,.38); }
+  .brand-mark::after { content: ""; position: absolute; inset: 8px; border-radius: 50%; background: #10132c; box-shadow: inset 0 0 10px rgba(255,255,255,.12); }
+  .brand strong { display: block; font-size: 17px; letter-spacing: .12em; }
+  .brand small { color: var(--muted); letter-spacing: .08em; }
+  .wallet { display: flex; align-items: center; justify-content: center; gap: 9px; flex: 1; flex-wrap: wrap; }
+  .wallet-chip { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; background: rgba(22, 26, 56, .72); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+  .wallet-chip b { font-variant-numeric: tabular-nums; }
+  .wallet-chip .icon { font-size: 18px; }
+  .sigil-wallet b { display: inline-flex; align-items: center; gap: 5px; }
+  .wallet-divider { color: rgba(255,255,255,.32); font-weight: 500; }
+  .wallet-wild { color: #f2c8ff; text-shadow: 0 0 12px rgba(203,126,255,.36); }
+  .top-actions { display: flex; gap: 9px; }
+
+  /* ---------- Main layout ---------- */
+  .app-shell { width: min(1480px, calc(100% - 28px)); margin: 22px auto 70px; }
+  .grid-main { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+  .panel { border: 1px solid var(--line); border-radius: var(--radius); background: linear-gradient(180deg, rgba(27,31,68,.89), rgba(13,16,37,.92)); box-shadow: var(--shadow); overflow: hidden; }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--line); }
+  .panel-head h2, .panel-head h3 { margin: 0; font-size: 18px; }
+  .panel-body { padding: 18px 20px 20px; }
+  .section { margin-top: 24px; }
+  .section-title { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 13px; }
+  .section-title h2 { margin-bottom: 4px; }
+  .section-title p { margin: 0; color: var(--muted); }
+
+  /* ---------- Banner ---------- */
+  .banner-panel { position: relative; isolation: isolate; }
+  .banner-art { position: absolute; inset: 0; z-index: -1; overflow: hidden; }
+  .banner-art::before { content: ""; position: absolute; inset: -20%; background: radial-gradient(circle at 74% 35%, rgba(100,230,255,.33), transparent 22%), radial-gradient(circle at 64% 57%, rgba(183,124,255,.25), transparent 32%), linear-gradient(110deg, rgba(8,10,25,.97) 18%, rgba(14,17,45,.72) 52%, rgba(25,22,63,.52)); transform: rotate(-2deg); }
+  .banner-art::after { content: ""; position: absolute; width: 430px; height: 430px; right: 4%; top: 45px; border-radius: 50%; border: 1px solid rgba(255,255,255,.15); background: radial-gradient(circle at 45% 40%, rgba(255,255,255,.4), transparent 2%), radial-gradient(circle at center, rgba(83,199,255,.35), rgba(111,76,255,.16) 42%, transparent 65%); box-shadow: 0 0 90px rgba(92,166,255,.22), inset 0 0 90px rgba(169,121,255,.15); animation: floatOrb 7s ease-in-out infinite; }
+  @keyframes floatOrb { 50% { transform: translateY(-18px) scale(1.035); } }
+  .standard-ornament { position: absolute; inset: 0; z-index: -1; overflow: hidden; opacity: 1; pointer-events: none; transition: opacity .45s ease, filter .45s ease; }
+  .standard-ornament::before { content: ""; position: absolute; width: 570px; height: 570px; right: -118px; top: -185px; border-radius: 50%; border: 1px solid rgba(111,226,255,.28); background: repeating-conic-gradient(from 0deg, transparent 0 8deg, rgba(103,220,255,.13) 9deg 10deg, transparent 11deg 25deg), repeating-radial-gradient(circle, transparent 0 43px, rgba(109,204,255,.1) 45px 46px, transparent 48px 72px); box-shadow: 0 0 74px rgba(70,177,255,.15), inset 0 0 62px rgba(125,100,255,.1); animation: archiveWheel 38s linear infinite; }
+  .standard-ornament::after { content: ""; position: absolute; inset: -35%; background-image: radial-gradient(circle, rgba(255,255,255,.86) 0 1px, transparent 1.8px), radial-gradient(circle, rgba(111,226,255,.6) 0 1px, transparent 1.8px); background-size: 84px 84px, 137px 137px; background-position: 0 0, 38px 62px; opacity: .36; transform: rotate(-8deg); animation: archiveStars 18s linear infinite; }
+  .archive-grid { position: absolute; inset: -20%; background: linear-gradient(rgba(94,201,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(94,201,255,.045) 1px, transparent 1px); background-size: 58px 58px; transform: perspective(560px) rotateX(64deg) translateY(39%); transform-origin: 50% 100%; opacity: .54; mask-image: linear-gradient(to top, #000, transparent 74%); animation: archiveGridFlow 7.5s linear infinite; }
+  .archive-comet { position: absolute; width: 310px; height: 2px; right: 2%; top: 24%; border-radius: 999px; background: linear-gradient(90deg, transparent, rgba(255,255,255,.9), rgba(100,226,255,.75), transparent); filter: drop-shadow(0 0 10px rgba(89,212,255,.72)); transform: rotate(-18deg) translateX(-180%); opacity: 0; animation: archiveComet 6.8s ease-in-out infinite; }
+  .banner-panel.standard-mode { border-color: rgba(99,218,255,.3); box-shadow: 0 26px 80px rgba(4,28,64,.46), 0 0 0 1px rgba(95,168,255,.09), inset 0 0 72px rgba(67,173,255,.055); }
+  .banner-panel.standard-mode .standard-ornament { opacity: 1; }
+  .banner-panel.limited-mode .standard-ornament { opacity: 0; filter: blur(10px); }
+  .banner-panel.standard-mode .banner-art::before { animation: archiveSkyBreath 8s ease-in-out infinite alternate; }
+  .banner-panel.standard-mode .banner-art::after { background: repeating-radial-gradient(circle, transparent 0 28px, rgba(114,226,255,.11) 29px 30px, transparent 32px 48px), radial-gradient(circle at 44% 39%, rgba(255,255,255,.7), transparent 2%), radial-gradient(circle at center, rgba(57,205,255,.32), rgba(91,83,255,.17) 44%, transparent 68%); box-shadow: 0 0 112px rgba(70,196,255,.24), inset 0 0 96px rgba(123,112,255,.16); }
+  .banner-panel.standard-mode .banner-copy h1 { color: transparent; background: linear-gradient(108deg, #effcff 0%, #7ce7ff 34%, #8ea4ff 68%, #d5c8ff 100%); background-size: 180% 100%; -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 20px rgba(89,211,255,.2)); animation: archiveTitleFlow 6s ease-in-out infinite alternate; }
+  .banner-panel.standard-mode .banner-tab.active { border-color: rgba(100,230,255,.62); background: linear-gradient(135deg, rgba(39,132,183,.48), rgba(77,91,190,.38)); box-shadow: inset 0 0 24px rgba(100,230,255,.1), 0 0 24px rgba(79,180,255,.12); }
+  @keyframes archiveWheel { to { transform: rotate(360deg); } }
+  @keyframes archiveStars { to { background-position: 84px 126px, -99px 199px; transform: rotate(-8deg) translateY(-30px); } }
+  @keyframes archiveGridFlow { to { background-position: 0 58px, 58px 0; } }
+  @keyframes archiveComet { 0%,56% { opacity: 0; transform: rotate(-18deg) translateX(-180%); } 63% { opacity: .9; } 82%,100% { opacity: 0; transform: rotate(-18deg) translateX(190%); } }
+  @keyframes archiveSkyBreath { to { filter: brightness(1.13) saturate(1.18); transform: rotate(-1deg) scale(1.012); } }
+  @keyframes archiveTitleFlow { to { background-position: 100% 0; } }
+  .limited-ornament { position: absolute; inset: 0; z-index: -1; overflow: hidden; opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+  .limited-ornament::before, .limited-ornament::after { content: ""; position: absolute; border-radius: 50%; border: 1px solid rgba(255,215,126,.38); box-shadow: 0 0 36px rgba(255,166,83,.2), inset 0 0 28px rgba(183,124,255,.14); }
+  .limited-ornament::before { width: 520px; height: 520px; right: -95px; top: -118px; background: repeating-conic-gradient(from 12deg, transparent 0 13deg, rgba(255,219,137,.18) 14deg 15deg, transparent 16deg 29deg); animation: omenSealSpin 34s linear infinite; }
+  .limited-ornament::after { width: 310px; height: 310px; right: 10px; top: -10px; border-style: dashed; animation: omenSealReverse 22s linear infinite; }
+  .limited-ribbons { position: absolute; inset: 0; background: linear-gradient(116deg, transparent 48%, rgba(255,196,111,.09) 49%, transparent 50%), linear-gradient(72deg, transparent 53%, rgba(190,112,255,.1) 54%, transparent 55%); background-size: 160px 100%, 210px 100%; opacity: .72; animation: omenRibbons 10s linear infinite; }
+  .banner-panel.limited-mode { border-color: rgba(255,202,98,.44); box-shadow: 0 26px 85px rgba(31,10,58,.55), 0 0 0 1px rgba(183,124,255,.12), inset 0 0 80px rgba(106,45,160,.08); }
+  .banner-panel.limited-mode .limited-ornament { opacity: 1; }
+  .banner-panel.limited-mode .banner-art::before { background: radial-gradient(circle at 78% 30%, rgba(255,196,96,.32), transparent 19%), radial-gradient(circle at 69% 54%, rgba(183,87,255,.38), transparent 29%), radial-gradient(circle at 24% 110%, rgba(106,52,197,.34), transparent 42%), linear-gradient(112deg, rgba(9,5,25,.99) 15%, rgba(27,12,56,.88) 53%, rgba(64,26,78,.6)); animation: limitedSkyBreath 5.8s ease-in-out infinite alternate; }
+  .banner-panel.limited-mode .banner-art::after { border-color: rgba(255,218,139,.52); background: radial-gradient(circle at 43% 36%, #fff 0 1.2%, rgba(255,232,171,.78) 2%, transparent 4%), repeating-radial-gradient(circle, transparent 0 31px, rgba(255,213,125,.15) 33px 34px, transparent 36px 53px), radial-gradient(circle at center, rgba(255,183,72,.26), rgba(168,71,255,.24) 44%, transparent 68%); box-shadow: 0 0 110px rgba(212,102,255,.3), 0 0 55px rgba(255,190,87,.2), inset 0 0 95px rgba(255,200,99,.17); }
+  .banner-panel.limited-mode .banner-copy h1 { color: transparent; background: linear-gradient(110deg, #fff4c5 3%, #ffca62 31%, #f7a4ff 62%, #c4a5ff 88%); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 0 20px rgba(239,143,255,.24)); }
+  .banner-panel.limited-mode .eyebrow { color: #ffd87d; text-shadow: 0 0 18px rgba(255,202,98,.32); }
+  .banner-panel.limited-mode .banner-tab.active { border-color: rgba(255,202,98,.62); background: linear-gradient(135deg, rgba(118,50,159,.55), rgba(180,94,99,.34)); box-shadow: inset 0 0 22px rgba(255,213,121,.1), 0 0 22px rgba(173,83,255,.12); }
+  .banner-panel.limited-mode .rateup-strip { position: relative; padding: 12px; border: 1px solid rgba(255,213,125,.25); border-radius: 20px; background: linear-gradient(135deg, rgba(35,13,57,.74), rgba(10,10,30,.62)); box-shadow: inset 0 0 30px rgba(183,124,255,.08), 0 18px 45px rgba(0,0,0,.18); }
+  .banner-panel.limited-mode .rateup-strip::before { content: ""; position: absolute; inset: 5px; pointer-events: none; border: 1px solid rgba(255,255,255,.07); border-radius: 15px; }
+  .rateup-chip { position: relative; overflow: hidden; }
+  .rateup-chip::after { content: ""; position: absolute; inset: -80% -40%; pointer-events: none; background: linear-gradient(110deg, transparent 41%, rgba(255,255,255,.18) 49%, transparent 57%); transform: translateX(-70%) rotate(8deg); animation: rateupSweep 4.8s ease-in-out infinite; animation-delay: var(--sweep-delay, 0s); }
+  .rateup-chip.rate-5 { border-color: rgba(255,210,112,.54); background: radial-gradient(circle at 10% 0%, rgba(255,213,113,.18), transparent 40%), rgba(18,10,32,.78); box-shadow: inset 0 0 26px rgba(255,198,88,.08); }
+  .rateup-chip.rate-4 { border-color: rgba(206,143,255,.42); }
+  .rateup-chip.rate-3 { border-color: rgba(104,224,255,.3); }
+  @keyframes omenSealSpin { to { transform: rotate(360deg); } }
+  @keyframes omenSealReverse { to { transform: rotate(-360deg) scale(1.04); } }
+  @keyframes omenRibbons { to { background-position: 160px 0, -210px 0; } }
+  @keyframes limitedSkyBreath { to { filter: brightness(1.18) saturate(1.22); transform: rotate(-1deg) scale(1.015); } }
+  @keyframes rateupSweep { 0%,50% { transform: translateX(-80%) rotate(8deg); opacity: 0; } 67% { opacity: .7; } 88%,100% { transform: translateX(80%) rotate(8deg); opacity: 0; } }
+  .banner-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 0; }
+  .banner-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+  .banner-tab { padding: 10px 15px; border-radius: 999px; color: var(--muted); background: rgba(10,13,33,.52); }
+  .banner-tab.active { color: #fff; border-color: rgba(100,230,255,.5); background: rgba(58,104,208,.35); box-shadow: inset 0 0 18px rgba(100,230,255,.08); }
+  .banner-nav-actions { display: flex; gap: 8px; }
+  .banner-copy { width: min(690px, 76%); padding: 45px clamp(22px, 4vw, 54px) 24px; }
+  .eyebrow { margin: 0 0 10px; color: var(--cyan); text-transform: uppercase; letter-spacing: .16em; font-size: 12px; font-weight: 900; }
+  .banner-copy h1 { margin-bottom: 14px; font-size: clamp(40px, 6vw, 76px); line-height: .95; letter-spacing: -.05em; }
+  .banner-copy > p { max-width: 570px; color: #d8dcf5; line-height: 1.62; font-size: 16px; }
+  .banner-facts { display: flex; gap: 10px; flex-wrap: wrap; margin: 19px 0; }
+  .fact-pill { padding: 8px 11px; border-radius: 10px; background: rgba(11,14,35,.62); border: 1px solid var(--line); color: #e1e5ff; font-size: 13px; }
+  .rateup-strip { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 9px; margin: 16px 0 20px; max-width: 620px; }
+  .rateup-chip { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: rgba(8,10,27,.62); }
+  .rateup-chip .mini-avatar { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 auto; border-radius: 50%; color: #090a16; font-weight: 950; background: var(--accent); box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 38%, transparent); }
+  .rateup-chip b { display: block; font-size: 13px; }
+  .rateup-chip small { color: var(--gold); letter-spacing: .08em; }
+  .pull-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .pull-btn { min-width: 168px; padding: 14px 18px; border-radius: 16px; border-color: rgba(255,255,255,.16); background: linear-gradient(140deg, rgba(85,114,255,.98), rgba(170,83,255,.96)); box-shadow: 0 18px 40px rgba(88,88,255,.22), inset 0 1px rgba(255,255,255,.25); font-weight: 900; text-align: left; }
+  .pull-btn.ten { color: #241800; background: linear-gradient(140deg, #ffe69b, #ffb732); box-shadow: 0 18px 40px rgba(255,183,50,.17), inset 0 1px rgba(255,255,255,.48); }
+  .pull-btn small { display: block; margin-top: 4px; opacity: .78; font-weight: 750; }
+
+  /* The meter block lives in normal document flow so hiding it removes all occupied space. */
+  .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 0 20px 18px; padding: 14px; border-radius: 17px; border: 1px solid var(--line); background: rgba(8,10,27,.75); backdrop-filter: blur(14px); }
+  .meter-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 7px; }
+  .meter-head strong { font-size: 13px; }
+  .meter-head span { color: var(--muted); font-size: 12px; }
+  .meter-track { height: 10px; border-radius: 999px; overflow: hidden; background: rgba(255,255,255,.08); }
+  .meter-fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--cyan), var(--violet)); box-shadow: 0 0 18px rgba(100,230,255,.35); transition: width .35s ease; }
+  .meter-fill.gold { background: linear-gradient(90deg, #ffca5c, #ff7f50); }
+
+  /* ---------- Roster ---------- */
+  .roster-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 13px; }
+  .char-card { --rarity-tone: #70ddff; --rarity-soft: rgba(89,210,255,.14); position: relative; min-height: 328px; padding: 19px; border-radius: 22px; border: 1px solid color-mix(in srgb, var(--rarity-tone) 36%, var(--line)); background: radial-gradient(circle at 82% 4%, var(--rarity-soft), transparent 34%), linear-gradient(155deg, color-mix(in srgb, var(--accent) 13%, transparent), rgba(14,17,40,.97) 42%); box-shadow: 0 16px 44px rgba(0,0,0,.25), inset 0 0 34px color-mix(in srgb, var(--rarity-tone) 4%, transparent); overflow: hidden; isolation: isolate; transition: transform .28s ease, border-color .28s ease, box-shadow .28s ease; }
+  .char-card.star-4 { --rarity-tone: #c58aff; --rarity-soft: rgba(180,89,255,.2); border-width: 1.5px; box-shadow: 0 18px 48px rgba(52,18,88,.28), inset 0 0 40px rgba(177,94,255,.06); }
+  .char-card.star-5 { --rarity-tone: #ffd36e; --rarity-soft: rgba(255,190,69,.23); border-width: 2px; box-shadow: 0 22px 58px rgba(83,44,9,.3), 0 0 28px rgba(255,190,69,.07), inset 0 0 48px rgba(255,204,91,.075); }
+  .char-card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--rarity-tone) 68%, white); box-shadow: 0 24px 62px rgba(0,0,0,.34), 0 0 30px color-mix(in srgb, var(--rarity-tone) 12%, transparent); }
+  .char-card::before { content: ""; position: absolute; inset: 6px; z-index: 0; pointer-events: none; border: 1px solid color-mix(in srgb, var(--rarity-tone) 18%, transparent); border-radius: 16px; clip-path: polygon(0 0, 36% 0, 41% 5px, 59% 5px, 64% 0, 100% 0, 100% 100%, 64% 100%, 59% calc(100% - 5px), 41% calc(100% - 5px), 36% 100%, 0 100%); }
+  .char-card::after { content: ""; position: absolute; width: 190px; height: 190px; right: -65px; top: -72px; z-index: 0; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--rarity-tone) 25%, transparent); background: repeating-conic-gradient(from 0deg, transparent 0 14deg, color-mix(in srgb, var(--rarity-tone) 9%, transparent) 15deg 16deg, transparent 17deg 31deg), radial-gradient(circle, var(--rarity-soft), transparent 67%); filter: blur(.2px); opacity: .72; animation: charHaloTurn 24s linear infinite; }
+  .char-card.star-5::after { width: 225px; height: 225px; right: -83px; top: -91px; border-style: double; opacity: .9; animation-duration: 18s; }
+  .char-aura { position: absolute; left: 22%; right: 22%; top: -42px; height: 72px; z-index: 0; border-radius: 50%; background: color-mix(in srgb, var(--rarity-tone) 24%, transparent); filter: blur(28px); opacity: .34; animation: charAuraBreathe 3.4s ease-in-out infinite alternate; }
+  .rarity-crest { position: absolute; right: 14px; top: 13px; z-index: 3; min-width: 54px; padding: 5px 8px; border: 1px solid color-mix(in srgb, var(--rarity-tone) 55%, transparent); border-radius: 999px; color: var(--rarity-tone); background: rgba(5,7,20,.68); box-shadow: 0 0 18px color-mix(in srgb, var(--rarity-tone) 17%, transparent), inset 0 0 12px color-mix(in srgb, var(--rarity-tone) 8%, transparent); text-align: center; font-size: 10px; font-weight: 950; letter-spacing: .08em; backdrop-filter: blur(8px); }
+  .char-card.star-5 .rarity-crest { animation: crestPulse 2.2s ease-in-out infinite alternate; }
+  .char-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 13px; padding-right: 46px; }
+  .avatar { position: relative; display: grid; place-items: center; width: 64px; height: 64px; flex: 0 0 auto; border-radius: 19px; border: 1px solid color-mix(in srgb, var(--rarity-tone) 52%, white); color: #090a15; font-size: 27px; font-weight: 950; background: radial-gradient(circle at 30% 20%, rgba(255,255,255,.72), transparent 18%), var(--accent); box-shadow: 0 12px 28px color-mix(in srgb, var(--accent) 25%, transparent), 0 0 22px color-mix(in srgb, var(--rarity-tone) 15%, transparent); }
+  .avatar::after { content: ""; position: absolute; inset: -5px; border-radius: 23px; border: 1px solid color-mix(in srgb, var(--rarity-tone) 25%, transparent); opacity: .7; }
+  .char-card.star-5 .avatar::after { border-style: dashed; animation: avatarFrameSpin 12s linear infinite; }
+  @keyframes charHaloTurn { to { transform: rotate(360deg); } }
+  @keyframes charAuraBreathe { to { opacity: .62; transform: scaleX(1.2); } }
+  @keyframes crestPulse { to { filter: brightness(1.28); box-shadow: 0 0 28px color-mix(in srgb, var(--rarity-tone) 34%, transparent), inset 0 0 16px color-mix(in srgb, var(--rarity-tone) 13%, transparent); } }
+  @keyframes avatarFrameSpin { to { transform: rotate(360deg); } }
+  .char-name { margin: 0 0 2px; font-size: 21px; }
+  .stars { color: var(--gold); letter-spacing: .08em; font-size: 13px; }
+  .role { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .char-stats { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin: 18px 0 12px; }
+  .char-stat { padding: 10px; border: 1px solid var(--line); border-radius: 13px; background: rgba(7,9,24,.42); }
+  .char-stat small { display: block; color: var(--muted); }
+  .char-stat b { display: block; margin-top: 4px; }
+  .char-verse { position: relative; z-index: 2; min-height: 36px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .char-actions { position: relative; z-index: 2; display: grid; gap: 10px; margin-top: 12px; }
+  .char-actions select { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); color: var(--text); background: rgba(7,9,24,.7); }
+  .char-actions .row { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+  .enabled-badge { z-index: 4; position: absolute; right: 14px; bottom: 14px; padding: 5px 9px; border-radius: 999px; color: #0b2417; background: var(--green); font-size: 11px; font-weight: 900; letter-spacing: .08em; }
+
+
+  /* Character interaction effects live outside the cards so sorting and re-rendering cannot clip them. */
+  .character-action-layer { position: fixed; inset: 0; z-index: 96; pointer-events: none; overflow: hidden; }
+  .character-action-fx { --tone: #77e8ff; position: fixed; display: grid; place-items: center; border-radius: 28px; isolation: isolate; filter: drop-shadow(0 0 24px color-mix(in srgb, var(--tone) 38%, transparent)); }
+  .character-action-fx::before { content: ""; position: absolute; inset: -20%; border-radius: 34%; background: radial-gradient(circle, color-mix(in srgb, var(--tone) 29%, transparent), transparent 66%); opacity: 0; }
+  .action-ring { position: absolute; left: 50%; top: 50%; width: 74%; aspect-ratio: 1; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--tone) 78%, white); box-shadow: 0 0 24px color-mix(in srgb, var(--tone) 30%, transparent), inset 0 0 24px color-mix(in srgb, var(--tone) 18%, transparent); opacity: 0; }
+  .action-ring.r2 { width: 48%; border-style: dashed; }
+  .action-ring.r3 { width: 104%; border-style: double; }
+  .action-glyph { position: relative; z-index: 3; padding: 7px 12px; border: 1px solid color-mix(in srgb, var(--tone) 62%, white); border-radius: 999px; color: #fff; background: rgba(5,7,20,.82); box-shadow: 0 0 22px color-mix(in srgb, var(--tone) 32%, transparent); font-size: 11px; font-weight: 950; letter-spacing: .18em; text-transform: uppercase; opacity: 0; }
+  .action-particle { --angle: 0deg; --delay: 0ms; --travel: 130px; position: absolute; left: 50%; top: 50%; width: 4px; height: 13px; border-radius: 999px; background: linear-gradient(to top, transparent, color-mix(in srgb, var(--tone) 74%, white)); box-shadow: 0 0 10px var(--tone); opacity: 0; transform-origin: 0 0; }
+  .character-action-fx.bind::before { animation: actionWash .72s ease-out both; }
+  .character-action-fx.bind .action-ring { animation: bindRing .82s cubic-bezier(.16,.8,.25,1) both; }
+  .character-action-fx.bind .r2 { animation-delay: .08s; }
+  .character-action-fx.bind .r3 { animation-delay: .14s; }
+  .character-action-fx.release::before { animation: releaseWash .72s ease-out both; }
+  .character-action-fx.release .action-ring { animation: releaseRing .78s cubic-bezier(.2,.7,.25,1) both; }
+  .character-action-fx.release .r2 { animation-delay: .06s; }
+  .character-action-fx.release .r3 { animation-delay: .12s; }
+  .character-action-fx.ascend::before { animation: ascendWash 1.15s ease-out both; }
+  .character-action-fx.ascend .action-ring { animation: ascendRing 1.12s cubic-bezier(.12,.76,.2,1) both; }
+  .character-action-fx.ascend .r2 { animation-delay: .1s; }
+  .character-action-fx.ascend .r3 { animation-delay: .2s; }
+  .character-action-fx .action-glyph { animation: actionGlyph .82s cubic-bezier(.2,.8,.25,1) both; }
+  .character-action-fx.ascend .action-glyph { animation-duration: 1.12s; }
+  .character-action-fx .action-particle { animation: actionParticle .8s ease-out var(--delay) both; }
+  .character-action-fx.ascend .action-particle { --travel: 185px; animation-duration: 1.12s; }
+  .char-card.action-bind { animation: bindCard .82s cubic-bezier(.16,.8,.25,1); }
+  .char-card.action-release { animation: releaseCard .78s cubic-bezier(.2,.7,.25,1); }
+  .char-card.action-ascend { animation: ascendCard 1.12s cubic-bezier(.12,.76,.2,1); }
+  .char-card.action-ascend .avatar { animation: ascendAvatar 1.12s cubic-bezier(.12,.76,.2,1); }
+  .char-card.action-ascend .rarity-crest { animation: ascendCrest 1.12s ease-out; }
+  @keyframes actionWash { 0% { opacity: 0; transform: scale(.62); } 36% { opacity: .82; } 100% { opacity: 0; transform: scale(1.2); } }
+  @keyframes releaseWash { 0% { opacity: .72; transform: scale(.82); } 100% { opacity: 0; transform: scale(1.38); filter: blur(8px); } }
+  @keyframes ascendWash { 0% { opacity: 0; transform: scale(.5); } 28% { opacity: 1; } 70% { opacity: .8; } 100% { opacity: 0; transform: scale(1.48); filter: brightness(1.45); } }
+  @keyframes bindRing { 0% { opacity: 0; transform: translate(-50%,-50%) scale(1.8) rotate(-30deg); } 45% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(.42) rotate(90deg); } }
+  @keyframes releaseRing { 0% { opacity: .94; transform: translate(-50%,-50%) scale(.38) rotate(0); } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.78) rotate(110deg); } }
+  @keyframes ascendRing { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.28) rotate(-80deg); } 38% { opacity: 1; } 72% { opacity: .78; } 100% { opacity: 0; transform: translate(-50%,-50%) scale(1.72) rotate(150deg); } }
+  @keyframes actionGlyph { 0% { opacity: 0; transform: translateY(10px) scale(.72); } 35% { opacity: 1; transform: translateY(0) scale(1.05); } 72% { opacity: 1; } 100% { opacity: 0; transform: translateY(-16px) scale(1.12); } }
+  @keyframes actionParticle { 0% { opacity: 0; transform: rotate(var(--angle)) translateY(-16px) scaleY(.3); } 24% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--angle)) translateY(calc(-1 * var(--travel))) scaleY(1.45); } }
+  @keyframes bindCard { 0% { transform: scale(.97); filter: brightness(.82); } 42% { transform: scale(1.025); filter: brightness(1.45); } 100% { transform: scale(1); filter: none; } }
+  @keyframes releaseCard { 0% { filter: brightness(1.4); } 38% { transform: scale(.985); filter: brightness(.84) saturate(.65); } 100% { transform: scale(1); filter: none; } }
+  @keyframes ascendCard { 0% { transform: translateY(0) scale(.98); filter: brightness(.9); } 30% { transform: translateY(-8px) scale(1.025); filter: brightness(1.72); } 60% { transform: translateY(-3px) scale(1.012); } 100% { transform: translateY(0) scale(1); filter: none; } }
+  @keyframes ascendAvatar { 0% { transform: scale(.88) rotate(-8deg); } 38% { transform: scale(1.16) rotate(6deg); filter: brightness(1.7); } 100% { transform: scale(1) rotate(0); filter: none; } }
+  @keyframes ascendCrest { 0%,100% { transform: scale(1); } 40% { transform: scale(1.18); filter: brightness(1.8); } }
+
+  /* ---------- Inventory and ledger ---------- */
+  .inventory-grid { display: grid; grid-template-columns: repeat(6, minmax(0,1fr)); gap: 10px; }
+  .inventory-item { display: grid; place-items: center; gap: 5px; min-height: 120px; text-align: center; padding: 12px; border-radius: 16px; border: 1px solid var(--line); background: rgba(8,10,27,.45); }
+  .inventory-item .big { font-size: 29px; }
+  .inventory-item span { color: var(--muted); font-size: 12px; }
+  .transaction-table { width: 100%; border-collapse: collapse; min-width: 620px; }
+  .transaction-table th, .transaction-table td { padding: 12px; border-bottom: 1px solid var(--line); text-align: left; font-size: 13px; }
+  .transaction-table th { color: var(--muted); }
+
+  /* ---------- Store, rates, settings, checkout ---------- */
+  .modal-shell { position: fixed; inset: 0; z-index: 120; display: none; place-items: center; padding: 18px; background: rgba(2,3,10,.78); backdrop-filter: blur(12px); }
+  .modal-shell.open { display: grid; }
+  .modal { width: min(980px, 100%); max-height: 92vh; overflow: auto; border: 1px solid var(--line); border-radius: 24px; background: linear-gradient(180deg, #171b3b, #0d1025); box-shadow: 0 35px 90px rgba(0,0,0,.55); }
+  .modal.small { width: min(580px, 100%); }
+  .modal-head { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--line); background: rgba(20,24,52,.97); backdrop-filter: blur(12px); }
+  .modal-head h2 { margin: 0; }
+  .modal-content { padding: 20px; }
+  .demo-badge { display: inline-flex; margin-left: 8px; padding: 4px 7px; border-radius: 999px; color: #081b12; background: var(--green); font-size: 10px; font-weight: 950; letter-spacing: .12em; vertical-align: middle; }
+  .bundle-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+  .bundle { position: relative; padding: 18px; border-radius: 18px; background: linear-gradient(180deg, rgba(58,65,125,.34), rgba(13,16,37,.62)); }
+  .bundle:hover { border-color: rgba(100,230,255,.45); }
+  .bundle .gem { font-size: 36px; }
+  .bundle h3 { margin: 8px 0 4px; }
+  .bundle .bonus { color: var(--green); font-size: 12px; min-height: 18px; }
+  .bundle .price { margin-top: 15px; font-size: 22px; font-weight: 950; }
+  .checkout-grid { display: grid; grid-template-columns: 1fr .8fr; gap: 18px; }
+  .field { display: grid; gap: 7px; margin-bottom: 12px; }
+  .field label { color: var(--muted); font-size: 13px; }
+  .field input { width: 100%; padding: 12px 13px; border-radius: 12px; border: 1px solid var(--line); color: var(--text); background: rgba(7,9,24,.68); }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .order-box { padding: 16px; border-radius: 18px; border: 1px solid var(--line); background: rgba(7,9,24,.52); height: max-content; }
+  .order-line { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; color: var(--muted); }
+  .order-line.total { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 14px; color: var(--text); font-weight: 900; }
+  .payment-status { min-height: 44px; margin-top: 10px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+  .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .switch { position: relative; width: 48px; height: 28px; }
+  .switch input { display: none; }
+  .switch span { position: absolute; inset: 0; border-radius: 999px; background: rgba(255,255,255,.1); cursor: pointer; transition: .2s; }
+  .switch span::after { content: ""; position: absolute; width: 20px; height: 20px; left: 4px; top: 4px; border-radius: 50%; background: #fff; transition: .2s; }
+  .switch input:checked + span { background: linear-gradient(90deg, var(--blue), var(--violet)); }
+  .switch input:checked + span::after { transform: translateX(20px); }
+  .motion-switch {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(54px, 1fr));
+    gap: 3px;
+    padding: 3px;
+    border: 1px solid rgba(255,255,255,.11);
+    border-radius: 999px;
+    background: rgba(4,6,18,.58);
+    box-shadow: inset 0 0 20px rgba(0,0,0,.25);
+  }
+  .motion-switch::before {
+    content: "";
+    position: absolute;
+    top: 3px;
+    bottom: 3px;
+    left: 3px;
+    width: calc((100% - 6px) / 3);
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(89,211,255,.9), rgba(139,92,246,.94));
+    box-shadow: 0 5px 18px rgba(86,126,255,.28), inset 0 1px rgba(255,255,255,.32);
+    transform: translateX(calc(var(--motion-index, 1) * 100%));
+    transition: transform .28s cubic-bezier(.2,.8,.2,1), background .28s ease, box-shadow .28s ease;
+  }
+  .motion-switch[data-mode="off"] { --motion-index: 0; }
+  .motion-switch[data-mode="system"] { --motion-index: 1; }
+  .motion-switch[data-mode="on"] { --motion-index: 2; }
+  .motion-switch[data-mode="off"]::before { background: linear-gradient(135deg, #687086, #42495c); box-shadow: 0 5px 16px rgba(0,0,0,.24), inset 0 1px rgba(255,255,255,.2); }
+  .motion-switch[data-mode="on"]::before { background: linear-gradient(135deg, #60e6ff, #b465ff); box-shadow: 0 5px 20px rgba(135,87,255,.38), inset 0 1px rgba(255,255,255,.38); }
+  .motion-option {
+    position: relative;
+    z-index: 1;
+    min-height: 30px;
+    padding: 5px 10px;
+    border: 0;
+    border-radius: 999px;
+    color: var(--muted);
+    background: transparent;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .05em;
+    cursor: pointer;
+    transition: color .2s ease, text-shadow .2s ease;
+  }
+  .motion-option.active { color: #07101e; text-shadow: 0 1px rgba(255,255,255,.2); }
+  .motion-option:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+  .rate-section { margin-bottom: 22px; }
+  .rate-section:last-child { margin-bottom: 0; }
+  .rate-section h3 { margin-bottom: 9px; }
+  .rate-table { width: 100%; border-collapse: collapse; }
+  .rate-table td { padding: 10px 6px; border-bottom: 1px solid var(--line); }
+  .rate-table td:last-child { text-align: right; color: var(--gold); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Summon and reward presentation ---------- */
+  .pull-overlay { position: fixed; inset: 0; z-index: 200; display: none; overflow: hidden; background: #03040d; cursor: pointer; user-select: none; touch-action: manipulation; }
+  .pull-overlay.active { display: block; }
+  .summon-scene, .reward-scene { position: absolute; inset: 0; }
+  .summon-scene {
+    --charge-duration: 2.7s;
+    --burst: #79cfff;
+    --burst-soft: rgba(86,126,255,.32);
+    display: grid;
+    place-items: center;
+    isolation: isolate;
+    overflow: visible;
+    background: radial-gradient(circle at center, var(--burst-soft), transparent 32%), radial-gradient(circle at 50% 120%, rgba(180,76,255,.35), transparent 42%), #03040d;
+    animation: scenePulse 1.7s ease-in-out infinite;
+  }
+  .summon-scene.tier-4 { --charge-duration: 3.65s; --burst: #c68aff; --burst-soft: rgba(169,79,255,.43); }
+  .summon-scene.tier-5 { --charge-duration: 5s; --burst: #ffd878; --burst-soft: rgba(255,168,54,.48); }
+  .summon-scene.orb-heavy { background: radial-gradient(circle at center, rgba(74,224,255,.46), transparent 28%), radial-gradient(circle at 50% 120%, var(--burst-soft), transparent 46%), #020511; }
+  .summon-scene::before, .summon-scene::after { content: ""; position: absolute; inset: -28vmax; z-index: -1; pointer-events: none; }
+  .summon-scene::before { background: conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--burst) 46%, transparent), transparent 14%, transparent 36%, color-mix(in srgb, var(--burst) 38%, transparent), transparent 52%); opacity: .28; animation: skyWheel 8s linear infinite; }
+  .summon-scene::after { background: repeating-radial-gradient(circle at center, transparent 0 52px, color-mix(in srgb, var(--burst) 24%, transparent) 54px 56px, transparent 58px 86px); opacity: .35; animation: runeDepth var(--charge-duration) cubic-bezier(.3,.02,.2,1) forwards; }
+  @keyframes scenePulse { 50% { filter: brightness(1.22) saturate(1.16); } }
+  @keyframes skyWheel { to { transform: rotate(360deg) scale(1.06); } }
+  @keyframes runeDepth { 0% { transform: scale(.55) rotate(-12deg); opacity: 0; } 42% { opacity: .42; } 82% { transform: scale(1.18) rotate(9deg); opacity: .8; } 100% { transform: scale(2.7) rotate(22deg); opacity: 0; } }
+  .summon-flare { position: absolute; inset: -24vmax; pointer-events: none; background: radial-gradient(circle at center, #fff 0 1%, color-mix(in srgb, var(--burst) 82%, white) 2%, transparent 18%); opacity: 0; mix-blend-mode: screen; animation: flareBurst var(--charge-duration) ease-in forwards; }
+  @keyframes flareBurst { 0%, 68% { opacity: 0; transform: scale(.18); } 82% { opacity: .32; transform: scale(.75); } 93% { opacity: .92; transform: scale(1.45); } 100% { opacity: 0; transform: scale(3.8); } }
+  .summon-glyph { position: absolute; z-index: 2; color: var(--burst); font-size: 48px; text-shadow: 0 0 18px currentColor, 0 0 55px currentColor; opacity: 0; animation: glyphAwaken var(--charge-duration) cubic-bezier(.3,.02,.15,1) forwards; }
+  .tier-4 .summon-glyph { font-size: 72px; }
+  .tier-5 .summon-glyph { font-size: 108px; }
+  @keyframes glyphAwaken { 0%, 28% { opacity: 0; transform: scale(.2) rotate(-80deg); } 53% { opacity: .38; } 78% { opacity: 1; transform: scale(1) rotate(0deg); } 94% { opacity: 1; transform: scale(1.35) rotate(18deg); } 100% { opacity: 0; transform: scale(4.8) rotate(45deg); } }
+  .summon-core { position: relative; z-index: 3; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle at 36% 32%, #fff, color-mix(in srgb, var(--burst) 70%, white) 14%, var(--burst) 42%, #27134f 72%); box-shadow: 0 0 30px #fff, 0 0 88px color-mix(in srgb, var(--burst) 78%, transparent), 0 0 210px var(--burst-soft); animation: coreCharge var(--charge-duration) cubic-bezier(.45,.04,.18,1) forwards; }
+  .tier-4 .summon-core { width: 178px; height: 178px; }
+  .tier-5 .summon-core { width: 210px; height: 210px; }
+  .summon-core::before, .summon-core::after { content: ""; position: absolute; inset: -30px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--burst) 65%, white); box-shadow: 0 0 22px color-mix(in srgb, var(--burst) 55%, transparent); animation: ringSpin 1.35s linear infinite, ringBreathe .8s ease-in-out infinite alternate; }
+  .summon-core::after { inset: -64px; border-width: 3px; border-style: dashed; animation-direction: reverse, alternate; animation-duration: 2.25s, 1.05s; }
+  @keyframes coreCharge { 0% { transform: scale(.15); opacity: .08; } 28% { opacity: .8; } 58% { transform: scale(1); opacity: 1; } 76% { transform: scale(1.18); } 86% { transform: scale(.94); filter: brightness(1.2); } 94% { transform: scale(1.34); filter: brightness(2); } 100% { transform: scale(15); opacity: 0; filter: brightness(5); } }
+  @keyframes ringSpin { to { transform: rotate(360deg); } }
+  @keyframes ringBreathe { to { opacity: .35; scale: 1.08; } }
+  .streaks { position: absolute; inset: -30vmax; overflow: visible; pointer-events: none; }
+  .streak { position: absolute; left: 50%; top: 50%; width: var(--w,3px); height: var(--h,120px); border-radius: 999px; transform-origin: center top; background: linear-gradient(transparent, color-mix(in srgb, var(--burst) 62%, white)); filter: drop-shadow(0 0 8px var(--burst)); animation: streakFly var(--speed,1.2s) ease-in infinite; }
+  @keyframes streakFly { from { transform: rotate(var(--r)) translateY(-20px) scaleY(.12); opacity: 0; } 22% { opacity: 1; } to { transform: rotate(var(--r)) translateY(-680px) scaleY(2.1); opacity: 0; } }
+
+  /* Every summon begins with the exact same neutral veil. Outcome styling starts only when reveal-phase is applied. */
+  .summon-scene.prelude { --burst: #8bdcff; --burst-soft: rgba(93,137,255,.28); background: radial-gradient(circle at center, rgba(90,177,255,.25), transparent 31%), radial-gradient(circle at 50% 120%, rgba(98,70,190,.25), transparent 43%), #03040d; animation: preludeSky 1.4s ease-in-out forwards; }
+  .summon-scene.prelude::before { opacity: .22; animation: skyWheel 8s linear infinite; }
+  .summon-scene.prelude::after { opacity: .3; animation: preludeRunes 1.4s cubic-bezier(.3,.02,.2,1) forwards; }
+  .summon-scene.prelude .summon-flare { animation: none; opacity: 0; }
+  .summon-scene.prelude .summon-glyph { color: #8bdcff; font-size: 52px; animation: preludeGlyph 1.4s ease-out forwards; }
+  .summon-scene.prelude .summon-core { width: 156px; height: 156px; background: radial-gradient(circle at 36% 32%, #fff, #c9f5ff 13%, #74cfff 42%, #283a78 73%); box-shadow: 0 0 30px #fff, 0 0 82px rgba(104,214,255,.65), 0 0 190px rgba(73,102,255,.26); animation: corePrelude 1.4s cubic-bezier(.28,.72,.2,1) forwards; }
+  .summon-scene.prelude .summon-core::before, .summon-scene.prelude .summon-core::after { border-color: rgba(144,228,255,.72); box-shadow: 0 0 20px rgba(99,213,255,.28); }
+  @keyframes preludeSky { 0% { filter: brightness(.62); } 55% { filter: brightness(1); } 100% { filter: brightness(1.15); } }
+  @keyframes preludeRunes { 0% { transform: scale(.48) rotate(-12deg); opacity: 0; } 52% { opacity: .36; } 100% { transform: scale(1.04) rotate(3deg); opacity: .62; } }
+  @keyframes preludeGlyph { 0% { opacity: 0; transform: scale(.15) rotate(-70deg); } 55% { opacity: .25; } 100% { opacity: .72; transform: scale(.82) rotate(-8deg); } }
+  @keyframes corePrelude { 0% { transform: scale(.12); opacity: .06; } 38% { opacity: .92; } 72% { transform: scale(.94); } 88% { transform: scale(1.08); } 100% { transform: scale(1); opacity: 1; filter: brightness(1.12); } }
+
+  .branch-emblem { position: absolute; left: 50%; top: 50%; z-index: 1; width: 290px; height: 290px; margin: -145px 0 0 -145px; opacity: 0; pointer-events: none; }
+  .branch-emblem span { position: absolute; inset: 0; border: 2px solid currentColor; opacity: .42; }
+  .branch-emblem span:nth-child(1) { transform: rotate(45deg) scale(.74); }
+  .branch-emblem span:nth-child(2) { border-style: dashed; border-radius: 50%; transform: scale(.92); }
+  .branch-emblem span:nth-child(3) { inset: 57px; border-radius: 50%; }
+
+  .summon-scene.reveal-phase { --branch-duration: 1.65s; --burst: #80dfff; --burst-soft: rgba(70,130,255,.36); background: radial-gradient(circle at center, var(--burst-soft), transparent 30%), radial-gradient(circle at 50% 120%, rgba(97,74,203,.32), transparent 45%), #02040e; animation: baseBranchSky var(--branch-duration) ease-out forwards; }
+  .summon-scene.reveal-phase::before { animation: branchWheel var(--branch-duration) cubic-bezier(.18,.7,.1,1) forwards; }
+  .summon-scene.reveal-phase::after { animation: branchRunes var(--branch-duration) cubic-bezier(.2,.7,.12,1) forwards; }
+  .summon-scene.reveal-phase .summon-flare { animation: branchFlare var(--branch-duration) ease-in forwards; }
+  .summon-scene.reveal-phase .summon-glyph { animation: baseGlyphBranch var(--branch-duration) ease-out forwards; }
+  .summon-scene.reveal-phase .summon-core { animation: baseCoreBranch var(--branch-duration) cubic-bezier(.3,.02,.15,1) forwards; }
+  .summon-scene.reveal-phase .branch-emblem { color: #86e8ff; animation: emblemBase var(--branch-duration) ease-out forwards; }
+
+  .summon-scene.reveal-phase.tier-4 { --branch-duration: 3.05s; --burst: #c976ff; --burst-soft: rgba(174,65,255,.5); background: conic-gradient(from 10deg at 50% 50%, rgba(197,112,255,.08), transparent 14%, rgba(113,79,255,.12) 26%, transparent 42%, rgba(235,148,255,.08) 58%, transparent 75%), radial-gradient(circle at center, rgba(189,81,255,.48), transparent 28%), radial-gradient(circle at 50% 112%, rgba(70,91,255,.45), transparent 47%), #080315; animation-name: rareBranchSky; }
+  .summon-scene.reveal-phase.tier-4 .summon-core { width: 188px; height: 188px; background: radial-gradient(circle at 35% 29%, #fff, #f0ccff 12%, #c46bff 39%, #4c1976 70%); animation-name: rareCoreBranch; }
+  .summon-scene.reveal-phase.tier-4 .summon-glyph { color: #dda0ff; font-size: 92px; animation-name: rareGlyphBranch; }
+  .summon-scene.reveal-phase.tier-4 .branch-emblem { color: #d99cff; animation-name: emblemRare; }
+  .summon-scene.reveal-phase.tier-4 .branch-emblem span:nth-child(1) { border-width: 4px; border-radius: 20%; }
+
+  .summon-scene.reveal-phase.tier-5 { --branch-duration: 4.5s; --burst: #ffd66f; --burst-soft: rgba(255,157,42,.54); background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,232,166,.08) 0 2deg, transparent 2deg 12deg), radial-gradient(circle at center, rgba(255,204,90,.56), transparent 25%), radial-gradient(circle at 50% 115%, rgba(255,85,62,.26), transparent 44%), radial-gradient(circle at 15% 80%, rgba(195,83,255,.3), transparent 35%), #0d0710; animation-name: apexBranchSky; }
+  .summon-scene.reveal-phase.tier-5 .summon-core { width: 224px; height: 224px; background: radial-gradient(circle at 34% 28%, #fff, #fff8d6 11%, #ffd66f 34%, #f08b2f 57%, #551928 76%); animation-name: apexCoreBranch; }
+  .summon-scene.reveal-phase.tier-5 .summon-glyph { color: #ffe28e; font-size: 142px; animation-name: apexGlyphBranch; }
+  .summon-scene.reveal-phase.tier-5 .branch-emblem { color: #ffe293; width: 410px; height: 410px; margin: -205px 0 0 -205px; animation-name: emblemApex; }
+  .summon-scene.reveal-phase.tier-5 .branch-emblem span { border-width: 3px; box-shadow: 0 0 28px currentColor; }
+  .summon-scene.reveal-phase.orb-heavy { background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(164,251,255,.08) 0 3deg, transparent 3deg 15deg), radial-gradient(circle at center, rgba(66,230,255,.6), transparent 25%), radial-gradient(circle at 50% 115%, var(--burst-soft), transparent 48%), #020811; }
+
+  @keyframes baseBranchSky { 0% { filter: brightness(1.08); } 45% { filter: brightness(1.35) saturate(1.18); } 100% { filter: brightness(2); } }
+  @keyframes rareBranchSky { 0% { filter: brightness(1) hue-rotate(-12deg); } 28% { filter: brightness(1.7) saturate(1.5); transform: scale(1.02); } 52% { filter: brightness(.85) saturate(1.9); } 78% { filter: brightness(2.1); transform: scale(1.07) rotate(.5deg); } 100% { filter: brightness(3.4); transform: scale(1.13); } }
+  @keyframes apexBranchSky { 0% { filter: brightness(.95) saturate(.7); } 18% { filter: brightness(1.8) saturate(1.7); } 36% { filter: brightness(.58) saturate(2.1); transform: scale(.98); } 60% { filter: brightness(2.5); transform: scale(1.06); } 78% { filter: brightness(1.1) contrast(1.3); } 100% { filter: brightness(5) saturate(.5); transform: scale(1.2); } }
+  @keyframes branchWheel { 0% { opacity: .28; transform: rotate(0) scale(.92); } 72% { opacity: .7; } 100% { opacity: 0; transform: rotate(155deg) scale(2.4); } }
+  @keyframes branchRunes { 0% { transform: scale(.88) rotate(3deg); opacity: .55; } 74% { opacity: .95; } 100% { transform: scale(3.5) rotate(42deg); opacity: 0; } }
+  @keyframes branchFlare { 0%,55% { opacity: 0; transform: scale(.28); } 76% { opacity: .42; transform: scale(.8); } 93% { opacity: 1; transform: scale(1.8); } 100% { opacity: 0; transform: scale(4.8); } }
+  @keyframes baseCoreBranch { 0% { transform: scale(1); } 42% { transform: scale(1.2); } 75% { transform: scale(.9); filter: brightness(1.5); } 100% { transform: scale(13); opacity: 0; filter: brightness(5); } }
+  @keyframes rareCoreBranch { 0% { transform: scale(.84) rotate(0); border-radius: 50%; } 25% { transform: scale(1.22) rotate(45deg); border-radius: 28%; } 48% { transform: scale(.92) rotate(90deg); border-radius: 12%; filter: brightness(1.7); } 70% { transform: scale(1.4) rotate(135deg); border-radius: 32%; } 100% { transform: scale(17) rotate(225deg); border-radius: 50%; opacity: 0; filter: brightness(6); } }
+  @keyframes apexCoreBranch { 0% { transform: scale(.72); filter: brightness(1); } 18% { transform: scale(1.3); filter: brightness(2.2); } 34% { transform: scale(.48); filter: brightness(.75); box-shadow: 0 0 18px #fff, 0 0 45px #ffd66f; } 51% { transform: scale(1.65); filter: brightness(3.2); } 68% { transform: scale(1.08); filter: brightness(1.3); } 82% { transform: scale(2.25); filter: brightness(5); } 100% { transform: scale(22); opacity: 0; filter: brightness(8); } }
+  @keyframes baseGlyphBranch { 0% { opacity: .55; transform: scale(.82) rotate(-8deg); } 70% { opacity: 1; transform: scale(1.25) rotate(8deg); } 100% { opacity: 0; transform: scale(5) rotate(35deg); } }
+  @keyframes rareGlyphBranch { 0% { opacity: .3; transform: scale(.6) rotate(-45deg); } 36% { opacity: 1; transform: scale(1.25) rotate(0); } 70% { transform: scale(1.7) rotate(45deg); } 100% { opacity: 0; transform: scale(7) rotate(120deg); } }
+  @keyframes apexGlyphBranch { 0% { opacity: 0; transform: scale(.2) rotate(-120deg); } 22% { opacity: 1; transform: scale(1.35) rotate(0); } 48% { transform: scale(.9) rotate(40deg); text-shadow: 0 0 35px currentColor, 0 0 100px currentColor; } 76% { transform: scale(2.15) rotate(95deg); } 100% { opacity: 0; transform: scale(10) rotate(190deg); } }
+  @keyframes emblemBase { 0% { opacity: 0; transform: scale(.6) rotate(-15deg); } 48% { opacity: .4; } 100% { opacity: 0; transform: scale(2.2) rotate(38deg); } }
+  @keyframes emblemRare { 0% { opacity: 0; transform: scale(.35) rotate(-40deg); } 28% { opacity: .75; transform: scale(1) rotate(0); } 74% { opacity: .9; transform: scale(1.35) rotate(90deg); } 100% { opacity: 0; transform: scale(3.2) rotate(180deg); } }
+  @keyframes emblemApex { 0% { opacity: 0; transform: scale(.2) rotate(-90deg); } 18% { opacity: .8; transform: scale(1.05) rotate(0); } 42% { opacity: .3; transform: scale(.72) rotate(45deg); } 60% { opacity: 1; transform: scale(1.5) rotate(90deg); } 82% { opacity: .95; transform: scale(2.2) rotate(150deg); } 100% { opacity: 0; transform: scale(5) rotate(250deg); } }
+
+
+  /* Smooth-spectrum layers keep the neutral opening intact, then crossfade into rarity color. */
+  .rarity-wash {
+    position: absolute;
+    inset: -26vmax;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(.96);
+    filter: saturate(.72) brightness(.78);
+    background: radial-gradient(circle at center, rgba(85,190,255,.34), transparent 31%), radial-gradient(circle at 50% 116%, rgba(92,82,215,.24), transparent 48%);
+    transition: opacity .92s cubic-bezier(.22,.7,.15,1), transform 1.15s cubic-bezier(.22,.7,.15,1), filter 1.05s ease;
+    will-change: opacity, transform, filter;
+  }
+  .summon-scene.reveal-phase .rarity-wash { opacity: 1; transform: scale(1.035); filter: saturate(1.05) brightness(1); }
+  .summon-scene.reveal-phase.tier-4 .rarity-wash {
+    background: conic-gradient(from 10deg at 50% 50%, rgba(197,112,255,.11), transparent 14%, rgba(113,79,255,.16) 26%, transparent 42%, rgba(235,148,255,.11) 58%, transparent 75%), radial-gradient(circle at center, rgba(189,81,255,.53), transparent 30%), radial-gradient(circle at 50% 112%, rgba(70,91,255,.47), transparent 49%);
+  }
+  .summon-scene.reveal-phase.tier-5 .rarity-wash {
+    background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,232,166,.09) 0 2deg, transparent 2deg 12deg), radial-gradient(circle at center, rgba(255,204,90,.6), transparent 28%), radial-gradient(circle at 50% 115%, rgba(255,85,62,.29), transparent 46%), radial-gradient(circle at 15% 80%, rgba(195,83,255,.32), transparent 37%);
+  }
+  .summon-scene.reveal-phase.orb-heavy .rarity-wash {
+    background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(164,251,255,.1) 0 3deg, transparent 3deg 15deg), radial-gradient(circle at center, rgba(66,230,255,.64), transparent 28%), radial-gradient(circle at 50% 115%, var(--burst-soft), transparent 50%);
+  }
+
+  /* Keep the scene substrate neutral; the wash above supplies the interpolated rarity palette. */
+  .summon-scene.reveal-phase,
+  .summon-scene.reveal-phase.tier-4,
+  .summon-scene.reveal-phase.tier-5,
+  .summon-scene.reveal-phase.orb-heavy {
+    background: radial-gradient(circle at center, rgba(90,177,255,.25), transparent 31%), radial-gradient(circle at 50% 120%, rgba(98,70,190,.25), transparent 43%), #03040d;
+  }
+
+  .summon-flare, .streaks, .summon-glyph, .branch-emblem, .summon-core, .skip-hint { z-index: 2; }
+  .summon-core {
+    overflow: visible;
+    transition: width .88s cubic-bezier(.22,.7,.15,1), height .88s cubic-bezier(.22,.7,.15,1), box-shadow .9s ease, border-radius .9s ease;
+  }
+  .core-spectrum {
+    position: absolute;
+    inset: -2px;
+    z-index: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transform: scale(.9);
+    pointer-events: none;
+    background: radial-gradient(circle at 36% 32%, #fff, #d8f7ff 13%, #7ad6ff 42%, #283a78 73%);
+    box-shadow: 0 0 36px rgba(255,255,255,.72), 0 0 96px rgba(104,214,255,.48), 0 0 210px rgba(73,102,255,.22);
+    transition: opacity .82s ease, transform .96s cubic-bezier(.22,.7,.15,1), box-shadow 1s ease;
+    will-change: opacity, transform;
+  }
+  .summon-scene.reveal-phase .core-spectrum { opacity: .88; transform: scale(1.015); }
+  .summon-scene.reveal-phase.tier-4 .core-spectrum {
+    background: radial-gradient(circle at 35% 29%, #fff, #f0ccff 12%, #c46bff 39%, #4c1976 70%);
+    box-shadow: 0 0 42px rgba(255,255,255,.8), 0 0 118px rgba(196,107,255,.68), 0 0 250px rgba(109,49,190,.42);
+  }
+  .summon-scene.reveal-phase.tier-5 .core-spectrum {
+    background: radial-gradient(circle at 34% 28%, #fff, #fff8d6 11%, #ffd66f 34%, #f08b2f 57%, #551928 76%);
+    box-shadow: 0 0 52px rgba(255,255,255,.94), 0 0 145px rgba(255,214,111,.82), 0 0 310px rgba(255,123,42,.5);
+  }
+  .summon-scene.reveal-phase.orb-heavy .core-spectrum {
+    background: radial-gradient(circle at 34% 29%, #fff, #c9fbff 12%, #48e9ff 39%, #17577a 72%);
+    box-shadow: 0 0 48px rgba(255,255,255,.9), 0 0 136px rgba(72,233,255,.75), 0 0 285px rgba(35,139,255,.46);
+  }
+
+  .summon-scene.reveal-phase .summon-core,
+  .summon-scene.reveal-phase.tier-4 .summon-core,
+  .summon-scene.reveal-phase.tier-5 .summon-core {
+    background: radial-gradient(circle at 36% 32%, #fff, #c9f5ff 13%, #74cfff 42%, #283a78 73%);
+  }
+  .summon-glyph {
+    transition: color .92s ease, font-size .9s cubic-bezier(.22,.7,.15,1), text-shadow .92s ease;
+  }
+  .summon-core::before, .summon-core::after {
+    transition: border-color .92s ease, box-shadow .92s ease, opacity .92s ease;
+  }
+  .branch-emblem { transition: color .92s ease, width .9s ease, height .9s ease, margin .9s ease; }
+  .streak { transition: background .9s ease, filter .9s ease, opacity .55s ease; }
+
+  .skip-hint { position: absolute; left: 50%; bottom: 28px; z-index: 5; transform: translateX(-50%); padding: 9px 14px; border-radius: 999px; background: rgba(0,0,0,.34); border: 1px solid rgba(255,255,255,.18); color: rgba(255,255,255,.8); font-size: 13px; letter-spacing: .08em; }
+  .reward-scene { display: none; padding: 28px; overflow: auto; background: radial-gradient(circle at 50% 0%, rgba(85,129,255,.25), transparent 35%), linear-gradient(180deg, #0b0d20, #050611); cursor: default; }
+  .reward-scene.visible { display: block; }
+  .reward-scene.apex { background: radial-gradient(circle at 50% 0%, rgba(255,200,85,.34), transparent 38%), radial-gradient(circle at 20% 100%, rgba(183,124,255,.18), transparent 35%), linear-gradient(180deg, #171023, #050611); }
+  .reward-wrap { width: min(1180px, 100%); margin: 0 auto; text-align: center; }
+  .reward-title { margin: 10px 0 22px; font-size: clamp(32px, 5vw, 58px); }
+  .reward-grid { display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); gap: 12px; }
+  .reward-card { --card-glow: rgba(115,148,255,.18); position: relative; min-height: 198px; display: grid; place-items: center; align-content: center; gap: 9px; padding: 24px 13px 18px; overflow: hidden; isolation: isolate; border-radius: 20px; border: 1px solid rgba(255,255,255,.16); background: radial-gradient(circle at 50% 20%, var(--card-glow), transparent 44%), linear-gradient(180deg, rgba(59,70,136,.48), rgba(17,20,47,.95)); box-shadow: 0 14px 36px rgba(0,0,0,.3), inset 0 1px rgba(255,255,255,.08); opacity: 0; transform: translateY(22px) scale(.94); perspective: 900px; animation: rewardIn .54s cubic-bezier(.2,.8,.2,1) forwards; animation-delay: var(--delay); }
+  .reward-card::before { content: ""; position: absolute; inset: -55%; z-index: -2; pointer-events: none; background: conic-gradient(from 90deg, transparent 0 24%, rgba(255,255,255,.2) 30%, transparent 36% 61%, var(--card-glow) 68%, transparent 76%); opacity: .25; animation: cardAuraSpin 10s linear infinite; }
+  .reward-card::after { content: ""; position: absolute; inset: -60% -35%; z-index: 5; pointer-events: none; background: linear-gradient(105deg, transparent 38%, rgba(255,255,255,.78) 49%, transparent 60%); transform: translateX(-80%) rotate(8deg); opacity: 0; }
+  .reward-frame { position: absolute; inset: 8px; z-index: 0; pointer-events: none; border: 1px solid rgba(255,255,255,.12); border-radius: 14px; clip-path: polygon(0 15%, 8% 15%, 8% 0, 92% 0, 92% 15%, 100% 15%, 100% 85%, 92% 85%, 92% 100%, 8% 100%, 8% 85%, 0 85%); }
+  .reward-frame::before, .reward-frame::after { content: ""; position: absolute; width: 26px; height: 26px; border-color: currentColor; opacity: .5; }
+  .reward-frame::before { left: 8px; top: 8px; border-left: 2px solid; border-top: 2px solid; }
+  .reward-frame::after { right: 8px; bottom: 8px; border-right: 2px solid; border-bottom: 2px solid; }
+  .rarity-mark { position: absolute; top: 12px; left: 50%; z-index: 3; transform: translateX(-50%); padding: 4px 9px; border-radius: 999px; border: 1px solid rgba(255,255,255,.15); background: rgba(7,9,24,.62); color: rgba(255,255,255,.72); font-size: 9px; font-weight: 900; letter-spacing: .16em; white-space: nowrap; }
+  .reward-rune { position: absolute; left: 50%; top: 47%; z-index: -1; width: 112px; height: 112px; margin: -56px 0 0 -56px; border: 1px dashed rgba(255,255,255,.18); border-radius: 50%; opacity: .2; animation: rewardRuneSpin 12s linear infinite; }
+  .reward-rune::before, .reward-rune::after { content: "✦"; position: absolute; left: 50%; color: rgba(255,255,255,.6); text-shadow: 0 0 12px currentColor; }
+  .reward-rune::before { top: -9px; transform: translateX(-50%); }
+  .reward-rune::after { bottom: -9px; transform: translateX(-50%) rotate(180deg); }
+  .reward-sparks { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+  .reward-sparks span { position: absolute; left: calc(50% + var(--x)); top: calc(48% + var(--y)); width: var(--size); height: var(--size); border-radius: 50%; background: currentColor; box-shadow: 0 0 11px currentColor; opacity: 0; animation: rewardSpark var(--spark-speed) ease-in-out infinite; animation-delay: var(--spark-delay); }
+  .reward-card.r1 { --card-glow: rgba(105,125,190,.1); }
+  .reward-card.r2 { --card-glow: rgba(111,160,220,.14); border-color: rgba(111,160,220,.38); }
+  .reward-card.r3 { --card-glow: rgba(100,230,255,.19); border-color: rgba(100,230,255,.58); box-shadow: 0 0 30px rgba(100,230,255,.12), 0 14px 36px rgba(0,0,0,.3); }
+  .reward-card.r3 .reward-icon { animation: uncommonIconFloat 2.4s ease-in-out infinite alternate; }
+  .reward-card.r4 { --card-glow: rgba(183,124,255,.35); color: #d7b3ff; border-color: rgba(200,145,255,.74); box-shadow: 0 0 42px rgba(183,124,255,.22), 0 18px 45px rgba(0,0,0,.36), inset 0 0 28px rgba(183,124,255,.08); background: radial-gradient(circle at 50% 20%, rgba(183,124,255,.34), transparent 43%), linear-gradient(180deg, rgba(82,45,122,.68), rgba(20,17,43,.97)); animation-name: rareRewardIn, rareCardBreath; animation-duration: .78s, 2.2s; animation-timing-function: cubic-bezier(.16,.86,.25,1), ease-in-out; animation-iteration-count: 1, infinite; animation-direction: normal, alternate; animation-delay: var(--delay), calc(var(--delay) + .8s); }
+  .reward-card.r4::before { opacity: .52; animation-duration: 5.2s; }
+  .reward-card.r4 .reward-frame { border-color: rgba(220,183,255,.4); animation: rareFramePulse 1.5s ease-in-out infinite alternate; }
+  .reward-card.r4 .reward-rune { opacity: .55; animation-duration: 5.8s; }
+  .reward-card.r4 .reward-icon { animation: rareIconFloat 1.7s ease-in-out infinite alternate; }
+  .reward-card.r5 { --card-glow: rgba(255,202,98,.55); color: #ffe3a0; border-color: rgba(255,218,124,.94); box-shadow: 0 0 72px rgba(255,202,98,.42), 0 22px 55px rgba(0,0,0,.42), inset 0 0 42px rgba(255,241,190,.11); background: radial-gradient(circle at 50% 18%, rgba(255,229,137,.52), transparent 38%), radial-gradient(circle at 18% 86%, rgba(199,117,255,.22), transparent 44%), linear-gradient(180deg, rgba(146,92,18,.78), rgba(28,20,41,.98)); animation-name: apexRewardIn, apexCardPulse; animation-duration: 1.02s, 1.65s; animation-timing-function: cubic-bezier(.12,.9,.2,1), ease-in-out; animation-iteration-count: 1, infinite; animation-direction: normal, alternate; animation-delay: var(--delay), calc(var(--delay) + 1.02s); }
+  .reward-card.r5::before { opacity: .82; animation-duration: 3.1s; filter: blur(.2px); }
+  .reward-card.r5 .reward-frame { border-color: rgba(255,236,176,.66); box-shadow: inset 0 0 25px rgba(255,215,107,.12); animation: apexFramePulse 1.1s ease-in-out infinite alternate; }
+  .reward-card.r5 .reward-rune { width: 142px; height: 142px; margin: -71px 0 0 -71px; opacity: .82; border-style: solid; box-shadow: 0 0 28px rgba(255,208,98,.22); animation-duration: 3.6s; }
+  .reward-card.r5 .reward-icon { font-size: 51px; animation: apexIconFloat 1.05s ease-in-out infinite alternate; }
+  .reward-card.r5::after, .reward-card.orb-heavy::after { opacity: .72; animation: cardSweep 1.3s ease-in-out infinite; animation-delay: var(--delay); }
+  .reward-card.sigil-card .reward-rune { border-width: 2px; }
+  .reward-card.sigil-3 { color: #92efff; }
+  .reward-card.sigil-4 { color: #d9adff; }
+  .reward-card.sigil-5 { color: #ffe49a; }
+  .reward-card.orb-card { color: #83eeff; }
+  .reward-card.orb-card .reward-rune { border-style: double; box-shadow: 0 0 24px rgba(100,230,255,.18); }
+  .reward-card.orb-heavy { --card-glow: rgba(100,230,255,.48); border-color: rgba(122,238,255,.95); box-shadow: 0 0 58px rgba(100,230,255,.34), 0 18px 45px rgba(0,0,0,.38), inset 0 0 34px rgba(100,230,255,.11); background: radial-gradient(circle at 50% 16%, rgba(100,230,255,.38), transparent 44%), linear-gradient(180deg, rgba(28,75,111,.78), rgba(16,22,47,.98)); }
+  .reward-card.orb-heavy .reward-icon { animation: orbRewardPulse .9s ease-in-out infinite alternate; }
+  .reward-card.orb-4 .reward-rune { animation: tideRune 1.8s linear infinite; }
+  @keyframes rewardIn { to { opacity: 1; transform: translateY(0) scale(1); } }
+  @keyframes rareRewardIn { 0% { opacity: 0; transform: translateY(48px) scale(.72) rotateX(22deg); filter: brightness(2.2); } 58% { opacity: 1; transform: translateY(-8px) scale(1.05) rotateX(-3deg); } 100% { opacity: 1; transform: translateY(0) scale(1) rotateX(0); filter: brightness(1); } }
+  @keyframes apexRewardIn { 0% { opacity: 0; transform: translateY(76px) scale(.46) rotateY(48deg); filter: brightness(4) saturate(.4); } 38% { opacity: 1; transform: translateY(-18px) scale(1.13) rotateY(-8deg); filter: brightness(2.4) saturate(1.5); } 68% { transform: translateY(5px) scale(.98) rotateY(3deg); } 100% { opacity: 1; transform: translateY(0) scale(1) rotateY(0); filter: brightness(1) saturate(1); } }
+  @keyframes apexCardPulse { to { box-shadow: 0 0 96px rgba(255,202,98,.58), 0 24px 65px rgba(0,0,0,.46), inset 0 0 38px rgba(255,255,255,.13); transform: translateY(-4px) scale(1.024); } }
+  @keyframes rareCardBreath { to { box-shadow: 0 0 62px rgba(183,124,255,.36), 0 21px 50px rgba(0,0,0,.4), inset 0 0 34px rgba(210,160,255,.12); transform: translateY(-2px) scale(1.012); } }
+  @keyframes rareFramePulse { to { opacity: .65; filter: drop-shadow(0 0 7px currentColor); } }
+  @keyframes apexFramePulse { to { opacity: .88; filter: drop-shadow(0 0 12px currentColor); transform: scale(1.012); } }
+  @keyframes cardAuraSpin { to { transform: rotate(360deg); } }
+  @keyframes rewardRuneSpin { to { transform: rotate(360deg); } }
+  @keyframes tideRune { to { transform: rotate(360deg) scale(1.08); } }
+  @keyframes rewardSpark { 0%,100% { opacity: 0; transform: scale(.25); } 42% { opacity: .9; transform: scale(1.35); } 65% { opacity: .35; transform: scale(.7); } }
+  @keyframes cardSweep { 0% { transform: translateX(-95%) rotate(8deg); } 70%,100% { transform: translateX(95%) rotate(8deg); } }
+  @keyframes uncommonIconFloat { to { transform: translateY(-4px); filter: drop-shadow(0 0 10px currentColor); } }
+  @keyframes rareIconFloat { to { transform: translateY(-7px) scale(1.09); filter: drop-shadow(0 0 17px currentColor); } }
+  @keyframes apexIconFloat { to { transform: translateY(-9px) scale(1.16) rotate(3deg); filter: drop-shadow(0 0 25px currentColor); } }
+  @keyframes orbRewardPulse { to { transform: scale(1.22); filter: drop-shadow(0 0 23px #64e6ff); } }
+  .reward-icon { position: relative; z-index: 2; font-size: 44px; filter: drop-shadow(0 5px 12px rgba(0,0,0,.3)); }
+  .reward-card b, .reward-card small { position: relative; z-index: 2; }
+  .reward-card b { max-width: 100%; font-size: 15px; overflow-wrap: anywhere; }
+  .reward-card small { color: var(--muted); }
+  .reward-card.r4 small, .reward-card.r5 small { color: currentColor; opacity: .82; }
+  .reward-actions { display: flex; justify-content: center; gap: 10px; margin-top: 24px; }
+
+  /* ---------- Toasts ---------- */
+  .toast-stack { position: fixed; right: 18px; bottom: 18px; z-index: 300; display: grid; gap: 10px; pointer-events: none; }
+  .toast { min-width: 260px; max-width: 390px; padding: 13px 15px; border-radius: 14px; border: 1px solid var(--line); background: rgba(18,22,49,.97); box-shadow: var(--shadow); animation: toastIn .22s ease-out; }
+  .toast.good { border-color: rgba(112,239,176,.38); }
+  .toast.bad { border-color: rgba(255,114,136,.42); }
+  @keyframes toastIn { from { opacity: 0; transform: translateY(12px); } }
+
+  @media (max-width: 1050px) {
+    .grid-main { grid-template-columns: 1fr; }
+    .side-stack { grid-template-columns: 1fr 1fr; }
+    .roster-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .inventory-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .bundle-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .reward-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+    .banner-copy { width: 82%; }
+  }
+  @media (max-width: 720px) {
+    .topbar { flex-wrap: nowrap; gap: 7px; min-height: 52px; padding: 6px 9px; }
+    .brand { min-width: 0; flex: 0 0 auto; gap: 7px; }
+    .brand-mark { width: 30px; height: 30px; }
+    .brand-mark::after { inset: 6px; }
+    .brand strong { font-size: 12px; letter-spacing: .09em; }
+    .brand small { display: none; }
+    .wallet { order: 0; width: auto; min-width: 0; flex: 1 1 auto; flex-wrap: nowrap; justify-content: flex-end; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+    .wallet::-webkit-scrollbar { display: none; }
+    .wallet-chip { flex: 0 0 auto; gap: 4px; min-height: 30px; padding: 4px 7px; border-radius: 10px; font-size: 11px; }
+    .wallet-chip .icon { font-size: 13px; }
+    .wallet-chip span:last-child { display: none; }
+    .wallet-chip b { font-size: 11px; }
+    .top-actions { flex: 0 0 auto; gap: 4px; }
+    .top-actions .ghost-btn { min-height: 34px; padding: 6px 8px; border-radius: 10px; font-size: 11px; }
+    .top-actions .icon-btn { min-width: 34px; min-height: 34px; border-radius: 10px; }
+    .grid-main { display: grid; grid-template-columns: 1fr; }
+    .banner-nav { align-items: flex-start; }
+    .banner-nav-actions { flex-direction: column; }
+    .banner-copy { width: 100%; padding: 34px 20px 24px; }
+    .banner-art::after { width: 260px; height: 260px; right: -80px; top: 105px; opacity: .52; }
+    .rateup-strip, .meters, .roster-grid, .checkout-grid { grid-template-columns: 1fr; }
+    .inventory-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .reward-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .bundle-grid { grid-template-columns: 1fr 1fr; }
+    .section-title { align-items: flex-start; }
+  }
+  @media (max-width: 460px) {
+    .topbar { gap: 5px; padding-inline: 7px; }
+    .brand strong { display: none; }
+    .wallet-chip { padding-inline: 6px; }
+    .wallet-chip:nth-child(4) { display: none; }
+    .top-actions .ghost-btn { padding-inline: 7px; }
+    .app-shell { width: min(100% - 18px, 1480px); }
+    .bundle-grid { grid-template-columns: 1fr; }
+    .pull-btn { width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body.motion-system *, body.motion-system *::before, body.motion-system *::after {
+      animation-duration: .001ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: .001ms !important;
+    }
+  }
+  body.motion-off *, body.motion-off *::before, body.motion-off *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .001ms !important;
+  }
+</style>
+</head>
+<body>
+<div class="ambient"></div>
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true"></div>
+    <div><strong>ORBFALL</strong><small>VEIL CLIENT</small></div>
+  </div>
+  <div class="wallet" aria-label="Current resources">
+    <div class="wallet-chip"><span class="icon">💎</span><b id="walletLumens">0</b><span>Lumens</span></div>
+    <div class="wallet-chip"><span class="icon">🔵</span><b id="walletOrbs">0 / 0</b><span>Orbs</span></div>
+    <div class="wallet-chip sigil-wallet" title="Character Sigils + Wild Sigils"><span class="icon">🜲</span><b><span id="walletSigils">0</span><span class="wallet-divider">+</span><span class="wallet-wild"><span id="walletUniversalSigils">0</span>◇</span></b><span>Sigils</span></div>
+    <div class="wallet-chip"><span class="icon">◈</span><b id="walletSpent">$0.00</b><span>Spent</span></div>
+  </div>
+  <div class="top-actions">
+    <button class="ghost-btn" id="storeButton">Vault</button>
+    <button class="icon-btn" id="settingsButton" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<main class="app-shell">
+  <div class="grid-main">
+    <section class="panel banner-panel standard-mode" id="bannerPanel">
+      <div class="banner-art"></div>
+      <div class="standard-ornament" aria-hidden="true"><div class="archive-grid"></div><div class="archive-comet"></div></div>
+      <div class="limited-ornament" aria-hidden="true"><div class="limited-ribbons"></div></div>
+      <div class="banner-nav">
+        <div class="banner-tabs">
+          <button class="banner-tab active" data-banner="standard">Astral Archive</button>
+          <button class="banner-tab" data-banner="limited">Veiled Omen</button>
+        </div>
+        <div class="banner-nav-actions">
+          <button class="ghost-btn" id="ratesButton">Details</button>
+          <button class="ghost-btn hidden" id="rerollBanner">Shift Omen</button>
+        </div>
+      </div>
+      <div class="banner-copy">
+        <p class="eyebrow" id="bannerEyebrow">ARCHIVE // ORB-TUNED</p>
+        <h1 id="bannerTitle">Astral Archive</h1>
+        <p id="bannerDescription">Old light circles back. Nothing is ever truly lost.</p>
+        <div class="rateup-strip hidden" id="rateupStrip"></div>
+        <div class="banner-facts" id="bannerFacts"></div>
+        <div class="pull-row">
+          <button class="pull-btn" data-pulls="1">Invoke ×1<small>💎 160 Lumens</small></button>
+          <button class="pull-btn ten" data-pulls="10">Invoke ×10<small>💎 1,600 Lumens</small></button>
+        </div>
+      </div>
+      <div class="meters" id="pityMeters">
+        <div>
+          <div class="meter-head"><strong>Orb Tide</strong><span id="orbMeterText">0 / 10</span></div>
+          <div class="meter-track"><div class="meter-fill" id="orbMeterFill"></div></div>
+        </div>
+        <div>
+          <div class="meter-head"><strong>Crown Echo</strong><span id="sigilMeterText">0 / 80</span></div>
+          <div class="meter-track"><div class="meter-fill gold" id="sigilMeterFill"></div></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <section class="section">
+    <div class="section-title"><div><h2><span id="rosterCount">33</span> Names Awake</h2><p>Bind light. Raise echoes.</p></div><button class="ghost-btn" id="undelegateAll">Release All</button></div>
+    <div class="roster-grid" id="rosterGrid"></div>
+  </section>
+
+  <section class="section panel">
+    <div class="panel-head"><h2>Relics</h2><span style="color:var(--muted);font-size:12px;letter-spacing:.08em">DUST // STEEL // MEMORY</span></div>
+    <div class="panel-body"><div class="inventory-grid" id="inventoryGrid"></div></div>
+  </section>
+
+  <section class="section panel">
+    <div class="panel-head"><h2>Vault Ledger</h2><button class="ghost-btn" id="restorePurchases">Recall</button></div>
+    <div class="panel-body" style="overflow:auto"><table class="transaction-table"><thead><tr><th>Moment</th><th>Seal</th><th>Offering</th><th>USD</th></tr></thead><tbody id="transactionBody"></tbody></table></div>
+  </section>
+</main>
+
+<div class="modal-shell" id="storeModal" role="dialog" aria-modal="true" aria-labelledby="storeTitle">
+  <div class="modal">
+    <div class="modal-head"><h2 id="storeTitle">Lumen Vault <span class="demo-badge">DEMO</span></h2><button class="icon-btn" data-close="storeModal">✕</button></div>
+    <div class="modal-content"><div class="bundle-grid" id="bundleGrid"></div></div>
+  </div>
+</div>
+
+<div class="modal-shell" id="checkoutModal" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+  <div class="modal small">
+    <div class="modal-head"><h2 id="checkoutTitle">Vault Link <span class="demo-badge">DEMO</span></h2><button class="icon-btn" data-close="checkoutModal">✕</button></div>
+    <div class="modal-content">
+      <div class="checkout-grid">
+        <form id="checkoutForm" autocomplete="off">
+          <div class="field"><label for="cardName">Bearer</label><input id="cardName" required value="Veil Wanderer" /></div>
+          <div class="field"><label for="cardNumber">Card</label><input id="cardNumber" inputmode="numeric" maxlength="19" value="4242 4242 4242 4242" required /></div>
+          <div class="field-row">
+            <div class="field"><label for="cardExpiry">Expiry</label><input id="cardExpiry" maxlength="5" value="12/30" required /></div>
+            <div class="field"><label for="cardCvc">CVC</label><input id="cardCvc" inputmode="numeric" maxlength="4" value="123" required /></div>
+          </div>
+          <div class="field"><label for="billingZip">Postal</label><input id="billingZip" inputmode="numeric" maxlength="10" value="94107" required /></div>
+          <button class="gold-btn" style="width:100%" id="payButton" type="submit">Seal Purchase</button>
+          <div class="payment-status" id="paymentStatus"></div>
+        </form>
+        <div class="order-box" id="orderSummary"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-shell" id="ratesModal" role="dialog" aria-modal="true" aria-labelledby="ratesTitle">
+  <div class="modal small">
+    <div class="modal-head"><h2 id="ratesTitle">Invocation Details</h2><button class="icon-btn" data-close="ratesModal">✕</button></div>
+    <div class="modal-content" id="ratesContent"></div>
+  </div>
+</div>
+
+<div class="modal-shell" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal small">
+    <div class="modal-head"><h2 id="settingsTitle">Veil Settings</h2><button class="icon-btn" data-close="settingsModal">✕</button></div>
+    <div class="modal-content">
+      <div class="setting-row"><b>Pity Meters</b><label class="switch"><input type="checkbox" id="settingMeters"><span></span></label></div>
+      <div class="setting-row">
+        <b>Animation</b>
+        <div class="motion-switch" id="settingMotion" data-mode="system" role="radiogroup" aria-label="Animation mode">
+          <button class="motion-option" type="button" data-motion="off" role="radio" aria-checked="false">Off</button>
+          <button class="motion-option active" type="button" data-motion="system" role="radio" aria-checked="true">System</button>
+          <button class="motion-option" type="button" data-motion="on" role="radio" aria-checked="false">On</button>
+        </div>
+      </div>
+      <div class="setting-row"><b>Sound</b><label class="switch"><input type="checkbox" id="settingSound"><span></span></label></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:18px"><button class="danger-btn" id="resetSave">Sever Memory</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="pull-overlay" id="pullOverlay" aria-live="polite">
+  <div class="summon-scene" id="summonScene">
+    <div class="rarity-wash" aria-hidden="true"></div>
+    <div class="summon-flare"></div>
+    <div class="streaks" id="streaks"></div>
+    <div class="summon-glyph" aria-hidden="true">✦</div>
+    <div class="branch-emblem" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="summon-core"><span class="core-spectrum" aria-hidden="true"></span></div>
+    <div class="skip-hint">TOUCH TO SEVER</div>
+  </div>
+  <div class="reward-scene" id="rewardScene">
+    <div class="reward-wrap">
+      <p class="eyebrow">THE VEIL ANSWERS</p>
+      <h2 class="reward-title" id="rewardTitle">Claimed</h2>
+      <div class="reward-grid" id="rewardGrid"></div>
+      <div class="reward-actions"><button class="primary-btn" id="continueButton">Return</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="character-action-layer" id="characterActionLayer" aria-hidden="true"></div>
+<div class="toast-stack" id="toastStack"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ---------- Core catalog ---------- */
+  const SAVE_KEY = "orbfall-simulator-v5-roster33";
+  const LEGACY_SAVE_KEYS = ["orbfall-simulator-v3-roster33", "orbfall-simulator-v2"];
+  const PULL_COST = 160;
+  const ORB_METER_LIMIT = 10;
+  const CROWN_HARD_PITY = 80;
+  const CROWN_SOFT_START = 65;
+
+  const characters = [
+    { id:"astra", name:"Astra", stars:3, role:"Support • Dawn", base:6, accent:"#58d6ff", glyph:"A", verse:"She keeps the first light alive." },
+    { id:"brann", name:"Brann", stars:3, role:"Defender • Stone", base:7, accent:"#8ed47c", glyph:"B", verse:"The wall remembers every blow." },
+    { id:"cinder", name:"Cinder", stars:3, role:"Striker • Ember", base:8, accent:"#ff866f", glyph:"C", verse:"Ash moves faster than flame." },
+    { id:"juno", name:"Juno", stars:3, role:"Scout • Gale", base:6, accent:"#73d8f4", glyph:"J", verse:"Every open road whispers her name." },
+    { id:"kestrel", name:"Kestrel", stars:3, role:"Vanguard • Talon", base:7, accent:"#c5dd6a", glyph:"K", verse:"The sky taught him where to strike." },
+    { id:"lumen", name:"Lumen", stars:3, role:"Healer • Prism", base:6, accent:"#8cf1d5", glyph:"L", verse:"A small light can still split the dark." },
+    { id:"morrow", name:"Morrow", stars:3, role:"Controller • Dusk", base:8, accent:"#a985d8", glyph:"M", verse:"Evening gathers quietly in his hands." },
+    { id:"nix", name:"Nix", stars:3, role:"Assassin • Frost", base:7, accent:"#78bbff", glyph:"N", verse:"Winter leaves no footprint behind." },
+    { id:"orin", name:"Orin", stars:3, role:"Defender • Iron", base:8, accent:"#b9c1cf", glyph:"O", verse:"He stands where the line should break." },
+    { id:"piper", name:"Piper", stars:3, role:"Support • Echo", base:6, accent:"#f0a6d7", glyph:"P", verse:"One clear note turns fear aside." },
+    { id:"rook", name:"Rook", stars:3, role:"Vanguard • Ash", base:7, accent:"#d89a73", glyph:"R", verse:"He advances before the smoke settles." },
+
+    { id:"dahlia", name:"Dahlia", stars:4, role:"Controller • Bloom", base:10, accent:"#e681ff", glyph:"D", verse:"Thorns dream beneath her feet." },
+    { id:"echo", name:"Echo", stars:4, role:"Healer • Tide", base:11, accent:"#65e3e2", glyph:"E", verse:"The sea returns what it takes." },
+    { id:"flux", name:"Flux", stars:4, role:"Assassin • Volt", base:12, accent:"#ffd45e", glyph:"F", verse:"Thunder leaves no second shadow." },
+    { id:"selene", name:"Selene", stars:4, role:"Sniper • Lunar", base:10, accent:"#b7b4ff", glyph:"S", verse:"Moonlight finds the narrowest opening." },
+    { id:"thorne", name:"Thorne", stars:4, role:"Defender • Briar", base:11, accent:"#70cf83", glyph:"T", verse:"The garden closes around the uninvited." },
+    { id:"umbra", name:"Umbra", stars:4, role:"Assassin • Shade", base:12, accent:"#8b73c9", glyph:"U", verse:"A shadow is only a door without hinges." },
+    { id:"vela", name:"Vela", stars:4, role:"Support • Comet", base:10, accent:"#ff9fcb", glyph:"V", verse:"Her trail remains after the wish is gone." },
+    { id:"warden", name:"Warden", stars:4, role:"Guardian • Aegis", base:11, accent:"#74a9ff", glyph:"W", verse:"No oath passes through him unguarded." },
+    { id:"xanthe", name:"Xanthe", stars:4, role:"Burst • Venom", base:12, accent:"#b7e663", glyph:"X", verse:"The sweetest color carries the sharpest end." },
+    { id:"yara", name:"Yara", stars:4, role:"Healer • Rain", base:11, accent:"#70d7ff", glyph:"Y", verse:"Rain remembers every wound it touches." },
+    { id:"zephyr", name:"Zephyr", stars:4, role:"Controller • Gale", base:10, accent:"#73e6c5", glyph:"Z", verse:"The battlefield turns when he exhales." },
+
+    { id:"gaia", name:"Gaia", stars:5, role:"Guardian • Terra", base:14, accent:"#67d98d", glyph:"G", verse:"Mountains kneel when she wakes." },
+    { id:"helios", name:"Helios", stars:5, role:"Burst • Solar", base:15, accent:"#ffba47", glyph:"H", verse:"A sun sealed inside a name." },
+    { id:"iris", name:"Iris", stars:5, role:"Tactician • Astral", base:16, accent:"#9f8cff", glyph:"I", verse:"She reads the path before it exists." },
+    { id:"aurelia", name:"Aurelia", stars:5, role:"Sovereign • Aurora", base:14, accent:"#ffe08a", glyph:"Æ", verse:"Dawn wears a crown when she arrives." },
+    { id:"bastion", name:"Bastion", stars:5, role:"Guardian • Void", base:15, accent:"#8294d6", glyph:"β", verse:"The empty dark breaks against his name." },
+    { id:"caligo", name:"Caligo", stars:5, role:"Assassin • Eclipse", base:16, accent:"#c36fff", glyph:"C", verse:"Day vanishes at the edge of his blade." },
+    { id:"draven", name:"Draven", stars:5, role:"Vanguard • Crimson", base:15, accent:"#ff667f", glyph:"D", verse:"He marches to the pulse beneath the world." },
+    { id:"eidolon", name:"Eidolon", stars:5, role:"Tactician • Dream", base:16, accent:"#d399ff", glyph:"E", verse:"Reality follows the shape of her sleep." },
+    { id:"fiora", name:"Fiora", stars:5, role:"Healer • Genesis", base:14, accent:"#75f0b8", glyph:"F", verse:"Life begins again where her hands meet." },
+    { id:"kael", name:"Kael", stars:5, role:"Burst • Tempest", base:15, accent:"#56c7ff", glyph:"K", verse:"Storms borrow their voice from him." },
+    { id:"lyra", name:"Lyra", stars:5, role:"Controller • Aether", base:16, accent:"#f39cff", glyph:"L", verse:"The unseen strings answer only to her." }
+  ];
+
+  const bannerNames = ["Eclipse Accord", "Glass Horizon", "Starless Hymn", "Crown of Rain", "Ashen Meridian", "Midnight Bloom"];
+
+  const bundles = [
+    { id:"spark", name:"Spark Pouch", base:80, bonus:0, price:0.99 },
+    { id:"glimmer", name:"Glimmer Pack", base:400, bonus:40, price:4.99 },
+    { id:"nova", name:"Nova Case", base:1200, bonus:180, price:14.99 },
+    { id:"quasar", name:"Quasar Vault", base:2400, bonus:400, price:29.99 },
+    { id:"nebula", name:"Nebula Crate", base:4000, bonus:900, price:49.99 },
+    { id:"cosmos", name:"Cosmos Reserve", base:8000, bonus:2000, price:99.99 }
+  ];
+
+  /*
+   * One invocation always rolls a base relic. Orb and Sigil channels are independent,
+   * so a single invocation can produce a relic, an Orb, and a Sigil at the same time.
+   * Standard favors Orb acquisition; Limited favors Sigils and featured characters.
+   */
+  const bannerConfig = {
+    standard: {
+      eyebrow: "ARCHIVE // ORB-TUNED",
+      title: "Astral Archive",
+      description: "Old light circles back. Nothing is ever truly lost.",
+      mark: "ARCHIVE",
+      orbDrops: [
+        { amount:4, chance:0.002 },
+        { amount:2, chance:0.012 },
+        { amount:1, chance:0.070 }
+      ],
+      sigilRates: { 3:0.026, 4:0.0075, 5:0.0025 },
+      rateupShare: { 3:0, 4:0, 5:0 },
+      crownSoftStep: 0.060
+    },
+    limited: {
+      eyebrow: "OMEN // SIGIL-TUNED",
+      title: "Veiled Omen",
+      description: "Three names burn brighter. The rest wait beyond the glass.",
+      mark: "OMEN",
+      orbDrops: [
+        { amount:4, chance:0.001 },
+        { amount:2, chance:0.005 },
+        { amount:1, chance:0.035 }
+      ],
+      sigilRates: { 3:0.045, 4:0.015, 5:0.006 },
+      rateupShare: { 3:0.50, 4:0.65, 5:0.75 },
+      crownSoftStep: 0.065
+    }
+  };
+
+  /* ---------- State and migration ---------- */
+  function randomRateUps() {
+    return Object.fromEntries([3,4,5].map(stars => {
+      const pool = characters.filter(c => c.stars === stars);
+      return [stars, pool[Math.floor(Math.random() * pool.length)].id];
+    }));
+  }
+
+  const defaultState = () => ({
+    lumens: 1600,
+    orbs: 32,
+    orbMeter: 0,
+    crownPity: { standard:0, limited:0 },
+    rateGuarantee: { 3:false, 4:false, 5:false },
+    limitedRateUps: randomRateUps(),
+    limitedName: bannerNames[Math.floor(Math.random() * bannerNames.length)],
+    sigilFragments: 0,
+    universalSigils: 0,
+    currentBanner: "standard",
+    sigils: Object.fromEntries(characters.map(c => [c.id, 0])),
+    upgrades: Object.fromEntries(characters.map(c => [c.id, 0])),
+    activeTiers: Object.fromEntries(characters.map(c => [c.id, 0])),
+    enabled: Object.fromEntries(characters.map(c => [c.id, false])),
+    inventory: { credits:0, xp:0, gear2:0, gear3:0, modules:0 },
+    transactions: [],
+    settings: { showPity:true, animationMode:"system", sound:true }
+  });
+
+  let state = loadState();
+  let selectedBundle = null;
+  let pullResults = [];
+  let animationTimer = null;
+  let branchTimer = null;
+  let animationRunning = false;
+  let activeAnimationProfile = null;
+  let audioCtx = null;
+
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => [...root.querySelectorAll(sel)];
+  const fmt = new Intl.NumberFormat("en-US");
+  const money = new Intl.NumberFormat("en-US", { style:"currency", currency:"USD" });
+
+  function loadState() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (raw) return mergeState(raw);
+      for (const legacyKey of LEGACY_SAVE_KEYS) {
+        const legacy = JSON.parse(localStorage.getItem(legacyKey));
+        if (!legacy) continue;
+        const migrated = {
+          ...legacy,
+          currentBanner: legacy.currentBanner === "sigil" ? "limited" : (legacy.currentBanner || "standard"),
+          crownPity: legacy.crownPity || { standard:Number(legacy.sigilPity || 0), limited:Number(legacy.sigilPity || 0) }
+        };
+        return mergeState(migrated);
+      }
+      return defaultState();
+    } catch {
+      return defaultState();
+    }
+  }
+
+  function mergeState(raw) {
+    const fresh = defaultState();
+    const incomingSettings = { ...(raw.settings || {}) };
+    if (!incomingSettings.animationMode && typeof incomingSettings.reduceMotion === "boolean") {
+      incomingSettings.animationMode = incomingSettings.reduceMotion ? "off" : "system";
+    }
+    delete incomingSettings.reduceMotion;
+    return {
+      ...fresh,
+      ...raw,
+      crownPity: { ...fresh.crownPity, ...(raw.crownPity || {}) },
+      rateGuarantee: { ...fresh.rateGuarantee, ...(raw.rateGuarantee || {}) },
+      limitedRateUps: { ...fresh.limitedRateUps, ...(raw.limitedRateUps || {}) },
+      sigils: { ...fresh.sigils, ...(raw.sigils || {}) },
+      upgrades: { ...fresh.upgrades, ...(raw.upgrades || {}) },
+      activeTiers: { ...fresh.activeTiers, ...(raw.activeTiers || {}) },
+      enabled: { ...fresh.enabled, ...(raw.enabled || {}) },
+      inventory: { ...fresh.inventory, ...(raw.inventory || {}) },
+      settings: { ...fresh.settings, ...incomingSettings }
+    };
+  }
+
+  function saveState() {
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch {}
+  }
+
+  /* ---------- Economy helpers ---------- */
+  function charById(id) { return characters.find(c => c.id === id); }
+  function poolByStars(stars) { return characters.filter(c => c.stars === Number(stars)); }
+  function activeSurcharge(tier) { return tier <= 2 ? 0 : tier <= 4 ? 1 : tier === 5 ? 2 : 3; }
+  function orbCost(c) { return c.base + activeSurcharge(state.activeTiers[c.id]); }
+  function totalDelegated() { return characters.reduce((sum, c) => sum + (state.enabled[c.id] ? orbCost(c) : 0), 0); }
+  function availableOrbs() { return state.orbs - totalDelegated(); }
+  function ownedCharacterSigils() { return Object.values(state.sigils).reduce((a,b) => a+b, 0); }
+  function totalSigils() { return ownedCharacterSigils() + state.universalSigils; }
+  function totalSpentUSD() { return state.transactions.reduce((sum, entry) => sum + Number(entry.amount || 0), 0); }
+  function currentConfig() { return bannerConfig[state.currentBanner]; }
+  function percent(n, digits=1) { return `${(n * 100).toFixed(digits)}%`; }
+
+  function crownRate(banner, nextPull) {
+    const cfg = bannerConfig[banner];
+    if (nextPull >= CROWN_HARD_PITY) return 1;
+    if (nextPull <= CROWN_SOFT_START) return cfg.sigilRates[5];
+    return Math.min(1, cfg.sigilRates[5] + cfg.crownSoftStep * (nextPull - CROWN_SOFT_START));
+  }
+
+  function orbBloomChance(banner) {
+    return bannerConfig[banner].orbDrops.reduce((sum, drop) => sum + drop.chance, 0);
+  }
+
+  function sigilTraceChance(banner) {
+    const rates = bannerConfig[banner].sigilRates;
+    return rates[3] + rates[4] + rates[5];
+  }
+
+  /* ---------- Motion preference ---------- */
+  const systemMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+  function motionMode() {
+    return ["off", "system", "on"].includes(state.settings.animationMode) ? state.settings.animationMode : "system";
+  }
+
+  function motionIsReduced() {
+    const mode = motionMode();
+    return mode === "off" || (mode === "system" && systemMotionQuery.matches);
+  }
+
+  function applyMotionMode() {
+    const mode = motionMode();
+    document.body.classList.remove("motion-off", "motion-system", "motion-on", "reduce-motion");
+    document.body.classList.add(`motion-${mode}`);
+  }
+
+  /* ---------- Rendering ---------- */
+  function renderAll() {
+    applyMotionMode();
+    const delegated = totalDelegated();
+    const remaining = availableOrbs();
+    const orbLoad = `${fmt.format(remaining)} / ${fmt.format(state.orbs)}`;
+    const spent = money.format(totalSpentUSD());
+    $("#walletLumens").textContent = fmt.format(state.lumens);
+    $("#walletOrbs").textContent = orbLoad;
+    $("#walletSigils").textContent = fmt.format(ownedCharacterSigils());
+    $("#walletUniversalSigils").textContent = fmt.format(state.universalSigils);
+    $("#walletSpent").textContent = spent;
+
+    $$(".banner-tab").forEach(button => button.classList.toggle("active", button.dataset.banner === state.currentBanner));
+    const cfg = currentConfig();
+    const isLimited = state.currentBanner === "limited";
+    $("#bannerPanel").classList.toggle("limited-mode", isLimited);
+    $("#bannerPanel").classList.toggle("standard-mode", !isLimited);
+    const featuredFive = charById(state.limitedRateUps[5]);
+    $("#bannerEyebrow").textContent = cfg.eyebrow;
+    $("#bannerTitle").textContent = isLimited ? `${featuredFive.name} // ${state.limitedName}` : cfg.title;
+    $("#bannerDescription").textContent = cfg.description;
+    $("#rerollBanner").classList.toggle("hidden", !isLimited);
+    $("#rateupStrip").classList.toggle("hidden", !isLimited);
+    if (isLimited) renderRateUps();
+
+    $("#bannerFacts").innerHTML = bannerFacts().map(text => `<span class="fact-pill">${escapeHtml(text)}</span>`).join("");
+    const crown = state.crownPity[state.currentBanner];
+    $("#orbMeterText").textContent = `${state.orbMeter} / ${ORB_METER_LIMIT}`;
+    $("#sigilMeterText").textContent = `${crown} / ${CROWN_HARD_PITY} • ${percent(crownRate(state.currentBanner, crown + 1))}`;
+    $("#orbMeterFill").style.width = `${(state.orbMeter / ORB_METER_LIMIT) * 100}%`;
+    $("#sigilMeterFill").style.width = `${(crown / CROWN_HARD_PITY) * 100}%`;
+    $("#pityMeters").classList.toggle("hidden", !state.settings.showPity);
+
+    renderRoster();
+    renderInventory();
+    renderTransactions();
+    renderRates();
+    syncSettings();
+    saveState();
+  }
+
+  function bannerFacts() {
+    if (state.currentBanner === "standard") {
+      return ["Orb-rich", "All 33 Sigils", "Crown at 80", "Orb at 10"];
+    }
+    return ["Sigil-rich", "3★ 50% rate-up", "4★ 65% rate-up", "5★ 75% rate-up"];
+  }
+
+  function renderRateUps() {
+    $("#rateupStrip").innerHTML = [5,4,3].map(stars => {
+      const c = charById(state.limitedRateUps[stars]);
+      return `<div class="rateup-chip rate-${stars}" style="--accent:${c.accent};--sweep-delay:${(5-stars)*.55}s"><div class="mini-avatar">${c.glyph}</div><div><b>${escapeHtml(c.name)}</b><small>${"★".repeat(stars)} RATE-UP</small></div></div>`;
+    }).join("");
+  }
+
+  function renderRoster() {
+    const rosterCount = $("#rosterCount");
+    if (rosterCount) rosterCount.textContent = characters.length;
+    const ordered = [...characters].sort((a, b) =>
+      (b.stars - a.stars) ||
+      ((state.sigils[b.id] || 0) - (state.sigils[a.id] || 0)) ||
+      ((state.activeTiers[b.id] || 0) - (state.activeTiers[a.id] || 0)) ||
+      a.name.localeCompare(b.name, "en-US")
+    );
+    $("#rosterGrid").innerHTML = ordered.map(c => {
+      const sigils = state.sigils[c.id];
+      const upgrade = state.upgrades[c.id];
+      const enabled = state.enabled[c.id];
+      const cost = orbCost(c);
+      const tierOptions = Array.from({length: upgrade + 1}, (_, i) => `<option value="${i}" ${state.activeTiers[c.id] === i ? "selected" : ""}>Echo ${i}${i === upgrade && i > 0 ? " ✦" : ""}</option>`).join("");
+      return `<article class="char-card star-${c.stars}" data-character="${c.id}" style="--accent:${c.accent}">
+        <span class="char-aura" aria-hidden="true"></span>
+        <span class="rarity-crest">${"★".repeat(c.stars)}</span>
+        <div class="char-top">
+          <div class="avatar">${c.glyph}</div>
+          <div><h3 class="char-name">${escapeHtml(c.name)}</h3><div class="stars">${"★".repeat(c.stars)}</div><div class="role">${escapeHtml(c.role)}</div></div>
+        </div>
+        <div class="char-stats">
+          <div class="char-stat"><small>Load</small><b>${cost}</b></div>
+          <div class="char-stat"><small>Echo</small><b>${upgrade}/6</b></div>
+          <div class="char-stat"><small>Sigil</small><b>${sigils}</b></div>
+        </div>
+        <div class="char-verse">${escapeHtml(c.verse)}</div>
+        <div class="char-actions">
+          <select data-tier="${c.id}" aria-label="Echo tier for ${escapeHtml(c.name)}">${tierOptions}</select>
+          <div class="row">
+            <button class="${enabled ? "danger-btn" : "primary-btn"}" data-enable="${c.id}">${enabled ? "Release" : `Bind ${cost}`}</button>
+            <button class="ghost-btn" data-upgrade="${c.id}" ${upgrade >= 6 ? "disabled" : ""}>${upgrade >= 6 ? "Complete" : "Ascend"}</button>
+          </div>
+        </div>
+        ${enabled ? `<span class="enabled-badge">BOUND</span>` : ""}
+      </article>`;
+    }).join("");
+
+    $$('[data-enable]').forEach(button => button.addEventListener("click", () => toggleEnable(button.dataset.enable)));
+    $$('[data-upgrade]').forEach(button => button.addEventListener("click", () => upgradeCharacter(button.dataset.upgrade)));
+    $$('[data-tier]').forEach(select => select.addEventListener("change", () => setActiveTier(select.dataset.tier, Number(select.value))));
+  }
+
+  function renderInventory() {
+    const items = [
+      ["🪙", "Credits", state.inventory.credits],
+      ["📘", "Memory Shards", state.inventory.xp],
+      ["🛡️", "2★ Relics", state.inventory.gear2],
+      ["⚔️", "3★ Relics", state.inventory.gear3],
+      ["🧩", "Sigil Fragments", state.sigilFragments],
+      ["⚙️", "Echo Cores", state.inventory.modules]
+    ];
+    $("#inventoryGrid").innerHTML = items.map(([icon,name,count]) => `<div class="inventory-item"><div class="big">${icon}</div><b>${escapeHtml(name)}</b><span>${fmt.format(count)}</span></div>`).join("");
+  }
+
+  function renderTransactions() {
+    const rows = state.transactions.slice(0, 10);
+    $("#transactionBody").innerHTML = rows.length
+      ? rows.map(t => `<tr><td>${escapeHtml(new Date(t.date).toLocaleString("en-US"))}</td><td>${escapeHtml(t.receipt)}</td><td>${escapeHtml(t.bundle)}</td><td>${money.format(t.amount)}</td></tr>`).join("")
+      : `<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:22px">The ledger sleeps.</td></tr>`;
+  }
+
+  function renderRates() {
+    const featured = [5,4,3].map(stars => charById(state.limitedRateUps[stars]));
+    $("#ratesContent").innerHTML = `
+      <section class="rate-section">
+        <h3>Astral Archive</h3>
+        <table class="rate-table"><tbody>
+          <tr><td>+1 Orb</td><td>7.0%</td></tr>
+          <tr><td>+2 Orb</td><td>1.2%</td></tr>
+          <tr><td>+4 Orb</td><td>0.2%</td></tr>
+          <tr><td>3★ Sigil</td><td>2.60%</td></tr>
+          <tr><td>4★ Sigil</td><td>0.75%</td></tr>
+          <tr><td>5★ Sigil</td><td>0.25%</td></tr>
+        </tbody></table>
+      </section>
+      <section class="rate-section">
+        <h3>${escapeHtml(state.limitedName)}</h3>
+        <table class="rate-table"><tbody>
+          <tr><td>+1 Orb</td><td>3.5%</td></tr>
+          <tr><td>+2 Orb</td><td>0.5%</td></tr>
+          <tr><td>+4 Orb</td><td>0.1%</td></tr>
+          <tr><td>3★ Sigil · ${escapeHtml(featured[2].name)} 50%</td><td>4.50%</td></tr>
+          <tr><td>4★ Sigil · ${escapeHtml(featured[1].name)} 65%</td><td>1.50%</td></tr>
+          <tr><td>5★ Sigil · ${escapeHtml(featured[0].name)} 75%</td><td>0.60%</td></tr>
+        </tbody></table>
+      </section>
+      <section class="rate-section">
+        <table class="rate-table"><tbody>
+          <tr><td>Orb Tide</td><td>10</td></tr>
+          <tr><td>Crown soft echo</td><td>66</td></tr>
+          <tr><td>Crown certainty</td><td>80</td></tr>
+          <tr><td>Rate-up miss</td><td>Next same rarity</td></tr>
+        </tbody></table>
+      </section>`;
+  }
+
+  /* ---------- Roster interactions ---------- */
+  function playCharacterAction(id, type, level=0, delay=0, withSound=true) {
+    if (motionIsReduced()) return;
+    window.setTimeout(() => {
+      const card = document.querySelector(`[data-character="${id}"]`);
+      if (!card) return;
+      const c = charById(id);
+      const duration = type === "ascend" ? 1180 : 860;
+      card.classList.remove("action-bind", "action-release", "action-ascend");
+      void card.offsetWidth;
+      card.classList.add(`action-${type}`);
+
+      const rect = card.getBoundingClientRect();
+      const fx = document.createElement("div");
+      const label = type === "ascend" ? `Echo ${level}` : type === "bind" ? "Bound" : "Released";
+      fx.className = `character-action-fx ${type}`;
+      fx.style.left = `${rect.left}px`;
+      fx.style.top = `${rect.top}px`;
+      fx.style.width = `${rect.width}px`;
+      fx.style.height = `${rect.height}px`;
+      fx.style.setProperty("--tone", type === "ascend" ? "#ffd36e" : c.accent);
+      fx.innerHTML = `<span class="action-ring r1"></span><span class="action-ring r2"></span><span class="action-ring r3"></span><b class="action-glyph">${label}</b>${Array.from({length:type === "ascend" ? 18 : 12}, (_, i) => `<i class="action-particle" style="--angle:${i * (360 / (type === "ascend" ? 18 : 12))}deg;--delay:${(i % 6) * 24}ms"></i>`).join("")}`;
+      $("#characterActionLayer").appendChild(fx);
+      if (withSound) playTone(type);
+      window.setTimeout(() => {
+        fx.remove();
+        card.classList.remove(`action-${type}`);
+      }, duration + 160);
+    }, delay);
+  }
+
+  function toggleEnable(id) {
+    const c = charById(id);
+    let action;
+    if (state.enabled[id]) {
+      const returned = orbCost(c);
+      state.enabled[id] = false;
+      action = "release";
+      toast(`${c.name} returns ${returned} Orb.`, "good");
+    } else {
+      const cost = orbCost(c);
+      if (availableOrbs() < cost) return toast(`${cost - availableOrbs()} Orb short.`, "bad");
+      state.enabled[id] = true;
+      action = "bind";
+      toast(`${c.name} is bound.`, "good");
+    }
+    renderAll();
+    playCharacterAction(id, action);
+  }
+
+  function upgradeCharacter(id) {
+    const c = charById(id);
+    if (state.upgrades[id] >= 6) return;
+    if (state.sigils[id] > 0) state.sigils[id]--;
+    else if (state.universalSigils > 0) state.universalSigils--;
+    else return toast(`${c.name} has no Sigil.`, "bad");
+    state.upgrades[id]++;
+    const newLevel = state.upgrades[id];
+    toast(`${c.name} reaches Echo ${newLevel}.`, "good");
+    renderAll();
+    playCharacterAction(id, "ascend", newLevel);
+  }
+
+  function setActiveTier(id, tier) {
+    const c = charById(id);
+    const oldTier = state.activeTiers[id];
+    const oldCost = c.base + activeSurcharge(oldTier);
+    const newCost = c.base + activeSurcharge(tier);
+    if (state.enabled[id] && newCost > oldCost && availableOrbs() < (newCost - oldCost)) {
+      toast("The constellation cannot hold.", "bad");
+      renderAll();
+      return;
+    }
+    state.activeTiers[id] = tier;
+    renderAll();
+  }
+
+  /* ---------- Pull outcome generation ---------- */
+  function reward(icon, name, subtitle, rarity, meta={}) {
+    return { icon, name, subtitle, rarity, ...meta };
+  }
+
+  function generateBaseReward() {
+    const r = Math.random();
+    if (r < 0.44) {
+      const n = randomInt(700, 1500);
+      state.inventory.credits += n;
+      return reward("🪙", `${fmt.format(n)} Credits`, "Dust", 1);
+    }
+    if (r < 0.68) {
+      const n = randomInt(3, 8);
+      state.inventory.xp += n;
+      return reward("📘", `${n} Memory Shard`, "Memory", 1);
+    }
+    if (r < 0.84) {
+      state.inventory.gear2++;
+      return reward("🛡️", "2★ Relic", "Steel", 2);
+    }
+    if (r < 0.95) {
+      state.inventory.gear3++;
+      return reward("⚔️", "3★ Relic", "Steel", 3);
+    }
+    if (r < 0.985) {
+      state.inventory.modules++;
+      return reward("⚙️", "Echo Core", "Resonance", 4);
+    }
+
+    const n = randomInt(2, 5);
+    state.sigilFragments += n;
+    let converted = 0;
+    while (state.sigilFragments >= 100) {
+      state.sigilFragments -= 100;
+      state.universalSigils++;
+      converted++;
+    }
+    return reward("🧩", `${n} Sigil Fragment`, converted ? "+1 Wild Sigil" : "Fragment", 4);
+  }
+
+  /* A single mutually-exclusive Orb bonus is rolled in addition to the ten-pull meter. */
+  function rollOrbBonus() {
+    const drops = currentConfig().orbDrops;
+    const r = Math.random();
+    let cursor = 0;
+    for (const drop of drops) {
+      cursor += drop.chance;
+      if (r < cursor) {
+        state.orbs += drop.amount;
+        return reward("🔵", `+${drop.amount} Orb`, "Orb", drop.amount >= 4 ? 5 : 4, { kind:"orb", amount:drop.amount });
+      }
+    }
+    return null;
+  }
+
+  function pickSigilCharacter(stars) {
+    const pool = poolByStars(stars);
+    if (state.currentBanner === "standard") {
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    const featured = charById(state.limitedRateUps[stars]);
+    const guaranteed = state.rateGuarantee[stars];
+    const hitFeatured = guaranteed || Math.random() < bannerConfig.limited.rateupShare[stars];
+    if (hitFeatured) {
+      state.rateGuarantee[stars] = false;
+      return featured;
+    }
+
+    state.rateGuarantee[stars] = true;
+    const offRate = pool.filter(c => c.id !== featured.id);
+    return offRate[Math.floor(Math.random() * offRate.length)];
+  }
+
+  /*
+   * Crown pity only tracks 5★ Sigils. Lower rarities remain naturally more common.
+   * Limited misses create a same-rarity featured guarantee that survives banner shifts.
+   */
+  function rollSigil() {
+    const banner = state.currentBanner;
+    const cfg = currentConfig();
+    const nextCrown = state.crownPity[banner] + 1;
+    const fiveHit = Math.random() < crownRate(banner, nextCrown) || nextCrown >= CROWN_HARD_PITY;
+
+    if (fiveHit) {
+      const c = pickSigilCharacter(5);
+      state.sigils[c.id]++;
+      state.crownPity[banner] = 0;
+      return reward("🜲", `${c.name} Sigil`, "★★★★★", 5, { kind:"sigil", stars:5, characterId:c.id });
+    }
+
+    state.crownPity[banner]++;
+    const r = Math.random();
+    if (r < cfg.sigilRates[4]) {
+      const c = pickSigilCharacter(4);
+      state.sigils[c.id]++;
+      return reward("🜲", `${c.name} Sigil`, "★★★★", 4, { kind:"sigil", stars:4, characterId:c.id });
+    }
+    if (r < cfg.sigilRates[4] + cfg.sigilRates[3]) {
+      const c = pickSigilCharacter(3);
+      state.sigils[c.id]++;
+      return reward("🜲", `${c.name} Sigil`, "★★★", 3, { kind:"sigil", stars:3, characterId:c.id });
+    }
+    return null;
+  }
+
+  function performPull(count) {
+    const cost = count * PULL_COST;
+    if (state.lumens < cost) {
+      toast(`${fmt.format(cost - state.lumens)} Lumens short.`, "bad");
+      openModal("storeModal");
+      return;
+    }
+
+    state.lumens -= cost;
+    pullResults = [];
+
+    for (let i = 0; i < count; i++) {
+      pullResults.push(generateBaseReward());
+
+      const orbBonus = rollOrbBonus();
+      if (orbBonus) pullResults.push(orbBonus);
+
+      state.orbMeter++;
+      if (state.orbMeter >= ORB_METER_LIMIT) {
+        state.orbMeter -= ORB_METER_LIMIT;
+        state.orbs++;
+        /* Guaranteed +1 uses the same card rarity and exact naming as a random +1. */
+        pullResults.push(reward("🔵", "+1 Orb", "Orb", 4, { kind:"orb", amount:1 }));
+      }
+
+      const sigil = rollSigil();
+      if (sigil) pullResults.push(sigil);
+    }
+
+    saveState();
+    startPullAnimation(pullResults);
+  }
+
+  /* ---------- Limited banner regeneration ---------- */
+  function regenerateLimitedBanner() {
+    const previous = { ...state.limitedRateUps };
+    const next = randomRateUps();
+    [3,4,5].forEach(stars => {
+      if (next[stars] === previous[stars]) {
+        const pool = poolByStars(stars).filter(c => c.id !== previous[stars]);
+        next[stars] = pool[Math.floor(Math.random() * pool.length)].id;
+      }
+    });
+    state.limitedRateUps = next;
+    const names = bannerNames.filter(name => name !== state.limitedName);
+    state.limitedName = names[Math.floor(Math.random() * names.length)];
+    toast("The omen shifts.", "good");
+    renderAll();
+  }
+
+  /* ---------- Pull animation ---------- */
+  function animationProfile(results) {
+    const maxOrb = Math.max(0, ...results.filter(r => r.kind === "orb").map(r => Number(r.amount || 0)));
+    const highestSigil = Math.max(0, ...results.filter(r => r.kind === "sigil").map(r => Number(r.stars || 0)));
+    if (highestSigil >= 5 || maxOrb >= 4) {
+      return { tier:"tier-5", orbHeavy:maxOrb >= 4, duration:5900, branchDelay:1400, streaks:92, branchTone:"apex-charge", tone:"apex", title:highestSigil >= 5 ? "Crownfall" : "Tidebreak" };
+    }
+    if (highestSigil >= 4 || maxOrb >= 2) {
+      return { tier:"tier-4", orbHeavy:maxOrb >= 2, duration:4450, branchDelay:1400, streaks:64, branchTone:"rare-charge", tone:"rare", title:maxOrb >= 2 ? "Tide Surges" : "Resonance" };
+    }
+    return { tier:"tier-base", orbHeavy:false, duration:3050, branchDelay:1400, streaks:42, branchTone:null, tone:"reveal", title:"Claimed" };
+  }
+
+  function rewardCardClasses(result) {
+    const classes = ["reward-card", `r${result.rarity}`];
+    if (result.kind === "orb") {
+      const amount = Number(result.amount || 0);
+      classes.push("orb-card", `orb-${amount}`);
+      if (amount >= 2) classes.push("orb-heavy");
+    }
+    if (result.kind === "sigil") {
+      const stars = Number(result.stars || 0);
+      classes.push("sigil-card", `sigil-${stars}`);
+      if (stars >= 5) classes.push("apex");
+    }
+    return classes.join(" ");
+  }
+
+  function rewardRarityMark(result) {
+    if (result.kind === "sigil") return `${"★".repeat(Number(result.stars || result.rarity))} SIGIL`;
+    if (result.kind === "orb") {
+      const amount = Number(result.amount || 0);
+      return amount >= 4 ? "GRAND TIDE" : amount >= 2 ? "HIGH TIDE" : "ORB";
+    }
+    return ["COMMON", "TEMPERED", "RADIANT", "EXALTED", "MYTHIC"][Math.max(0, Number(result.rarity || 1) - 1)];
+  }
+
+  function rewardSparks(result, cardIndex) {
+    const count = result.rarity >= 5 ? 16 : result.rarity >= 4 ? 10 : result.rarity >= 3 ? 5 : 0;
+    if (!count) return "";
+    return Array.from({ length:count }, (_, sparkIndex) => {
+      const angle = ((sparkIndex * 137.5) + (cardIndex * 31)) * Math.PI / 180;
+      const radius = 26 + (sparkIndex % 5) * 12;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius * .72;
+      const size = 2 + (sparkIndex % 3);
+      const speed = 1.2 + (sparkIndex % 4) * .32;
+      const delay = ((sparkIndex * .17) + (cardIndex * .04)) % 1.4;
+      return `<span style="--x:${x.toFixed(1)}px;--y:${y.toFixed(1)}px;--size:${size}px;--spark-speed:${speed.toFixed(2)}s;--spark-delay:${delay.toFixed(2)}s"></span>`;
+    }).join("");
+  }
+
+  function rewardCardMarkup(result, index) {
+    return `<div class="${rewardCardClasses(result)}" style="--delay:${Math.min(index, 18) * (motionIsReduced() ? 0 : .055)}s">
+      <span class="rarity-mark">${escapeHtml(rewardRarityMark(result))}</span>
+      <span class="reward-frame"></span>
+      <span class="reward-rune"></span>
+      <span class="reward-sparks">${rewardSparks(result, index)}</span>
+      <div class="reward-icon">${result.icon}</div>
+      <b>${escapeHtml(result.name)}</b>
+      <small>${escapeHtml(result.subtitle)}</small>
+    </div>`;
+  }
+
+  function startPullAnimation(results) {
+    animationRunning = true;
+    activeAnimationProfile = animationProfile(results);
+    const scene = $("#summonScene");
+    scene.className = "summon-scene prelude";
+    scene.style.display = "grid";
+    $("#rewardScene").classList.remove("visible", "apex");
+    $("#pullOverlay").classList.add("active");
+
+    /* Off and System-reduced reveal immediately without an intermediate cinematic frame. */
+    if (motionIsReduced()) {
+      scene.style.display = "none";
+      clearTimeout(branchTimer);
+      clearTimeout(animationTimer);
+      animationTimer = setTimeout(() => showRewards(results), 32);
+      return;
+    }
+
+    createStreaks(30);
+    playTone("charge");
+    clearTimeout(branchTimer);
+    branchTimer = setTimeout(() => {
+      if (!animationRunning) return;
+      scene.className = `summon-scene reveal-phase ${activeAnimationProfile.tier}${activeAnimationProfile.orbHeavy ? " orb-heavy" : ""}`;
+      /* Preserve the neutral field and layer the rarity density in gradually. */
+      createStreaks(Math.max(0, activeAnimationProfile.streaks - 30), true);
+      if (activeAnimationProfile.branchTone) playTone(activeAnimationProfile.branchTone);
+    }, activeAnimationProfile.branchDelay);
+    clearTimeout(animationTimer);
+    animationTimer = setTimeout(() => showRewards(results), activeAnimationProfile.duration);
+  }
+
+  function showRewards(results) {
+    if (!animationRunning) return;
+    animationRunning = false;
+    clearTimeout(animationTimer);
+    clearTimeout(branchTimer);
+    $("#summonScene").style.display = "none";
+    const rewardScene = $("#rewardScene");
+    rewardScene.classList.add("visible");
+    rewardScene.classList.toggle("apex", activeAnimationProfile?.tier === "tier-5");
+    $("#rewardTitle").textContent = activeAnimationProfile?.title || "Claimed";
+    $("#rewardGrid").innerHTML = results.map(rewardCardMarkup).join("");
+    playTone(activeAnimationProfile?.tone || "reveal");
+    renderAll();
+  }
+
+  function closeRewards() {
+    $("#pullOverlay").classList.remove("active");
+    $("#rewardScene").classList.remove("visible", "apex");
+    clearTimeout(branchTimer);
+    const scene = $("#summonScene");
+    scene.className = "summon-scene";
+    scene.style.display = "grid";
+    activeAnimationProfile = null;
+  }
+
+  function createStreaks(count=38, append=false) {
+    const holder = $("#streaks");
+    if (!append) holder.innerHTML = "";
+    const existing = holder.children.length;
+    const total = Math.max(1, existing + count);
+    for (let i = 0; i < count; i++) {
+      const streak = document.createElement("span");
+      streak.className = "streak";
+      streak.style.setProperty("--r", `${(existing + i) * (360 / total)}deg`);
+      streak.style.setProperty("--w", `${2 + Math.random() * 3}px`);
+      streak.style.setProperty("--h", `${90 + Math.random() * 130}px`);
+      streak.style.setProperty("--speed", `${.72 + Math.random() * .88}s`);
+      streak.style.animationDelay = `${Math.random() * 1.1}s`;
+      const targetOpacity = (.28 + Math.random() * .72).toFixed(2);
+      streak.style.opacity = append ? "0" : targetOpacity;
+      holder.appendChild(streak);
+      if (append) requestAnimationFrame(() => { streak.style.opacity = targetOpacity; });
+    }
+  }
+
+  function playTone(type) {
+    if (!state.settings.sound) return;
+    try {
+      audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+      const now = audioCtx.currentTime;
+      const profiles = {
+        charge: { notes:[[170,620]], duration:.65, gain:.10 },
+        "rare-charge": { notes:[[150,760],[300,1040]], duration:1.0, gain:.09 },
+        "apex-charge": { notes:[[110,980],[220,1320],[440,1760]], duration:1.45, gain:.075 },
+        reveal: { notes:[[440,760]], duration:.38, gain:.10 },
+        rare: { notes:[[560,1120],[840,1680]], duration:.8, gain:.075 },
+        apex: { notes:[[420,1260],[630,1890],[840,2520]], duration:1.2, gain:.065 },
+        bind: { notes:[[220,520],[440,760]], duration:.58, gain:.065 },
+        release: { notes:[[620,260],[390,180]], duration:.58, gain:.055 },
+        ascend: { notes:[[260,880],[520,1420],[780,1960]], duration:1.0, gain:.058 }
+      };
+      const profile = profiles[type] || profiles.reveal;
+      profile.notes.forEach(([from,to], index) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = index === 0 ? "sine" : "triangle";
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.frequency.setValueAtTime(from, now);
+        osc.frequency.exponentialRampToValueAtTime(to, now + profile.duration);
+        gain.gain.setValueAtTime(.0001, now);
+        gain.gain.exponentialRampToValueAtTime(profile.gain, now + .035 + index * .02);
+        gain.gain.exponentialRampToValueAtTime(.0001, now + profile.duration);
+        osc.start(now);
+        osc.stop(now + profile.duration + .03);
+      });
+    } catch {}
+  }
+
+  /* ---------- Demo storefront ---------- */
+  function renderStore() {
+    $("#bundleGrid").innerHTML = bundles.map(bundle => `<button class="bundle" data-bundle="${bundle.id}"><div class="gem">💎</div><h3>${escapeHtml(bundle.name)}</h3><div>${fmt.format(bundle.base + bundle.bonus)} Lumens</div><div class="bonus">${bundle.bonus ? `+${fmt.format(bundle.bonus)} Veil Bonus` : "First Spark"}</div><div class="price">${money.format(bundle.price)}</div></button>`).join("");
+    $$('[data-bundle]').forEach(button => button.addEventListener("click", () => beginCheckout(button.dataset.bundle)));
+  }
+
+  function beginCheckout(id) {
+    selectedBundle = bundles.find(bundle => bundle.id === id);
+    closeModal("storeModal");
+    $("#paymentStatus").textContent = "";
+    $("#payButton").disabled = false;
+    $("#payButton").textContent = "Seal Purchase";
+    $("#orderSummary").innerHTML = `<h3 style="margin-top:0">Offering</h3>
+      <div class="order-line"><span>${escapeHtml(selectedBundle.name)}</span><span>${money.format(selectedBundle.price)}</span></div>
+      <div class="order-line"><span>Lumens</span><span>${fmt.format(selectedBundle.base + selectedBundle.bonus)}</span></div>
+      <div class="order-line"><span>Tax</span><span>${money.format(0)}</span></div>
+      <div class="order-line total"><span>Total</span><span>${money.format(selectedBundle.price)}</span></div>`;
+    openModal("checkoutModal");
+  }
+
+  /* This local service mirrors intent/authorization/entitlement stages but never calls a network or charges money. */
+  const paymentService = {
+    async createPaymentIntent(bundle) {
+      await wait(450);
+      return { id:`pi_${cryptoId()}`, amount:bundle.price, currency:"USD", status:"requires_confirmation" };
+    },
+    async authorize(intent, cardDigits) {
+      await wait(750);
+      if (cardDigits === "4000000000000002") throw new Error("The vault refused this line.");
+      if (cardDigits !== "4242424242424242") throw new Error("Trial line not recognized.");
+      return { ...intent, status:"succeeded", authorization:`auth_${cryptoId()}` };
+    },
+    async grantEntitlement(payment, bundle) {
+      await wait(400);
+      return { paymentId:payment.id, lumens:bundle.base + bundle.bonus, receipt:`VEIL-${cryptoId().slice(0,8).toUpperCase()}` };
+    }
+  };
+
+  async function submitPayment(event) {
+    event.preventDefault();
+    if (!selectedBundle) return;
+    const cardDigits = $("#cardNumber").value.replace(/\D/g, "");
+    if (!/^\d{16}$/.test(cardDigits)) return setPaymentStatus("The card line is incomplete.", true);
+    if (!/^\d{2}\/\d{2}$/.test($("#cardExpiry").value)) return setPaymentStatus("The expiry seal is broken.", true);
+    if (!/^\d{3,4}$/.test($("#cardCvc").value)) return setPaymentStatus("The cipher is incomplete.", true);
+
+    const payButton = $("#payButton");
+    payButton.disabled = true;
+    try {
+      setPaymentStatus("Opening the vault…");
+      const intent = await paymentService.createPaymentIntent(selectedBundle);
+      setPaymentStatus("Reading the seal…");
+      const confirmed = await paymentService.authorize(intent, cardDigits);
+      setPaymentStatus("Drawing Lumens…");
+      const grant = await paymentService.grantEntitlement(confirmed, selectedBundle);
+      state.lumens += grant.lumens;
+      state.transactions.unshift({ date:new Date().toISOString(), receipt:grant.receipt, bundle:selectedBundle.name, amount:selectedBundle.price, lumens:grant.lumens });
+      saveState();
+      setPaymentStatus(`${fmt.format(grant.lumens)} Lumens answer the call.`);
+      payButton.textContent = "Sealed";
+      playTone("rare");
+      renderAll();
+      setTimeout(() => {
+        closeModal("checkoutModal");
+        toast(`+${fmt.format(grant.lumens)} Lumens`, "good");
+      }, 850);
+    } catch (error) {
+      setPaymentStatus(error.message || "The link collapsed.", true);
+      payButton.disabled = false;
+      payButton.textContent = "Try Again";
+    }
+  }
+
+  function setPaymentStatus(text, error=false) {
+    const el = $("#paymentStatus");
+    el.textContent = text;
+    el.style.color = error ? "var(--red)" : "var(--muted)";
+  }
+
+  /* ---------- Utilities and wiring ---------- */
+  function openModal(id) { $("#" + id).classList.add("open"); }
+  function closeModal(id) { $("#" + id).classList.remove("open"); }
+  function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+  function randomInt(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+  function cryptoId() {
+    if (window.crypto?.getRandomValues) {
+      const array = new Uint32Array(2);
+      crypto.getRandomValues(array);
+      return [...array].map(value => value.toString(16).padStart(8, "0")).join("");
+    }
+    return Math.random().toString(16).slice(2) + Date.now().toString(16);
+  }
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>'"]/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[char]));
+  }
+  function toast(message, type="") {
+    const el = document.createElement("div");
+    el.className = `toast ${type}`;
+    el.textContent = message;
+    $("#toastStack").appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+  function syncSettings() {
+    $("#settingMeters").checked = state.settings.showPity;
+    const mode = motionMode();
+    const control = $("#settingMotion");
+    control.dataset.mode = mode;
+    $$("[data-motion]", control).forEach(button => {
+      const selected = button.dataset.motion === mode;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-checked", String(selected));
+    });
+    $("#settingSound").checked = state.settings.sound;
+  }
+
+  $$(".banner-tab").forEach(button => button.addEventListener("click", () => {
+    state.currentBanner = button.dataset.banner;
+    renderAll();
+  }));
+  $$('[data-pulls]').forEach(button => button.addEventListener("click", () => performPull(Number(button.dataset.pulls))));
+  $("#rerollBanner").addEventListener("click", regenerateLimitedBanner);
+  $("#ratesButton").addEventListener("click", () => openModal("ratesModal"));
+  $("#storeButton").addEventListener("click", () => openModal("storeModal"));
+  $("#settingsButton").addEventListener("click", () => openModal("settingsModal"));
+  $("#checkoutForm").addEventListener("submit", submitPayment);
+  $("#continueButton").addEventListener("click", closeRewards);
+  $("#pullOverlay").addEventListener("pointerdown", event => {
+    if (animationRunning) {
+      event.preventDefault();
+      showRewards(pullResults);
+    }
+  });
+  $("#undelegateAll").addEventListener("click", () => {
+    const released = characters.filter(c => state.enabled[c.id]).map(c => c.id);
+    characters.forEach(c => { state.enabled[c.id] = false; });
+    toast("The constellation opens.", "good");
+    renderAll();
+    if (released.length) playTone("release");
+    released.forEach((id, index) => playCharacterAction(id, "release", 0, Math.min(index * 55, 500), false));
+  });
+  $("#restorePurchases").addEventListener("click", () => toast("The ledger remembers.", "good"));
+  $("#settingMeters").addEventListener("change", event => { state.settings.showPity = event.target.checked; renderAll(); });
+  $("#settingMotion").addEventListener("click", event => {
+    const button = event.target.closest("[data-motion]");
+    if (!button) return;
+    state.settings.animationMode = button.dataset.motion;
+    renderAll();
+  });
+  $("#settingSound").addEventListener("change", event => { state.settings.sound = event.target.checked; renderAll(); });
+  const handleSystemMotionChange = () => {
+    if (motionMode() === "system") {
+      applyMotionMode();
+      syncSettings();
+    }
+  };
+  if (systemMotionQuery.addEventListener) systemMotionQuery.addEventListener("change", handleSystemMotionChange);
+  else if (systemMotionQuery.addListener) systemMotionQuery.addListener(handleSystemMotionChange);
+  $("#resetSave").addEventListener("click", () => {
+    if (confirm("Sever this memory?")) {
+      state = defaultState();
+      saveState();
+      closeModal("settingsModal");
+      renderAll();
+      toast("A new memory begins.", "good");
+    }
+  });
+  $$('[data-close]').forEach(button => button.addEventListener("click", () => closeModal(button.dataset.close)));
+  $$(".modal-shell").forEach(shell => shell.addEventListener("pointerdown", event => {
+    if (event.target === shell) closeModal(shell.id);
+  }));
+  $("#cardNumber").addEventListener("input", event => {
+    event.target.value = event.target.value.replace(/\D/g, "").slice(0,16).replace(/(.{4})/g, "$1 ").trim();
+  });
+  $("#cardExpiry").addEventListener("input", event => {
+    const value = event.target.value.replace(/\D/g, "").slice(0,4);
+    event.target.value = value.length > 2 ? `${value.slice(0,2)}/${value.slice(2)}` : value;
+  });
+  $("#cardCvc").addEventListener("input", event => {
+    event.target.value = event.target.value.replace(/\D/g, "").slice(0,4);
+  });
+
+  renderStore();
+  renderAll();
+})();
+</script>
+</body>
+</html>
