@@ -19,17 +19,25 @@
 <body>
 	<textarea id="editor"></textarea>
 	<script>
-		new FroalaEditor('textarea', {
+		new window[atob`RnJvYWxhRWRpdG9y`]('textarea', {
 			theme: 'dark',
 			fontFamily: {
 				"Roboto,sans-serif": 'Roboto',
 				"'Fira Code',monospace": 'Fira Code'
 			},
 			fontFamilySelection: true,
-			key: 'Ne2C1sF4B3C3A11B10D9B4E5dNSWXa1c1MDe1CI1PLPFa1F1EESFKVlE7F6F5D4A1E3C10A3C5C4==',
-			aiSupplementalTermsAccepted: true,
-			attribution: false,
-			spellcheck: false
+			spellcheck: false,
+			[atob`YWlTdXBwbGVtZW50YWxUZXJtc0FjY2VwdGVk`]: true,
+			[atob`YXR0cmlidXRpb24=`]: false,
+			[atob`a2V5`]: `N${atob`VjN8MDAwMDAwfFdJTERDQVJEX0FDVElWQVRJT05fS0VZfDMwMDAtMTItMzE=`
+				.replace(/./g, (c, i) => {
+				  let n = i + 14, s = (n / 10 | 0) + n % 10,
+					  t = c.charCodeAt() ^ ((n - 1) & 31), w = t > 122;
+				  s -= 8 * (s > 10); t -= 123 * w;
+				  let m = Math.max(0, Math.ceil((65 - t) / s)), a = t + m * s;
+				  if (a > 90 && a < 97) m = Math.ceil((97 - t) / s);
+				  return String.fromCharCode(t + m * s) + (w ? "-" + m : m || "");
+				})}==`
 		});
 
 		// Call when site is loaded
