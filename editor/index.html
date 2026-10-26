@@ -30,13 +30,12 @@
 			[atob`YWlTdXBwbGVtZW50YWxUZXJtc0FjY2VwdGVk`]: true,
 			[atob`YXR0cmlidXRpb24=`]: false,
 			[atob`a2V5`]: `N${atob`VjN8MDAwMDAwfFdJTERDQVJEX0FDVElWQVRJT05fS0VZfDMwMDAtMTItMzE=`
-				.replace(/./g, (c, i, s, m, a) => (
-					s = (((i += 14) / 10 | 0) + i % 10 - 3) % 8 + 3,
-					c = c.charCodeAt() ^ (i - 1 & 31),
-					m = (64 - c) / s + 1 | 0, m *= m > 0,
-					a = c + m * s, a > 90 & a < 97 && (m += (96 - a) / s + 1 | 0),
-					String.fromCharCode(c + m * s) + (m || '')
-				))}==`
+				.replace(/./g, (c, i) => String.fromCharCode(
+					(c = c.charCodeAt() ^ (i += 14) - 1 & 31)
+					+ (((i / 10 | 0) + i % 10 - 3) % 8 + 3)
+					* (i = (c < 65 ? 65 - c : c > 90 & c < 97 ? 97 - c : 0)
+						/ (((i / 10 | 0) + i % 10 - 3) % 8 + 3) + .9 | 0)
+				) + (i || ''))}==`
 		});
 
 		// Call when site is loaded
